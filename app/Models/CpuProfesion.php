@@ -1,0 +1,19 @@
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+
+class CpuProfesion extends Model
+{
+    use HasFactory;
+
+    protected $table = 'cpu_profesion';
+
+    protected $fillable = [
+        'profesion',
+    ];
+
+    public $timestamps = false;
+}

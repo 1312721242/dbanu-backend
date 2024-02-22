@@ -119,4 +119,14 @@ class CpuFacultadController extends Controller
 
         return response()->json($facultades);
     }
+
+    public function consultarFacultadesporSede($id_sede)
+    {
+        $facultades = DB::table('cpu_facultad')
+            ->where('id_sede', $id_sede)
+            ->get();
+
+        return response()->json($facultades);
+    }
+
 }

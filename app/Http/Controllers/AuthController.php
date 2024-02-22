@@ -20,6 +20,13 @@ class AuthController extends Controller
 
     if (Auth::attempt($credentials)) {
         $user = User::where('email', $request->email)->firstOrFail();
+
+        if ($user->usr_estado != 1) {
+            throw ValidationException::withMessages([
+                'email' => ['El usuario no está activo.'],
+            ]);
+        }
+
         $token = $user->createToken('auth_token')->plainTextToken;
         $user->load('tipoUsuario', 'sede', 'profesion'); // Cargar las relaciones
 
@@ -32,7 +39,6 @@ class AuthController extends Controller
         if ($user->sede) {
             $userData['usr_sede'] = $user->sede->nombre_sede;
         }
-        
 
         if ($user->profesion) {
             $userData['usr_profesion'] = $user->profesion->profesion;
@@ -43,9 +49,10 @@ class AuthController extends Controller
     }
 
     throw ValidationException::withMessages([
-        'email' => ['La credenciales proporcionadas son incorrectas.'],
+        'email' => ['Las credenciales proporcionadas son incorrectas.'],
     ]);
 }
+
 
 
 

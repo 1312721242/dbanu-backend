@@ -1,5 +1,4 @@
 <?php
-
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
@@ -38,6 +37,7 @@ Route::middleware('auth:sanctum')->post('/agregar-facultad', [CpuFacultadControl
 Route::middleware('auth:sanctum')->put('/modificar-facultad/{id}', [CpuFacultadController::class, 'modificarFacultad']);
 Route::middleware('auth:sanctum')->delete('/eliminar-facultad/{id}', [CpuFacultadController::class, 'eliminarFacultad']);
 Route::middleware('auth:sanctum')->get('/consultar-facultades', [CpuFacultadController::class, 'consultarFacultades']);
+Route::middleware('auth:sanctum')->get('/consultar-facultades-sede/{id_sede}', [CpuFacultadController::class, 'consultarFacultadesporSede']);
 
 // Carrera
 Route::middleware('auth:sanctum')->post('/agregar-carrera', [CpuCarreraController::class, 'agregarCarrera']);

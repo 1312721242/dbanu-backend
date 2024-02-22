@@ -1,5 +1,6 @@
 <?php
 
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\MenuController;
@@ -91,3 +92,11 @@ Route::post('/agregar-funcion', [CpuUserfunctionController::class, 'agregarFunci
 Route::put('/modificar-funcion/{id}', [CpuUserfunctionController::class, 'modificarFuncion']);
 Route::delete('/eliminar-funcion/{id}', [CpuUserfunctionController::class, 'eliminarFuncion']);
 Route::get('/consultar-funciones', [CpuUserfunctionController::class, 'consultarFunciones']);
+
+//userrolefunction
+use App\Http\Controllers\CpuUserrolefunctionController;
+
+Route::post('/agregar-userrolefuncion', [CpuUserrolefunctionController::class, 'agregarFuncion']);
+Route::put('/modificar-userrolefuncion/{id}', [CpuUserrolefunctionController::class, 'modificarFuncion']);
+Route::delete('/eliminar-fuserroleuncion/{id}', [CpuUserrolefunctionController::class, 'eliminarFuncion']);
+Route::get('/consultar-userrolefunciones', [CpuUserrolefunctionController::class, 'consultarFunciones']);

@@ -37,6 +37,7 @@ class AuthController extends Controller
         if ($user->profesion) {
             $userData['usr_profesion'] = $user->profesion->profesion;
         }
+        
 
         return response()->json($userData);
     }

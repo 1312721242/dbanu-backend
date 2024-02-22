@@ -13,7 +13,8 @@ class CpuProfesion extends Model
 
     protected $fillable = [
         'profesion',
+        'abrebiatura',
     ];
 
-    public $timestamps = false;
+    // public $timestamps = false;
 }

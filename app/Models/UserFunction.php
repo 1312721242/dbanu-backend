@@ -11,6 +11,16 @@ class UserFunction extends Model
 
     // Nombre de la tabla en la base de datos
     protected $table = 'cpu_userfunction';
+    protected $primaryKey = 'id_userfunction';
+
+    protected $fillable = [
+        'id_users',
+        'id_usermenu',
+        'id_userrole',
+        'nombre',
+        'accion',
+        'id_menu',
+    ];
 
     public function userMenu()
     {

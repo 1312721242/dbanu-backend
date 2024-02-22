@@ -1,5 +1,7 @@
 <?php
 
+namespace App\Http\Controllers;
+
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
@@ -11,6 +13,7 @@ class CpuProfesionController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'profesion' => 'required|string|max:255',
+            'abrebiatura' => 'required|string|max:10',
         ]);
 
         if ($validator->fails()) {
@@ -18,6 +21,7 @@ class CpuProfesionController extends Controller
         }
 
         $profesion = $request->input('profesion');
+        $abrebiatura = $request->input('abrebiatura');
         $usuario = $request->user()->name;
         $ip = $request->ip();
         $nombreequipo = gethostbyaddr($ip);
@@ -25,19 +29,20 @@ class CpuProfesionController extends Controller
 
         $newProfesion = CpuProfesion::create([
             'profesion' => $profesion,
+            'abrebiatura' => $abrebiatura,
         ]);
 
         DB::table('cpu_auditoria')->insert([
             'aud_user' => $usuario,
             'aud_tabla' => 'cpu_profesion',
-            'aud_campo' => 'profesion',
+            'aud_campo' => 'profesion, abrebiatura',
             'aud_dataold' => '',
-            'aud_datanew' => $profesion,
+            'aud_datanew' => "$profesion, $abrebiatura",
             'aud_tipo' => 'INSERCION',
             'aud_fecha' => $fecha,
             'aud_ip' => $ip,
             'aud_tipoauditoria' => 1,
-            'aud_descripcion' => "CREACION DE PROFESION $profesion",
+            'aud_descripcion' => "CREACION DE PROFESION $profesion con abreviatura $abrebiatura",
             'aud_nombreequipo' => $nombreequipo,
         ]);
 
@@ -48,6 +53,7 @@ class CpuProfesionController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'profesion' => 'required|string|max:255',
+            'abrebiatura' => 'required|string|max:10',
         ]);
 
         if ($validator->fails()) {
@@ -55,6 +61,7 @@ class CpuProfesionController extends Controller
         }
 
         $profesion = $request->input('profesion');
+        $abrebiatura = $request->input('abrebiatura');
         $usuario = $request->user()->name;
         $ip = $request->ip();
         $nombreequipo = gethostbyaddr($ip);
@@ -62,19 +69,20 @@ class CpuProfesionController extends Controller
 
         DB::table('cpu_profesion')->where('id', $id)->update([
             'profesion' => $profesion,
+            'abrebiatura' => $abrebiatura,
         ]);
 
         DB::table('cpu_auditoria')->insert([
             'aud_user' => $usuario,
             'aud_tabla' => 'cpu_profesion',
-            'aud_campo' => 'profesion',
+            'aud_campo' => 'profesion, abrebiatura',
             'aud_dataold' => '',
-            'aud_datanew' => $profesion,
+            'aud_datanew' => "$profesion, $abrebiatura",
             'aud_tipo' => 'MODIFICACION',
             'aud_fecha' => $fecha,
             'aud_ip' => $ip,
             'aud_tipoauditoria' => 2,
-            'aud_descripcion' => "MODIFICACION DE PROFESION $profesion",
+            'aud_descripcion' => "MODIFICACION DE PROFESION $profesion con abreviatura $abrebiatura",
             'aud_nombreequipo' => $nombreequipo,
         ]);
 

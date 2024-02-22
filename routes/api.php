@@ -9,6 +9,8 @@ use App\Http\Controllers\CpuFacultadController;
 use App\Http\Controllers\CpuCarreraController;
 use App\Http\Controllers\UsuarioController; // Agregado el controlador de Usuario
 use App\Http\Controllers\CpuProfesionController;
+use App\Http\Controllers\CpuEstadosController;
+
 
 
 // Autenticación
@@ -64,3 +66,28 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::delete('/eliminar-profesion/{id}', [CpuProfesionController::class, 'eliminarProfesion']);
     Route::get('/consultar-profesiones', [CpuProfesionController::class, 'consultarProfesiones']);
 });
+
+//estados
+Route::middleware(['auth:sanctum'])->group(function () {
+    Route::post('/agregar-estado', [CpuEstadosController::class, 'agregarEstado']);
+    Route::put('/modificar-estado/{id}', [CpuEstadosController::class, 'modificarEstado']);
+    Route::delete('/eliminar-estado/{id}', [CpuEstadosController::class, 'eliminarEstado']);
+    Route::get('/consultar-estados', [CpuEstadosController::class, 'consultarEstados']);
+});
+
+
+//menu
+use App\Http\Controllers\CpuUsermenuController;
+
+Route::post('/agregar-menu', [CpuUsermenuController::class, 'agregarMenu']);
+Route::put('/modificar-menu/{id}', [CpuUsermenuController::class, 'modificarMenu']);
+Route::delete('/eliminar-menu/{id}', [CpuUsermenuController::class, 'eliminarMenu']);
+Route::get('/consultar-menus', [CpuUsermenuController::class, 'consultarMenus']);
+
+//funciones
+use App\Http\Controllers\CpuUserfunctionController;
+
+Route::post('/agregar-funcion', [CpuUserfunctionController::class, 'agregarFuncion']);
+Route::put('/modificar-funcion/{id}', [CpuUserfunctionController::class, 'modificarFuncion']);
+Route::delete('/eliminar-funcion/{id}', [CpuUserfunctionController::class, 'eliminarFuncion']);
+Route::get('/consultar-funciones', [CpuUserfunctionController::class, 'consultarFunciones']);

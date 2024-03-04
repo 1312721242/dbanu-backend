@@ -21,4 +21,10 @@ class CpuMatriculaConfiguracionController extends Controller
         return CpuMatriculaConfiguracion::findOrFail($id);
     }
 
+        public function periodoActivo()
+    {
+        return CpuMatriculaConfiguracion::where('id_estado', 8)->get();
+    }
+
+
 }

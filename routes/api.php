@@ -103,6 +103,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     // Rutas para el controlador CpuMatriculaConfiguracionController
     Route::get('cpu_matricula_configuracion', [CpuMatriculaConfiguracionController::class, 'index']);
     Route::get('cpu_matricula_configuracion/{id}', [CpuMatriculaConfiguracionController::class, 'show']);
+    Route::get('cpu_matricula_periodo_activo', [CpuMatriculaConfiguracionController::class, 'periodoActivo']);
 
     //subir documentos matricula
     Route::post('upload-pdf', [CpuLegalizacionMatriculaController::class, 'uploadPdf']);

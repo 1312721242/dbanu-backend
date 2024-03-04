@@ -9,6 +9,11 @@ use App\Models\Userrolefunction;
 
 class CpuUserrolefunctionController extends Controller
 {
+    public function __construct()
+    {
+        $this->middleware('auth:api');
+    }
+
     public function agregarFuncion(Request $request)
     {
         $validator = Validator::make($request->all(), [

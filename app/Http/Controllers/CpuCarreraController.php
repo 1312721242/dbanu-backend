@@ -9,6 +9,10 @@ use App\Models\CpuCarrera;
 
 class CpuCarreraController extends Controller
 {
+    public function __construct()
+    {
+        $this->middleware('auth:api');
+    }
     public function agregarCarrera(Request $request)
     {
         $validator = Validator::make($request->all(), [

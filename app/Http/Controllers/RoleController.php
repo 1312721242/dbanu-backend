@@ -9,6 +9,10 @@ use App\Models\Role; // Importar el modelo Role
 
 class RoleController extends Controller
 {
+    public function __construct()
+    {
+        $this->middleware('auth:api');
+    }
     public function agregarRoleUsuario(Request $request)
     {
         $validator = Validator::make($request->all(), [

@@ -9,6 +9,10 @@ use App\Models\User;
 
 class UsuarioController extends Controller
 {
+    public function __construct()
+    {
+        $this->middleware('auth:api');
+    }
     public function agregarUsuario(Request $request)
         {
             $validator = Validator::make($request->all(), [
@@ -49,7 +53,7 @@ class UsuarioController extends Controller
                 return response()->json(['error' => 'Usuario no encontrado'], 404);
             }
 
-            $usuario->update(['usr_estado' => 0]);
+            $usuario->update(['usr_estado' => 9]);
 
             return response()->json(['success' => true, 'message' => 'Usuario dado de baja correctamente']);
         }
@@ -63,7 +67,7 @@ class UsuarioController extends Controller
                 return response()->json(['error' => 'Usuario no encontrado'], 404);
             }
 
-            $usuario->update(['usr_estado' => 1]);
+            $usuario->update(['usr_estado' => 8]);
 
             return response()->json(['success' => true, 'message' => 'Usuario dado de alta correctamente']);
         }

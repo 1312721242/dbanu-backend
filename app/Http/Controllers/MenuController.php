@@ -7,7 +7,12 @@ use App\Models\UserFunction;
 use Illuminate\Http\Request;
 
 class MenuController extends Controller
+
 {
+    public function __construct()
+    {
+        $this->middleware('auth:api');
+    } 
     public function index()
     {
         // Recupera el ID de usuario desde la sesión (suponiendo que se ha implementado la autenticación)

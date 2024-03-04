@@ -9,6 +9,10 @@ use App\Models\Userfunction;
 
 class CpuUserfunctionController extends Controller
 {
+    public function __construct()
+    {
+        $this->middleware('auth:api');
+    }
     public function agregarFuncion(Request $request)
     { 
          

@@ -9,6 +9,10 @@ use App\Models\CpuProfesion;
 
 class CpuProfesionController extends Controller
 {
+    public function __construct()
+    {
+        $this->middleware('auth:api');
+    }
     public function agregarProfesion(Request $request)
     {
         $validator = Validator::make($request->all(), [

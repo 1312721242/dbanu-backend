@@ -9,6 +9,10 @@ use App\Models\CpuFacultad;
 
 class CpuFacultadController extends Controller
 {
+    public function __construct()
+    {
+        $this->middleware('auth:api');
+    }
     public function agregarFacultad(Request $request)
     {
         $validator = Validator::make($request->all(), [

@@ -26,8 +26,8 @@ Route::post('/logout', [AuthController::class, 'logout'])->middleware('auth:sanc
 
 Route::get('legalizacion-matricula/export-template', [LegalizacionMatriculaSecretariaController::class, 'exportTemplate']);
 
-    // Ruta para subir el archivo con la data de los asignados para que se matriculen
-    Route::post('legalizacion-matricula/upload', [LegalizacionMatriculaSecretariaController::class, 'upload']);
+// Ruta para subir el archivo con la data de los asignados para que se matriculen
+Route::post('legalizacion-matricula/upload', [LegalizacionMatriculaSecretariaController::class, 'upload']);
 
 
 // // Rutas para el controlador CpuMatriculaConfiguracionController

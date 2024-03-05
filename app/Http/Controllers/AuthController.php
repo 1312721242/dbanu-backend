@@ -30,7 +30,7 @@ class AuthController extends Controller
 
     $user = Auth::user();
 
-    if ($user->usr_estado != 1) {
+    if ($user->usr_estado != 8) {
         // Devolver un mensaje de error cuando el usuario no está activo
         return response()->json(['message' => 'El usuario no está activo.'], 401);
     }

@@ -16,10 +16,10 @@ use Illuminate\Support\Facades\DB;
 
 class CpuLegalizacionMatriculaController extends Controller
 {
-    // public function __construct()
-    // {
-    //     $this->middleware('auth:api');
-    // } 
+    public function __construct()
+    {
+        $this->middleware('auth:sanctum');
+    }
 
     public function uploadPdf(Request $request)
     {
@@ -135,21 +135,21 @@ class CpuLegalizacionMatriculaController extends Controller
 //     ];
 //     return Excel::download(new class($headers) implements FromArray, WithHeadings {
 //         use Exportable;
-    
+
 //         private $headers;
-    
+
 //         public function __construct(array $headers)
 //         {
 //             $this->headers = $headers;
 //         }
-    
+
 //         public function array(): array
 //         {
 //             return [
 //                 $this->headers
 //             ];
 //         }
-    
+
 //         public function headings(): array
 //         {
 //             return $this->headers;

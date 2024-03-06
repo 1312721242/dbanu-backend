@@ -16,6 +16,7 @@ use App\Http\Controllers\CpuUserrolefunctionController;
 use App\Http\Controllers\CpuMatriculaConfiguracionController;
 use App\Http\Controllers\CpuLegalizacionMatriculaController;
 use App\Http\Controllers\LegalizacionMatriculaSecretariaController;
+use App\Http\Controllers\CpuCasosMatriculaController;
 
 
 
@@ -122,4 +123,8 @@ Route::middleware(['auth:sanctum'])->group(function () {
     //subir documentos matricula
     Route::post('upload-pdf', [CpuLegalizacionMatriculaController::class, 'uploadPdf']);
     Route::get('/person-data', [CpuLegalizacionMatriculaController::class, 'getPersonData']);
+
+    //tomar los casos de matricula
+    Route::get('casos-matricula/{idSecretaria}/{idPeriodo}', [CpuCasosMatriculaController::class, 'index']);
+
 });

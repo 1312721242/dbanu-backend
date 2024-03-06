@@ -7,6 +7,11 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use App\Models\CpuLegalizacionMatricula;
 use Illuminate\Support\Facades\DB;
+use App\Models\CpuMatriculaConfiguracion;
+use App\Models\CpuCasosMatricula;
+use App\Models\CpuSecretariaMatricula;
+
+
 
 class CpuLegalizacionMatriculaController extends Controller
 {
@@ -15,18 +20,30 @@ class CpuLegalizacionMatriculaController extends Controller
         $this->middleware('auth:sanctum');
     }
 
-    //funcion para subir los archivos de la persona
-    public function uploadPdf(Request $request)
+      public function uploadPdf(Request $request)
     {
-        // Verificar si se han subido los archivos
-        if (!$request->hasFile('cedula') || !$request->hasFile('titulo') || !$request->hasFile('cupo')) {
-            return response()->json(['error' => 'Not all files uploaded.'], 422);
+
+        // Obtener la configuración de matrícula activa
+        $matriculaConfiguracion = CpuMatriculaConfiguracion::where('id_estado', 8)->first();
+
+        if (!$matriculaConfiguracion) {
+            return response()->json(['error' => 'No hay un periodo de matrícula activo.'], 401);
         }
 
+        // Verificar si la fecha actual está dentro del rango de fechas de matrícula
+        $currentDate = now();
+        if ($currentDate < $matriculaConfiguracion->fecha_inicio_matricula_ordinaria ||
+            $currentDate > $matriculaConfiguracion->fecha_fin_matricula_extraordinaria) {
+            return response()->json(['error' => 'La subida de archivos no está permitida fuera del periodo de matrícula.'], 401);
+        }
         $uploadedFiles = [];
 
         // Recorrer y procesar cada archivo
         foreach (['cedula', 'titulo', 'cupo'] as $paramName) {
+            if (!$request->hasFile($paramName)) {
+                continue; // Saltar si el archivo no se ha subido
+            }
+
             $file = $request->file($paramName);
 
             // Verificar si el archivo es válido
@@ -67,16 +84,63 @@ class CpuLegalizacionMatriculaController extends Controller
             $legalizacionMatricula->id_usuario = $userId;
         }
 
-        $legalizacionMatricula->copia_identificacion = $uploadedFiles['cedula'];
-        $legalizacionMatricula->estado_identificacion = 12;
-        $legalizacionMatricula->copia_titulo_acta_grado = $uploadedFiles['titulo'];
-        $legalizacionMatricula->estado_titulo = 12;
-        $legalizacionMatricula->copia_aceptacion_cupo = $uploadedFiles['cupo'];
-        $legalizacionMatricula->estado_cupo = 12;
+        if (isset($uploadedFiles['cedula'])) {
+            $legalizacionMatricula->copia_identificacion = $uploadedFiles['cedula'];
+            $legalizacionMatricula->estado_identificacion = 12;
+        }
+
+        if (isset($uploadedFiles['titulo'])) {
+            $legalizacionMatricula->copia_titulo_acta_grado = $uploadedFiles['titulo'];
+            $legalizacionMatricula->estado_titulo = 12;
+        }
+
+        if (isset($uploadedFiles['cupo'])) {
+            $legalizacionMatricula->copia_aceptacion_cupo = $uploadedFiles['cupo'];
+            $legalizacionMatricula->estado_cupo = 12;
+        }
+
         $legalizacionMatricula->save();
 
+        // Verificar si ya existe un caso con id_estado = 15 para id_legalizacion_matricula
+        $casoExistente = null; // Inicializar la variable $casoExistente como null
+
+        // Verificar si ya existe un caso con id_estado = 15 para id_legalizacion_matricula
+        // Verificar si ya existe un caso con id_estado diferente de 14 para id_legalizacion_matricula
+        $casoExistente = CpuCasosMatricula::where('id_legalizacion_matricula', $legalizacionMatricula->id)
+        ->where('id_estado', '<>', 14)
+        ->first();
+
+        
+        if ($casoExistente) {
+            // Reasignar el caso a la misma secretaría y cambiar el estado a 13
+            $casoExistente->id_secretaria = $casoExistente->id_secretaria; // Aquí probablemente querías asignar el mismo valor, pero corregí el nombre de la variable
+            $casoExistente->id_estado = 13;
+            $casoExistente->save();
+        } else {
+            // Crear un nuevo caso de matrícula
+            $casoMatricula = new CpuCasosMatricula();
+            $casoMatricula->id_legalizacion_matricula = $legalizacionMatricula->id;
+            $casoMatricula->id_estado = 13; // Estado inicial del caso
+            $casoMatricula->save();
+        
+            // Asignar el caso a la secretaría con menos casos pendientes en la misma sede
+            $idSede = $legalizacionMatricula->id_sede;
+            $secretaria = CpuSecretariaMatricula::where('id_sede', $idSede)
+                ->where('habilitada', true)
+                ->orderBy('casos_pendientes', 'asc')
+                ->first();
+        
+            if ($secretaria) {
+                $secretaria->casos_pendientes++;
+                $secretaria->save();
+                $casoMatricula->id_secretaria = $secretaria->id;
+                $casoMatricula->save();
+            }
+        }
         return response()->json(["mensaje" => "Archivos subidos correctamente", "files" => $uploadedFiles]);
     }
+
+    
 
     //funcion para tomar los datos de la persona
 

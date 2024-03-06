@@ -33,4 +33,15 @@ class CpuCasosMatricula extends Model
     {
         return $this->belongsTo(CpuEstados::class, 'id_estado');
     }
+
+    public function carrera()
+    {
+        return $this->belongsTo(CpuCarrera::class, 'id_carrera');
+    }
+
+    public function sede()
+    {
+        return $this->belongsTo(CpuSede::class, 'id_sede');
+    }
+
 }

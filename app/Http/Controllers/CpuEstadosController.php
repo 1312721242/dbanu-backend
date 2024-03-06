@@ -131,7 +131,7 @@ class CpuEstadosController extends Controller
 
     public function consultarEstados()
     {
-        $estados = CpuEstado::all();
+        $estados = CpuEstado::orderBy('id', 'asc')->get();
 
         return response()->json($estados);
     }

@@ -17,6 +17,7 @@ use App\Http\Controllers\CpuMatriculaConfiguracionController;
 use App\Http\Controllers\CpuLegalizacionMatriculaController;
 use App\Http\Controllers\CpuPeriodosController;
 use App\Http\Controllers\LegalizacionMatriculaSecretariaController;
+use App\Http\Controllers\CpuCasosMatriculaController;
 
 
 
@@ -27,8 +28,8 @@ Route::post('/logout', [AuthController::class, 'logout'])->middleware('auth:sanc
 
 Route::get('legalizacion-matricula/export-template', [LegalizacionMatriculaSecretariaController::class, 'exportTemplate']);
 
-    // Ruta para subir el archivo con la data de los asignados para que se matriculen
-    Route::post('legalizacion-matricula/upload', [LegalizacionMatriculaSecretariaController::class, 'upload']);
+// Ruta para subir el archivo con la data de los asignados para que se matriculen
+Route::post('legalizacion-matricula/upload', [LegalizacionMatriculaSecretariaController::class, 'upload']);
 
 
 // // Rutas para el controlador CpuMatriculaConfiguracionController
@@ -126,4 +127,8 @@ Route::middleware(['auth:sanctum'])->group(function () {
     //subir documentos matricula
     Route::post('upload-pdf', [CpuLegalizacionMatriculaController::class, 'uploadPdf']);
     Route::get('/person-data', [CpuLegalizacionMatriculaController::class, 'getPersonData']);
+
+    //tomar los casos de matricula
+    Route::get('casos-matricula/{idSecretaria}/{idPeriodo}', [CpuCasosMatriculaController::class, 'index']);
+
 });

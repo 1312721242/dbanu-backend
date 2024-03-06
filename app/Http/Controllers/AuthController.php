@@ -39,6 +39,7 @@ class AuthController extends Controller
     $user->load('tipoUsuario', 'sede', 'profesion'); // Cargar las relaciones
 
     $userData = [
+        'id' => $user->id,
         'token' => $token,
         'name' => $user->name,
         'usr_tipo' => $user->tipoUsuario->role,
@@ -72,6 +73,17 @@ public function loginApp(Request $request)
         return response()->json(['message' => 'No hay un periodo de matrícula activo.'], 401);
     }
 
+    // Verificar si el periodo está habilitado para login
+    $periodoHabilitado = CpuMatriculaConfiguracion::where('id_periodo', $id_periodo_activo)
+        ->where('fecha_inicio_habil_login', '<=', now())
+        ->where('fecha_fin_habil_login', '>=', now())
+        ->exists();
+
+    if (!$periodoHabilitado) {
+        // Devolver un mensaje de error cuando el periodo no está habilitado para login
+        return response()->json(['message' => 'El periodo no está habilitado para login.'], 401);
+    }
+
     // Buscar el registro en la tabla cpu_legalizacion_matricula
     $ciudadano = CpuLegalizacionMatricula::where('id_periodo', $id_periodo_activo)
         ->where('email', $credentials['email'])
@@ -83,6 +95,7 @@ public function loginApp(Request $request)
         return response()->json(['message' => 'Las credenciales proporcionadas son incorrectas.'], 401);
     }
 
+    // Resto del código para obtener el token y los datos del usuario
     $token = $ciudadano->createToken('auth_token')->plainTextToken;
 
     $userData = [
@@ -141,8 +154,6 @@ public function loginApp(Request $request)
 
     return response()->json($userData);
 }
-
-
 
 
     public function logout(Request $request)

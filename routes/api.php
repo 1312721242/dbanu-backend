@@ -15,6 +15,7 @@ use App\Http\Controllers\CpuUserfunctionController;
 use App\Http\Controllers\CpuUserrolefunctionController;
 use App\Http\Controllers\CpuMatriculaConfiguracionController;
 use App\Http\Controllers\CpuLegalizacionMatriculaController;
+use App\Http\Controllers\CpuPeriodosController;
 use App\Http\Controllers\LegalizacionMatriculaSecretariaController;
 use App\Http\Controllers\CpuCasosMatriculaController;
 
@@ -106,6 +107,9 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::put('/modificar-userrolefuncion/{id}', [CpuUserrolefunctionController::class, 'modificarFuncion']);
     Route::delete('/eliminar-fuserroleuncion/{id}', [CpuUserrolefunctionController::class, 'eliminarFuncion']);
     Route::get('/consultar-userrolefunciones', [CpuUserrolefunctionController::class, 'consultarFunciones']);
+
+    //periodos
+    Route::get('/consultar-periodos', [CpuPeriodosController::class, 'consultarPeriodos']);
 
     //generar plantilla y subir arhivo de excel a la base de datos
     // Ruta para generar la plantilla de archivo

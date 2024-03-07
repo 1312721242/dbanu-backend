@@ -18,6 +18,7 @@ use App\Http\Controllers\CpuLegalizacionMatriculaController;
 use App\Http\Controllers\CpuPeriodosController;
 use App\Http\Controllers\LegalizacionMatriculaSecretariaController;
 use App\Http\Controllers\CpuCasosMatriculaController;
+use App\Http\Controllers\CpuNotificacionMatriculaController;
 
 
 
@@ -130,5 +131,11 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
     //tomar los casos de matricula
     Route::get('casos-matricula/{idSecretaria}/{idPeriodo}', [CpuCasosMatriculaController::class, 'index']);
+    Route::post('casos-matricula/{idCaso}/revision-documentos', [CpuCasosMatriculaController::class, 'revisionDocumentos']);
+
+    //apis notificaciones para app de pabelco
+    Route::get('/notificaciones', [CpuNotificacionMatriculaController::class, 'index']);
+    Route::put('/notificaciones/{id}/marcar-leida', [CpuNotificacionMatriculaController::class, 'markAsRead']);
+    Route::get('/notificaciones/sin-leer', [CpuNotificacionMatriculaController::class, 'unreadCount']);
 
 });

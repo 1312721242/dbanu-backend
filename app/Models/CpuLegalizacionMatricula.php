@@ -61,4 +61,9 @@ class CpuLegalizacionMatricula extends Model
     {
         return $this->belongsTo(CpuCarrera::class, 'id_carrera');
     }
+
+    public function sede()
+    {
+        return $this->belongsTo(CpuSede::class, 'id_sede');
+    }
 }

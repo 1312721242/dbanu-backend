@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\CpuCasosMatricula;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 
 class CpuCasosMatriculaController extends Controller
 {
@@ -55,6 +56,11 @@ class CpuCasosMatriculaController extends Controller
     )
     ->get();
 
+    foreach ($casosMatricula as $caso) {
+        $caso->copia_identificacion = url('Files/' . $caso->copia_identificacion);
+        $caso->copia_titulo = url('Files/' . $caso->copia_titulo);
+        $caso->copia_aceptacion_cupo = url('Files/' . $caso->copia_aceptacion_cupo);
+    }
     return response()->json($casosMatricula);
 
 }

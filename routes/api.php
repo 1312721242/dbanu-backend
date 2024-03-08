@@ -27,10 +27,10 @@ Route::post('/login', [AuthController::class, 'login']);
 Route::post('/loginapp', [AuthController::class, 'loginApp']);
 Route::post('/logout', [AuthController::class, 'logout'])->middleware('auth:sanctum');
 
-Route::get('legalizacion-matricula/export-template', [LegalizacionMatriculaSecretariaController::class, 'exportTemplate']);
+// Route::get('legalizacion-matricula/export-template', [LegalizacionMatriculaSecretariaController::class, 'exportTemplate']);
 
-// Ruta para subir el archivo con la data de los asignados para que se matriculen
-Route::post('legalizacion-matricula/upload', [LegalizacionMatriculaSecretariaController::class, 'upload']);
+// // Ruta para subir el archivo con la data de los asignados para que se matriculen
+// Route::post('legalizacion-matricula/upload', [LegalizacionMatriculaSecretariaController::class, 'upload']);
 
 
 // // Rutas para el controlador CpuMatriculaConfiguracionController
@@ -45,6 +45,14 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('/user', function (Request $request) {
         return $request->user();
     });
+
+    //rutas para manejar el excel de subida de cupos asignados para matriculas
+    //ruta para exportar la platilla de excel
+    Route::get('legalizacion-matricula/export-template', [LegalizacionMatriculaSecretariaController::class, 'exportTemplate']);
+
+    // Ruta para subir el archivo con la data de los asignados para que se matriculen
+    Route::post('legalizacion-matricula/upload/{id_periodo}', [LegalizacionMatriculaSecretariaController::class, 'upload']);
+
 
     // Roles
     Route::post('/agregar-role-usuario', [RoleController::class, 'agregarRoleUsuario']);

@@ -140,10 +140,13 @@ Route::middleware(['auth:sanctum'])->group(function () {
     //tomar los casos de matricula
     Route::get('casos-matricula/{idSecretaria}/{idPeriodo}', [CpuCasosMatriculaController::class, 'index']);
     Route::post('casos-matricula/{idCaso}/revision-documentos', [CpuCasosMatriculaController::class, 'revisionDocumentos']);
-
+    Route::get('matricula-cases/{id_periodo}', [CpuCasosMatriculaController::class, 'getMatriculaCases']);
+ 
     //apis notificaciones para app de pabelco
     Route::get('/notificaciones', [CpuNotificacionMatriculaController::class, 'index']);
     Route::put('/notificaciones/{id}/marcar-leida', [CpuNotificacionMatriculaController::class, 'markAsRead']);
     Route::get('/notificaciones/sin-leer', [CpuNotificacionMatriculaController::class, 'unreadCount']);
+
+    
 
 });

@@ -71,7 +71,7 @@ class CpuCasosMatriculaController extends Controller
         
             // Obtener el mensaje de la notificación asociada al caso de matrícula si existe
             $notificacionMatricula = CpuNotificacionMatricula::find($caso->id_notificacion);
-            $caso->mensaje_notificacion = $notificacionMatricula ? $notificacionMatricula->mensaje : null;
+            $caso->observacion = $notificacionMatricula ? $notificacionMatricula->mensaje : null;
 
         }
         

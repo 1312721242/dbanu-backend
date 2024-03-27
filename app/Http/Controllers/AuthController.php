@@ -120,9 +120,9 @@ public function loginApp(Request $request)
         'instancia_de_asignacion' => $ciudadano->instancia_de_asignacion,
         'gratuidad' => $ciudadano->gratuidad,
         'observacion_gratuidad' => $ciudadano->observacion_gratuidad,
-        'copia_identificacion' => $ciudadano->copia_identificacion,
-        'copia_titulo_acta_grado' => $ciudadano->copia_titulo_acta_grado,
-        'copia_aceptacion_cupo' => $ciudadano->copia_aceptacion_cupo,
+        'copia_identificacion' =>url('Files/' .  $ciudadano->copia_identificacion),
+        'copia_titulo_acta_grado' =>url('Files/' .  $ciudadano->copia_titulo_acta_grado),
+        'copia_aceptacion_cupo' =>url('Files/' .  $ciudadano->copia_aceptacion_cupo),
         'listo_para_revision' => $ciudadano->listo_para_revision,
         'legalizo_matricula' => $ciudadano->legalizo_matricula,
     ];

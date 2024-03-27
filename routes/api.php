@@ -20,7 +20,7 @@ use App\Http\Controllers\LegalizacionMatriculaSecretariaController;
 use App\Http\Controllers\CpuCasosMatriculaController;
 use App\Http\Controllers\CpuNotificacionMatriculaController;
 use App\Http\Controllers\CpuTextosMensajesController;
-
+use App\Http\Controllers\CpuFuncionesTextosController;
 
 
 
@@ -30,16 +30,6 @@ Route::post('/login', [AuthController::class, 'login']);
 Route::post('/loginapp', [AuthController::class, 'loginApp']);
 Route::post('/logout', [AuthController::class, 'logout'])->middleware('auth:sanctum');
 
-// Route::get('legalizacion-matricula/export-template', [LegalizacionMatriculaSecretariaController::class, 'exportTemplate']);
-
-// // Ruta para subir el archivo con la data de los asignados para que se matriculen
-// Route::post('legalizacion-matricula/upload', [LegalizacionMatriculaSecretariaController::class, 'upload']);
-
-
-// // Rutas para el controlador CpuMatriculaConfiguracionController
-// Route::get('cpu_matricula_configuracion', [CpuMatriculaConfiguracionController::class, 'index']);
-// Route::get('cpu_matricula_configuracion/{id}', [CpuMatriculaConfiguracionController::class, 'show']);
-// Agrega más rutas según tus necesidades
 
 Route::middleware(['auth:sanctum'])->group(function () {
     // Menú
@@ -155,5 +145,12 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
     // toma textos para mostrar en el sistema de legalización de matricula de los estudiante
     Route::get('/textos-legalizar-matricula-aspirantes', [CpuTextosMensajesController::class, 'obtenerTextosFuncionTres']);
+
+    // funciones que llevan textos
+    Route::get('/funciones-textos', [CpuFuncionesTextosController::class, 'index']);
+    Route::post('/funciones-textos', [CpuFuncionesTextosController::class, 'store']);
+    Route::get('/funciones-textos/{id}', [CpuFuncionesTextosController::class, 'show']);
+    Route::put('/funciones-textos/{id}', [CpuFuncionesTextosController::class, 'update']);
+    Route::delete('/funciones-textos/{id}', [CpuFuncionesTextosController::class, 'destroy']);
 
 });

@@ -19,6 +19,9 @@ use App\Http\Controllers\CpuPeriodosController;
 use App\Http\Controllers\LegalizacionMatriculaSecretariaController;
 use App\Http\Controllers\CpuCasosMatriculaController;
 use App\Http\Controllers\CpuNotificacionMatriculaController;
+use App\Http\Controllers\CpuTextosMensajesController;
+
+
 
 
 
@@ -150,6 +153,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::put('/notificaciones/{id}/marcar-leida', [CpuNotificacionMatriculaController::class, 'markAsRead']);
     Route::get('/notificaciones/sin-leer', [CpuNotificacionMatriculaController::class, 'unreadCount']);
 
-    
+    // toma textos para mostrar en el sistema de legalización de matricula de los estudiante
+    Route::get('/textos-legalizar-matricula-aspirantes', [CpuTextosMensajesController::class, 'obtenerTextosFuncionTres']);
 
 });

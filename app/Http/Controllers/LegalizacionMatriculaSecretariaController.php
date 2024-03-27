@@ -44,6 +44,7 @@ class LegalizacionMatriculaSecretariaController extends Controller
         'instancia_de_asignacion (text)',
         'gratuidad (text)',
         'observacion_gratuidad (text)',
+        'tipo_matricula'
     ];
 
     // Set headers
@@ -61,72 +62,6 @@ class LegalizacionMatriculaSecretariaController extends Controller
     return response()->download($filename)->deleteFileAfterSend(true);
 }
 
-
-// public function upload(Request $request)
-// {
-//     $request->validate([
-//         'file' => 'required|mimes:xlsx,xls'
-//     ]);
-
-//     $file = $request->file('file');
-
-//     // Cargar el archivo usando PhpSpreadsheet
-//     $reader = new \PhpOffice\PhpSpreadsheet\Reader\Xlsx();
-//     $spreadsheet = $reader->load($file->getRealPath());
-
-//     $sheetData = $spreadsheet->getActiveSheet()->toArray(null, true, true, true);
-
-//     $firstRow = true; // Variable para controlar la primera fila
-//     foreach ($sheetData as $key => $row) {
-//         if ($firstRow) {
-//             $firstRow = false;
-//             continue; // Saltar la primera fila
-//         }
-
-//         $data = [
-//             'id_periodo' => $row['A'] ?? null,
-//             'id_registro_nacional' => $row['B'] ?? null,
-//             'id_postulacion' => $row['C'] ?? null,
-//             'ciudad_campus' => $row['D'] ?? null,
-//             'id_sede' => $row['E'] ?? null,
-//             'id_facultad' => $row['F'] ?? null,
-//             'id_carrera' => $row['G'] ?? null,
-//             'email' => $row['H'] ?? null,
-//             'cedula' => $row['I'] ?? null,
-//             'apellidos' => $row['J'] ?? null,
-//             'nombres' => $row['K'] ?? null,
-//             'genero' => $row['L'] ?? null,
-//             'etnia' => $row['M'] ?? null,
-//             'discapacidad' => $row['N'] ?? null,
-//             'segmento_persona' => $row['O'] ?? null,
-//             'nota_postulacion' => $row['P'] ?? null,
-//             'fecha_nacimiento' => null, // Asignar null al campo fecha_nacimiento
-//             'nacionalidad' => $row['R'] ?? null,
-//             'provincia_reside' => $row['S'] ?? null,
-//             'canton_reside' => $row['T'] ?? null,
-//             'parroquia_reside' => $row['U'] ?? null,
-//             'instancia_postulacion' => $row['V'] ?? null,
-//             'instancia_de_asignacion' => $row['W'] ?? null,
-//             'gratuidad' => $row['X'] ?? null,
-//             'observacion_gratuidad' => $row['Y'] ?? null,
-//         ];
-
-//         // Check if record already exists
-//         if ($data['id_periodo'] && $data['cedula']) {
-//             $existingRecord = CpuLegalizacionMatricula::where('id_periodo', $data['id_periodo'])
-//                 ->where('cedula', $data['cedula'])
-//                 ->exists();
-
-//             if (!$existingRecord) {
-//                 $model = new CpuLegalizacionMatricula();
-//                 $model->fill($data);
-//                 $model->save();
-//             }
-//         }
-//     }
-
-//     return response()->json(['message' => 'Archivo cargado exitosamente']);
-// }
 
 public function upload(Request $request, $id_periodo)
 {
@@ -175,6 +110,7 @@ public function upload(Request $request, $id_periodo)
             'instancia_de_asignacion' => $row['W'] ?? null,
             'gratuidad' => $row['X'] ?? null,
             'observacion_gratuidad' => $row['Y'] ?? null,
+            'tipo_matricula' => $row['Z'] ?? null,
         ];
 
         // Check if record already exists

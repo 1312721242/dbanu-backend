@@ -41,6 +41,8 @@ Route::post('/logout', [AuthController::class, 'logout'])->middleware('auth:sanc
 Route::middleware(['auth:sanctum'])->group(function () {
     // Menú
     Route::get('/menu', [MenuController::class, 'index']);
+    // menu aspirantes
+    Route::get('/menuaspirantes', [MenuController::class, 'menuaspirantes']);
     // Usuario
     Route::get('/user', function (Request $request) {
         return $request->user();

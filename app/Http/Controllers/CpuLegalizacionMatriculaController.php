@@ -159,11 +159,11 @@ class CpuLegalizacionMatriculaController extends Controller
             'cedula' => $user->cedula,
             'apellidos' => $user->apellidos,
             'nombres' => $user->nombres,
-            'copia_identificacion' => $user->copia_identificacion,
+            'copia_identificacion' => url('Files/' .$user->copia_identificacion),
             'estado_identificacion' => $user->estado_identificacion,
-            'copia_titulo_acta_grado' => $user->copia_titulo_acta_grado,
+            'copia_titulo_acta_grado' => url('Files/' .  $user->copia_titulo_acta_grado),
             'estado_titulo' => $user->estado_titulo,
-            'copia_aceptacion_cupo' => $user->copia_aceptacion_cupo,
+            'copia_aceptacion_cupo' => url('Files/' .  $user->copia_aceptacion_cupo),
             'estado_cupo' => $user->estado_cupo,
         ];
 

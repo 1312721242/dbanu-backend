@@ -61,7 +61,7 @@ class CpuLegalizacionMatriculaController extends Controller
 
                 // Validar el tipo y tamaño del archivo
                 $validator = Validator::make([$paramName => $file], [
-                    $paramName => 'required|mimes:pdf|max:8192', // Max 8MB
+                    $paramName => 'required|mimes:pdf|max:5120', // Max 5MB
                 ]);
 
                 if ($validator->fails()) {

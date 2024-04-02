@@ -128,4 +128,16 @@ class UsuarioController extends Controller
             return response()->json(['success' => true, 'message' => 'Información personal actualizada correctamente']);
         }
 
+        public function search(Request $request)
+            {
+                $searchTerm = $request->input('bus');
+
+                $users = User::where('name', 'ILIKE', "%$searchTerm%")->get(['name']);
+
+                return response()->json($users);
+            }
+
+
+
+
 }

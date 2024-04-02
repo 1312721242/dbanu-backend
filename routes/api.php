@@ -81,6 +81,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::put('/dar-de-alta-usuario/{id}', [UsuarioController::class, 'darDeAltaUsuario']);
     Route::put('/cambiar-password/{id}', [UsuarioController::class, 'cambiarPassword']);
     Route::put('/actualizar-informacion-personal/{id}', [UsuarioController::class, 'actualizarInformacionPersonal']);
+    Route::get('/users/search', [UsuarioController::class, 'search']);
 
     //profesiones
     Route::post('/agregar-profesion', [CpuProfesionController::class, 'agregarProfesion']);

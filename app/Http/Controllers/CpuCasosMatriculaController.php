@@ -96,6 +96,7 @@ class CpuCasosMatriculaController extends Controller
     $mensaje = isset($documentos['observacion']) ? $documentos['observacion'] : 'Documentos revisados sin observaciones';
     $notificacion = new CpuNotificacionMatricula();
     $notificacion->mensaje = $mensaje;
+    $notificacion->id_legalizacion = $casoMatricula->legalizacionMatricula->id;
     $notificacion->save();
 
     // Obtener el ID de la notificación creada

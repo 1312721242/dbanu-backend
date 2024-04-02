@@ -14,15 +14,18 @@ class CpuNotificacionMatriculaController extends Controller
     }
 
     public function index(Request $request)
-    {
-        // Obtener el usuario autenticado desde la solicitud
-        $user = $request->user();
+        {
+            // Obtener el usuario autenticado desde la solicitud
+            $user = $request->user();
 
-        // Obtener todas las notificaciones del usuario logueado
-        $notificaciones = CpuNotificacionMatricula::where('id_legalizacion', $user->id)->get();
+            // Obtener todas las notificaciones del usuario logueado ordenadas por created_at de forma descendente
+            $notificaciones = CpuNotificacionMatricula::where('id_legalizacion', $user->id)
+                                ->orderBy('created_at', 'desc')
+                                ->get();
 
-        return response()->json($notificaciones);
-    }
+            return response()->json($notificaciones);
+        }
+
 
     public function markAsRead(Request $request, $id)
     {

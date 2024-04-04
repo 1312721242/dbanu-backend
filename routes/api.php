@@ -126,6 +126,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
     // Rutas para el controlador CpuMatriculaConfiguracionController
     Route::get('cpu_matricula_configuracion', [CpuMatriculaConfiguracionController::class, 'index']);
+    Route::get('cpu_matricula_configuracion-fechas/{id_periodo}', [CpuMatriculaConfiguracionController::class, 'fechasMatricula']);
     Route::get('cpu_matricula_configuracion/{id}', [CpuMatriculaConfiguracionController::class, 'show']);
     Route::get('cpu_matricula_periodo_activo', [CpuMatriculaConfiguracionController::class, 'periodoActivo']);
 
@@ -138,7 +139,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::post('casos-matricula/{idCaso}/revision-documentos', [CpuCasosMatriculaController::class, 'revisionDocumentos']);
     Route::get('matricula-cases/{id_usuario}/{id_periodo}', [CpuCasosMatriculaController::class, 'getMatriculaCases']);
     Route::get('matricula-cases-all/{id_periodo}', [CpuCasosMatriculaController::class, 'getAllMatriculaCases']);
- 
+
     //apis notificaciones para app de pabelco
     Route::get('/notificaciones', [CpuNotificacionMatriculaController::class, 'index']);
     Route::put('/notificaciones/{id}/marcar-leida', [CpuNotificacionMatriculaController::class, 'markAsRead']);

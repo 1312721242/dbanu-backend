@@ -129,6 +129,8 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('cpu_matricula_configuracion-fechas/{id_periodo}', [CpuMatriculaConfiguracionController::class, 'fechasMatricula']);
     Route::get('cpu_matricula_configuracion/{id}', [CpuMatriculaConfiguracionController::class, 'show']);
     Route::get('cpu_matricula_periodo_activo', [CpuMatriculaConfiguracionController::class, 'periodoActivo']);
+    Route::post('cpu_matricula_configuracion/save', [CpuMatriculaConfiguracionController::class, 'store']);
+
 
     //subir documentos matricula
     Route::post('upload-pdf', [CpuLegalizacionMatriculaController::class, 'uploadPdf']);
@@ -147,6 +149,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
     // toma textos para mostrar en el sistema de legalización de matricula de los estudiante
     Route::get('/textos-legalizar-matricula-aspirantes', [CpuTextosMensajesController::class, 'obtenerTextosFuncionTres']);
+    Route::put('/editar-textos-funcion-tres', [CpuTextosMensajesController::class, 'editarTextosFuncionTres']);
 
     // funciones que llevan textos
     Route::get('/funciones-textos', [CpuFuncionesTextosController::class, 'index']);

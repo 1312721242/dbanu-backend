@@ -16,6 +16,29 @@ class CpuMatriculaConfiguracionController extends Controller
         return CpuMatriculaConfiguracion::all();
     }
 
+    public function store(Request $request)
+    {
+        $validatedData = $request->validate([
+            'id' => 'sometimes|required|integer|exists:cpu_matricula_configuracion,id',
+            'id_periodo' => 'required|integer',
+            'id_estado' => 'required|integer',
+            'fecha_inicio_matricula_ordinaria' => 'required|date',
+            'fecha_fin_matricula_ordinaria' => 'required|date',
+            'fecha_inicio_matricula_extraordinaria' => 'required|date',
+            'fecha_fin_matricula_extraordinaria' => 'required|date',
+            'fecha_inicio_habil_login' => 'required|date',
+            'fecha_fin_habil_login' => 'required|date',
+        ]);
+
+        $configuracion = CpuMatriculaConfiguracion::updateOrCreate(
+            ['id' => $request->id], // Keys to find
+            $validatedData // Values to fill or update
+        );
+
+        return response()->json($configuracion, 200);
+    }
+
+
     public function show($id)
     {
         return CpuMatriculaConfiguracion::findOrFail($id);

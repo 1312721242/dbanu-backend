@@ -20,6 +20,7 @@ class CpuTextosMensajesController extends Controller
         $textos = CpuTextosMensajes::where('id_funciones_texto', 3)
             ->join('cpu_funciones_textos', 'cpu_textos_mensajes.id_funciones_texto', '=', 'cpu_funciones_textos.id')
             ->select('cpu_textos_mensajes.*', 'cpu_funciones_textos.descripcion')
+            ->orderBy('id', 'asc')
             ->get();
 
         return response()->json($textos);
@@ -28,29 +29,25 @@ class CpuTextosMensajesController extends Controller
 
     public function editarTextosFuncionTres(Request $request)
     {
-        // Validación de la entrada
-        $request->validate([
-            'id' => 'required|integer', // Asegúrate de que el ID esté presente y sea un entero
-            'texto' => 'required|string',
-        ]);
+        // Asumiendo que recibimos un array de datos en el cuerpo de la solicitud
+        $datos = $request->all();
 
-        // Obtener el ID de la solicitud
-        $id = $request->input('id');
-
-        // Verificar si el ID existe en la base de datos
-        $texto = CpuTextosMensajes::find($id);
-
-        if (!$texto) {
-            return response()->json(['mensaje' => 'El ID proporcionado no existe en la base de datos.'], 404);
+        // Verificar si los datos son un solo array o un array de arrays
+        if (!is_array(reset($datos))) {
+            // Si son un solo array, convertirlo en un array de arrays
+            $datos = [$datos];
         }
 
-        // Asumiendo que recibimos el nuevo texto como parte del request
-        $nuevoTexto = $request->input('texto');
+        // Iterar sobre cada conjunto de datos
+        foreach ($datos as $dato) {
+            $id = $dato['id'];
+            $nuevoTexto = $dato['texto'];
 
-        // Actualizando texto del mensaje
-        CpuTextosMensajes::where('id', $id)->update(['texto' => $nuevoTexto]);
+            // Actualizar el texto en la base de datos para el ID proporcionado
+            CpuTextosMensajes::where('id', $id)
+                ->update(['texto' => $nuevoTexto]);
+        }
 
-        // Devolver una respuesta que confirme la actualización
-        return response()->json(['mensaje' => 'Texto actualizado con éxito.']);
+        return response()->json(['mensaje' => 'Textos actualizados con éxito.']);
     }
 }

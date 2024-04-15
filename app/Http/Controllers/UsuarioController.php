@@ -21,8 +21,8 @@ class UsuarioController extends Controller
                 'password' => 'required|string|min:6',
                 'usr_tipo' => 'required|exists:cpu_userrole,id_userrole',
                 'usr_sede' => 'required|exists:cpu_sede,id',
-                'usr_facultad' => 'required|exists:cpu_facultad,id',
-                'usr_carrera' => 'required|exists:cpu_carrera,id',
+                'usr_facultad' => 'sometimes|exists:cpu_facultad,id',
+                'usr_carrera' => 'sometimes|exists:cpu_carrera,id',
                 'usr_profesion' => 'required|exists:cpu_profesion,id',
             ]);
 

@@ -9,6 +9,9 @@ use PhpOffice\PhpSpreadsheet\Reader\Xlsx as ReaderXlsx;
 use App\Models\CpuLegalizacionMatricula;
 use Symfony\Component\HttpFoundation\Response;
 use PhpOffice\PhpSpreadsheet\Shared\Date;
+use App\Models\CpuCasosMatricula;
+use Illuminate\Support\Facades\DB;
+use App\Models\CpuSecretariaMatricula;
 
 
 class LegalizacionMatriculaSecretariaController extends Controller
@@ -130,7 +133,79 @@ public function upload(Request $request, $id_periodo)
     return response()->json(['message' => 'Archivo cargado exitosamente']);
 }
 
+//cuenta casos matricula
+public function consultarNumCasos()
+{
+    // Consulta para obtener el número de casos pendientes agrupados por sede y secretaria
+    $casosPorSecretaria = CpuCasosMatricula::select('id_secretaria', 'id_estado', DB::raw('count(*) as total'))
+        ->whereIn('id_estado', [13, 15])
+        ->groupBy('id_secretaria', 'id_estado')
+        ->get();
 
- 
+    // Obtener la información de la sede y nombre de cada secretaria
+    $secretarias = CpuSecretariaMatricula::all()->keyBy('id');
+
+    // Organizar la información en el formato deseado
+    $result = [];
+    foreach ($casosPorSecretaria as $caso) {
+        $sedeId = $secretarias[$caso->id_secretaria]->id_sede;
+        $sedeNombre = 'Sede'; // Obtener el nombre de la sede según el id_sede
+
+        $result[$sedeNombre]['id_secretaria'] = $caso->id_secretaria;
+        $result[$sedeNombre]['Nombresecretaria'] = $secretarias[$caso->id_secretaria]->nombre;
+        $result[$sedeNombre]['casos_nuevos'] = ($caso->id_estado == 13) ? $caso->total : 0;
+        $result[$sedeNombre]['casos_corrección'] = ($caso->id_estado == 15) ? $caso->total : 0;
+    }
+
+    return response()->json($result);
+}
+
+
+//funcion para reasignar casos
+
+public function reasignarCasos(Request $request)
+{
+    $request->validate([
+        'id_sede' => 'required|integer',
+        'id_periodo' => 'required|integer',
+    ]);
+
+    // Consultar el número total de casos con estado 13
+    $numCasosEstado13 = CpuCasosMatricula::where('id_estado', 13)->count();
+
+    // Consultar el número de secretarias habilitadas en la sede
+    $numSecretariasHabilitadas = CpuSecretariaMatricula::where('id_sede', $request->id_sede)
+        ->where('habilitada', true)
+        ->count();
+
+    // Verificar que hay al menos una secretaria habilitada para reasignar casos
+    if ($numSecretariasHabilitadas == 0) {
+        return response()->json(['message' => 'No hay secretarias habilitadas para reasignar casos'], 400);
+    }
+
+    // Calcular el número de casos a reasignar por secretaria
+    $casosPorSecretaria = $numCasosEstado13 / $numSecretariasHabilitadas;
+
+    // Obtener las secretarias habilitadas de la sede
+    $secretariasHabilitadas = CpuSecretariaMatricula::where('id_sede', $request->id_sede)
+        ->where('habilitada', true)
+        ->pluck('id');
+
+    // Reasignar casos a las secretarias
+    $casos = CpuCasosMatricula::where('id_estado', 13)
+        ->whereIn('id_secretaria', $secretariasHabilitadas)
+        ->orderBy('fecha_creacion', 'ASC')
+        ->limit($casosPorSecretaria)
+        ->get();
+
+    foreach ($casos as $caso) {
+        $caso->id_secretaria = $request->id_secretaria;
+        $caso->save();
+    }
+
+    return response()->json(['message' => 'Casos reasignados correctamente']);
+}
+
+
 
 }

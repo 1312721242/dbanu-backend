@@ -30,7 +30,7 @@ Route::post('/login', [AuthController::class, 'login']);
 Route::post('/loginapp', [AuthController::class, 'loginApp']);
 Route::post('/logout', [AuthController::class, 'logout'])->middleware('auth:sanctum');
 
-
+Route::get('legalizacion-matricula/export-template', [LegalizacionMatriculaSecretariaController::class, 'exportTemplate']);
 Route::middleware(['auth:sanctum'])->group(function () {
     // Menú
     Route::get('/menu', [MenuController::class, 'index']);
@@ -43,7 +43,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
     //rutas para manejar el excel de subida de cupos asignados para matriculas
     //ruta para exportar la platilla de excel
-    Route::get('legalizacion-matricula/export-template', [LegalizacionMatriculaSecretariaController::class, 'exportTemplate']);
+    // Route::get('legalizacion-matricula/export-template', [LegalizacionMatriculaSecretariaController::class, 'exportTemplate']);
 
     // Ruta para subir el archivo con la data de los asignados para que se matriculen
     Route::post('legalizacion-matricula/upload/{id_periodo}', [LegalizacionMatriculaSecretariaController::class, 'upload']);
@@ -141,6 +141,8 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::post('casos-matricula/{idCaso}/revision-documentos', [CpuCasosMatriculaController::class, 'revisionDocumentos']);
     Route::get('matricula-cases/{id_usuario}/{id_periodo}', [CpuCasosMatriculaController::class, 'getMatriculaCases']);
     Route::get('matricula-cases-all/{id_periodo}', [CpuCasosMatriculaController::class, 'getAllMatriculaCases']);
+    Route::get('consultar-num-casos', [LegalizacionMatriculaSecretariaController::class, 'consultarNumCasos']);
+    Route::post('reasignar-casos', [LegalizacionMatriculaSecretariaController::class, 'reasignarCasos']);
 
     //apis notificaciones para app de pabelco
     Route::get('/notificaciones', [CpuNotificacionMatriculaController::class, 'index']);

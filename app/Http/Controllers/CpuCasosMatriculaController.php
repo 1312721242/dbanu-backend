@@ -125,7 +125,7 @@ class CpuCasosMatriculaController extends Controller
             isset($documentos['estado_titulo']) && $documentos['estado_titulo'] == 11 ||
             isset($documentos['estado_cupo']) && $documentos['estado_cupo'] == 11) {
                 // Actualizar el estado a 14 en la tabla cpu_casos_matricula
-        $casoMatricula->id_estado = 13;
+        $casoMatricula->id_estado = 14;
             $notificacion->titulo = 'Corregir documentos';
         } else {
             $notificacion->titulo = 'Legalización de matrícula satisfactoria';
@@ -328,8 +328,6 @@ public function getAllMatriculaCases($id_periodo)
 
     return collect($cases);
 }
-
-
 
 
 }

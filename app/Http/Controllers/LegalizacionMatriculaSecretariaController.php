@@ -82,54 +82,54 @@ public function upload(Request $request, $id_periodo)
 
     $firstRow = true; // Variable para controlar la primera fila
     foreach ($sheetData as $key => $row) {
-        if ($firstRow) {
-            $firstRow = false;
-            continue; // Saltar la primera fila
-        }
-
-        $data = [
-            'id_periodo' => $id_periodo,
-            'id_registro_nacional' => $row['B'] ?? null,
-            'id_postulacion' => $row['C'] ?? null,
-            'ciudad_campus' => $row['D'] ?? null,
-            'id_sede' => $row['E'] ?? null,
-            'id_facultad' => $row['F'] ?? null,
-            'id_carrera' => $row['G'] ?? null,
-            'email' => $row['H'] ?? null,
-            'cedula' => $row['I'] ?? null,
-            'apellidos' => $row['J'] ?? null,
-            'nombres' => $row['K'] ?? null,
-            'genero' => $row['L'] ?? null,
-            'etnia' => $row['M'] ?? null,
-            'discapacidad' => $row['N'] ?? null,
-            'segmento_persona' => $row['O'] ?? null,
-            'nota_postulacion' => $row['P'] ?? null,
-            'fecha_nacimiento' => null, // Asignar null al campo fecha_nacimiento
-            'nacionalidad' => $row['R'] ?? null,
-            'provincia_reside' => $row['S'] ?? null,
-            'canton_reside' => $row['T'] ?? null,
-            'parroquia_reside' => $row['U'] ?? null,
-            'instancia_postulacion' => $row['V'] ?? null,
-            'instancia_de_asignacion' => $row['W'] ?? null,
-            'gratuidad' => $row['X'] ?? null,
-            'observacion_gratuidad' => $row['Y'] ?? null,
-            'tipo_matricula' => $row['Z'] ?? null,
-        ];
-
-        // Check if record already exists
-        if ($data['id_periodo'] && $data['cedula']) {
-            $existingRecord = CpuLegalizacionMatricula::where('id_periodo', $data['id_periodo'])
-                ->where('cedula', $data['cedula'])
-                ->exists();
-
-            if (!$existingRecord) {
-                $model = new CpuLegalizacionMatricula();
-                $model->fill($data);
-                $model->save();
+            if ($firstRow) {
+                $firstRow = false;
+                continue; // Saltar la primera fila
+            }
+    
+            $data = [
+                'id_periodo' => $id_periodo,
+                'id_registro_nacional' => $row['B'] ?? null,
+                'id_postulacion' => $row['C'] ?? null,
+                'ciudad_campus' => $row['D'] ?? null,
+                'id_sede' => $row['E'] ?? null,
+                'id_facultad' => $row['F'] ?? null,
+                'id_carrera' => $row['G'] ?? null,
+                'email' => $row['H'] ?? null,
+                'cedula' => $row['I'] ?? null,
+                'apellidos' => $row['J'] ?? null,
+                'nombres' => $row['K'] ?? null,
+                'genero' => $row['L'] ?? null,
+                'etnia' => $row['M'] ?? null,
+                'discapacidad' => $row['N'] ?? null,
+                'segmento_persona' => $row['O'] ?? null,
+                'nota_postulacion' => $row['P'] ?? null,
+                'fecha_nacimiento' => null, // Asignar null al campo fecha_nacimiento
+                'nacionalidad' => $row['R'] ?? null,
+                'provincia_reside' => $row['S'] ?? null,
+                'canton_reside' => $row['T'] ?? null,
+                'parroquia_reside' => $row['U'] ?? null,
+                'instancia_postulacion' => $row['V'] ?? null,
+                'instancia_de_asignacion' => $row['W'] ?? null,
+                'gratuidad' => $row['X'] ?? null,
+                'observacion_gratuidad' => $row['Y'] ?? null,
+                'tipo_matricula' => $row['Z']?? null,
+            ];
+    
+            // Check if record already exists
+            if ($data['id_periodo'] && $data['cedula']) {
+                $existingRecord = CpuLegalizacionMatricula::where('id_periodo', $data['id_periodo'])
+                    ->where('cedula', $data['cedula'])
+                    ->exists();
+    
+                if (!$existingRecord) {
+                    $model = new CpuLegalizacionMatricula();
+                    $model->fill($data);
+                    $model->save();
+                }
             }
         }
-    }
-
+   
     return response()->json(['message' => 'Archivo cargado exitosamente']);
 }
 
@@ -204,6 +204,46 @@ public function reasignarCasos(Request $request)
     }
 
     return response()->json(['message' => 'Casos reasignados correctamente']);
+}
+//actualizar el email
+public function actualizarEmail(Request $request, $id)
+{
+    $request->validate([
+        'email' => 'required|email|unique:cpu_legalizacion_matricula,email'
+    ]);
+
+    $email = $request->input('email');
+    $usuario = $request->user()->name;
+    $ip = $request->ip();
+    $nombreequipo = gethostbyaddr($ip);
+    $fecha = now();
+
+    try {
+        DB::table('cpu_legalizacion_matricula')->where('id', $id)->update([
+            'email' => $email,
+            'updated_at' => $fecha,
+        ]);
+
+        DB::table('cpu_auditoria')->insert([
+            'aud_user' => $usuario,
+            'aud_tabla' => 'cpu_legalizacion_matricula',
+            'aud_campo' => 'email',
+            'aud_dataold' => '',
+            'aud_datanew' => $email,
+            'aud_tipo' => 'MODIFICACIÓN',
+            'aud_fecha' => $fecha,
+            'aud_ip' => $ip,
+            'aud_tipoauditoria' => 2,
+            'aud_descripcion' => "MODIFICACIÓN DE EMAIL $email",
+            'aud_nombreequipo' => $nombreequipo,
+            'created_at' => $fecha,
+            'updated_at' => $fecha,
+        ]);
+
+        return response()->json(['success' => true, 'message' => 'Email actualizado correctamente']);
+    } catch (\Throwable $th) {
+        return response()->json(['warning' => true, 'message' => 'No se pudo actualizar el email, ya existe un email']);
+    }
 }
 
 

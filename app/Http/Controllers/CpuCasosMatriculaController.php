@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\Storage;
 use App\Models\CpuNotificacionMatricula;
 use App\Models\CpuLegalizacionMatricula;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Log;
 use Carbon\Carbon;
 
 class CpuCasosMatriculaController extends Controller
@@ -196,37 +197,75 @@ class CpuCasosMatriculaController extends Controller
         return response()->json(['error' => 'Usuario no encontrado'], 404);
     }
 
-    $persona = [
-        "destinatarios" => $usuario->email,
-        "cc" => "",
-        "cco" => "",
-        "asunto" => $asunto,
-        "cuerpo" => $cuerpo
-    ];
+    // $persona = [
+    //     "destinatarios" => $usuario->email,
+    //     "cc" => "",
+    //     "cco" => "",
+    //     "asunto" => $asunto,
+    //     "cuerpo" => $cuerpo
+    // ];
 
-    $datosCodificados = json_encode($persona);
+    // $datosCodificados = json_encode($persona);
 
-    $url = "https://prod-44.westus.logic.azure.com:443/workflows/4046dc46113a4d8bb5da374ef1ee3e32/triggers/manual/paths/invoke?api-version=2016-06-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=lA40KwffEyLqEjVA4uyHaWAHblO77vk2jXYEkjUG08s";
-    $ch = curl_init($url);
+    // $url = "https://prod-44.westus.logic.azure.com:443/workflows/4046dc46113a4d8bb5da374ef1ee3e32/triggers/manual/paths/invoke?api-version=2016-06-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=lA40KwffEyLqEjVA4uyHaWAHblO77vk2jXYEkjUG08s";
+    // $ch = curl_init($url);
 
-    curl_setopt($ch, CURLOPT_CUSTOMREQUEST, "POST");
-    curl_setopt($ch, CURLOPT_POSTFIELDS, $datosCodificados);
-    curl_setopt($ch, CURLOPT_HTTPHEADER, [
-        'Content-Type: application/json',
-        'Content-Length: ' . strlen($datosCodificados)
-    ]);
-    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    // curl_setopt($ch, CURLOPT_CUSTOMREQUEST, "POST");
+    // curl_setopt($ch, CURLOPT_POSTFIELDS, $datosCodificados);
+    // curl_setopt($ch, CURLOPT_HTTPHEADER, [
+    //     'Content-Type: application/json',
+    //     'Content-Length: ' . strlen($datosCodificados)
+    // ]);
+    // curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
 
-    $resultado = curl_exec($ch);
-    $codigoRespuesta = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    // $resultado = curl_exec($ch);
+    // $codigoRespuesta = curl_getinfo($ch, CURLINFO_HTTP_CODE);
 
-    curl_close($ch);
+    // curl_close($ch);
 
-    echo "Respuesta: $resultado, Código: $codigoRespuesta";
+    // echo "Respuesta: $resultado, Código: $codigoRespuesta";
+
+    $recipient = $usuario->email;
+    $subject = $asunto;
+    $body = $cuerpo;
+
+    try {
+        Mail::raw($body, function ($message) use ($recipient, $subject) {
+            $message->to($recipient)
+                ->subject($subject);
+        });
+
+        // El correo se envió correctamente
+        return response()->json(['message' => 'Correo enviado correctamente'], 200);
+    } catch (\Exception $e) {
+        // Error al enviar el correo
+        return response()->json(['message' => 'Error al enviar el correo: ' . $e->getMessage()], 500);
+    }
 
     return response()->json(['message' => 'Documentos revisados y notificación enviada', 'id_notificacion' => $idNotificacion], 200);
 }
 
+//funcion para probar envio de correo
+
+public function sendEmailTest()
+{
+    $recipient = 'junior.zamora@uleam.edu.ec';
+    $subject = 'Asunto del correo';
+    $body = 'Este es el cuerpo del correo en texto plano.';
+
+    try {
+        Mail::raw($body, function ($message) use ($recipient, $subject) {
+            $message->to($recipient)
+                ->subject($subject);
+        });
+
+        // El correo se envió correctamente
+        return response()->json(['message' => 'Correo enviado correctamente'], 200);
+    } catch (\Exception $e) {
+        // Error al enviar el correo
+        return response()->json(['message' => 'Error al enviar el correo: ' . $e->getMessage()], 500);
+    }
+}
 
 //obtener todos los registros de matricula de ese proceso:
 
@@ -328,6 +367,8 @@ public function getAllMatriculaCases($id_periodo)
 
     return collect($cases);
 }
+
+
 
 
 }

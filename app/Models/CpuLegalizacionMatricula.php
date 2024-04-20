@@ -50,6 +50,12 @@ class CpuLegalizacionMatricula extends Model
         'legalizo_matricula',
         'create_at',
         'updated_at',
+        'id_configuracion' ,
+        'estado_identificacion' ,
+        'estado_titulo' ,
+        'estado_cupo' ,
+        'tipo_matricula',
+        
     ];
 
     public function facultad()

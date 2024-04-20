@@ -18,7 +18,7 @@ class CpuCasosMatriculaController extends Controller
         $this->middleware('auth:sanctum');
     }
 
-   
+
     public function index($idUsuario, $idPeriodo)
     {
         // Buscar el id_secretaria por medio del id_usuario
@@ -40,7 +40,7 @@ class CpuCasosMatriculaController extends Controller
         ->join('cpu_sede', 'cpu_legalizacion_matricula.id_sede', '=', 'cpu_sede.id')
         ->where('cpu_casos_matricula.id_secretaria', $idSecretaria)
         ->where('cpu_legalizacion_matricula.id_periodo', $idPeriodo)
-        ->where('cpu_casos_matricula.id_estado', '!=', 14) 
+        ->where('cpu_casos_matricula.id_estado', '!=', 14)
         ->select(
             'cpu_casos_matricula.id as id_caso',
             'cpu_legalizacion_matricula.id as id_legalizacion',
@@ -68,13 +68,13 @@ class CpuCasosMatriculaController extends Controller
             $caso->copia_identificacion = url('Files/' . $caso->copia_identificacion);
             $caso->copia_titulo = url('Files/' . $caso->copia_titulo);
             $caso->copia_aceptacion_cupo = url('Files/' . $caso->copia_aceptacion_cupo);
-        
+
             // Obtener el mensaje de la notificación asociada al caso de matrícula si existe
             $notificacionMatricula = CpuNotificacionMatricula::find($caso->id_notificacion);
             $caso->observacion = $notificacionMatricula ? $notificacionMatricula->mensaje : null;
 
         }
-        
+
         return response()->json($casosMatricula);
 
     }
@@ -125,7 +125,7 @@ class CpuCasosMatriculaController extends Controller
             isset($documentos['estado_titulo']) && $documentos['estado_titulo'] == 11 ||
             isset($documentos['estado_cupo']) && $documentos['estado_cupo'] == 11) {
                 // Actualizar el estado a 14 en la tabla cpu_casos_matricula
-        $casoMatricula->id_estado = 14;
+        $casoMatricula->id_estado = 13;
             $notificacion->titulo = 'Corregir documentos';
         } else {
             $notificacion->titulo = 'Legalización de matrícula satisfactoria';
@@ -173,7 +173,7 @@ class CpuCasosMatriculaController extends Controller
                 if ($casoMatricula->legalizacionMatricula->estado_cupo == 11) {
                     $asunto .= ' Cupo';
                 }
-                
+
         $observacion = '';
         if ($casoMatricula->legalizacionMatricula->estado_identificacion == 11) {
             $observacion .= "El documento de identificación presenta inconvenientes. ";
@@ -254,18 +254,18 @@ public function getMatriculaCases($id_usuario, $id_periodo)
             'lm.instancia_de_asignacion', 'lm.gratuidad', 'lm.observacion_gratuidad',
             'lm.copia_identificacion', 'lm.copia_titulo_acta_grado', 'lm.copia_aceptacion_cupo',
             'lm.id_notificacion', 'lm.listo_para_revision', 'lm.legalizo_matricula', 'lm.created_at',
-            'lm.updated_at', DB::raw('CASE 
-                WHEN lm.estado_identificacion = 10 
-                AND lm.estado_titulo = 10 
+            'lm.updated_at', DB::raw('CASE
+                WHEN lm.estado_identificacion = 10
+                AND lm.estado_titulo = 10
                 AND lm.estado_cupo = 10 THEN \'Legalizado\'
-                WHEN lm.estado_identificacion = 11 
-                OR lm.estado_titulo = 11 
+                WHEN lm.estado_identificacion = 11
+                OR lm.estado_titulo = 11
                 OR lm.estado_cupo = 11 THEN \'En Corrección\'
-                WHEN lm.estado_identificacion IS NULL 
-                AND lm.estado_titulo IS NULL 
+                WHEN lm.estado_identificacion IS NULL
+                AND lm.estado_titulo IS NULL
                 AND lm.estado_cupo IS NULL THEN \'No subió documentos\'
-                WHEN lm.estado_identificacion = 12 
-                AND lm.estado_titulo = 12 
+                WHEN lm.estado_identificacion = 12
+                AND lm.estado_titulo = 12
                 AND lm.estado_cupo = 12 THEN \'Documentos cargados\'
                 ELSE \'En proceso\'
             END AS estado_matricula'),
@@ -297,18 +297,18 @@ public function getAllMatriculaCases($id_periodo)
                     'lm.observacion_gratuidad', 'lm.copia_identificacion', 'lm.copia_titulo_acta_grado',
                     'lm.copia_aceptacion_cupo', 'lm.id_notificacion', 'lm.listo_para_revision',
                     'lm.legalizo_matricula', 'lm.created_at', 'lm.updated_at',
-                    DB::raw('CASE 
-                        WHEN lm.estado_identificacion = 10 
-                        AND lm.estado_titulo = 10 
+                    DB::raw('CASE
+                        WHEN lm.estado_identificacion = 10
+                        AND lm.estado_titulo = 10
                         AND lm.estado_cupo = 10 THEN \'Legalizado\'
-                        WHEN lm.estado_identificacion = 11 
-                        OR lm.estado_titulo = 11 
+                        WHEN lm.estado_identificacion = 11
+                        OR lm.estado_titulo = 11
                         OR lm.estado_cupo = 11 THEN \'En Corrección\'
-                        WHEN lm.estado_identificacion IS NULL 
-                        AND lm.estado_titulo IS NULL 
+                        WHEN lm.estado_identificacion IS NULL
+                        AND lm.estado_titulo IS NULL
                         AND lm.estado_cupo IS NULL THEN \'No subió documentos\'
-                        WHEN lm.estado_identificacion = 12 
-                        AND lm.estado_titulo = 12 
+                        WHEN lm.estado_identificacion = 12
+                        AND lm.estado_titulo = 12
                         AND lm.estado_cupo = 12 THEN \'Documentos cargados\'
                         ELSE \'En proceso\'
                     END AS estado_matricula'),

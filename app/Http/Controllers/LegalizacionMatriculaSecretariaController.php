@@ -289,6 +289,42 @@ public function deleteRecords(Request $request, $id_periodo)
     return response()->json(['message' => 'Registros eliminados correctamente', 'num_registros_eliminados' => $numRegistrosEliminados]);
 }
 
+//actualizar registros discapacidad
+public function updateDiscapacidad(Request $request, $id_periodo)
+{
+    $request->validate([
+        'file' => 'required|mimes:xlsx,xls'
+    ]);
+
+    $file = $request->file('file');
+
+    // Cargar el archivo usando PhpSpreadsheet
+    $reader = new ReaderXlsx();
+    $spreadsheet = $reader->load($file->getRealPath());
+
+    $sheetData = $spreadsheet->getActiveSheet()->toArray(null, true, true, true);
+
+    $updates = [];
+    foreach ($sheetData as $key => $row) {
+        if ($key > 1) { // Ignorar la primera fila
+            $cedula = $row['A']; // Suponiendo que la columna 'A' contiene la cedula
+            $discapacidad = $row['B']; // Suponiendo que la columna 'B' contiene la discapacidad
+
+            // Agregar la actualización a la lista
+            $updates[] = ['id_periodo' => $id_periodo, 'cedula' => $cedula, 'discapacidad' => $discapacidad];
+        }
+    }
+
+    // Actualizar los registros correspondientes en la base de datos
+    $numRegistrosActualizados = 0;
+    foreach ($updates as $update) {
+        $numRegistrosActualizados += CpuLegalizacionMatricula::where('id_periodo', $update['id_periodo'])
+            ->where('cedula', $update['cedula'])
+            ->update(['discapacidad' => $update['discapacidad']]);
+    }
+
+    return response()->json(['message' => 'Registros actualizados correctamente', 'num_registros_actualizados' => $numRegistrosActualizados]);
+}
 
 
 

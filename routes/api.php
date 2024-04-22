@@ -135,6 +135,8 @@ Route::middleware(['auth:sanctum'])->group(function () {
     //subir documentos matricula
     Route::post('upload-pdf', [CpuLegalizacionMatriculaController::class, 'uploadPdf']);
     Route::get('/person-data', [CpuLegalizacionMatriculaController::class, 'getPersonData']);
+    
+
 
     //tomar los casos de matricula
     Route::get('casos-matricula/{idSecretaria}/{idPeriodo}', [CpuCasosMatriculaController::class, 'index']);
@@ -143,6 +145,8 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('matricula-cases-all/{id_periodo}', [CpuCasosMatriculaController::class, 'getAllMatriculaCases']);
     Route::get('consultar-num-casos', [LegalizacionMatriculaSecretariaController::class, 'consultarNumCasos']);
     Route::post('reasignar-casos', [LegalizacionMatriculaSecretariaController::class, 'reasignarCasos']);
+    //eliminar carreras no aperturadas
+    Route::post('delete-carreras-no-aperturadas/{id_periodo}', [LegalizacionMatriculaSecretariaController::class, 'deleteCarrerasNoAperturadas']);
 
     //apis notificaciones para app de pabelco
     Route::get('/notificaciones', [CpuNotificacionMatriculaController::class, 'index']);

@@ -12,7 +12,7 @@ use PhpOffice\PhpSpreadsheet\Shared\Date;
 use App\Models\CpuCasosMatricula;
 use Illuminate\Support\Facades\DB;
 use App\Models\CpuSecretariaMatricula;
-
+use App\Models\CpuSede;
 
 class LegalizacionMatriculaSecretariaController extends Controller
 {
@@ -144,17 +144,25 @@ public function consultarNumCasos()
 
     // Obtener la información de la sede y nombre de cada secretaria
     $secretarias = CpuSecretariaMatricula::all()->keyBy('id');
+    $sedes = CpuSede::all()->keyBy('id'); // Obtener todas las sedes
 
     // Organizar la información en el formato deseado
     $result = [];
     foreach ($casosPorSecretaria as $caso) {
         $sedeId = $secretarias[$caso->id_secretaria]->id_sede;
-        $sedeNombre = 'Sede'; // Obtener el nombre de la sede según el id_sede
+        $sedeNombre = $sedes[$sedeId]->nombre_sede ?? 'Sede Desconocida'; // Obtener el nombre de la sede
 
-        $result[$sedeNombre]['id_secretaria'] = $caso->id_secretaria;
-        $result[$sedeNombre]['Nombresecretaria'] = $secretarias[$caso->id_secretaria]->nombre;
-        $result[$sedeNombre]['casos_nuevos'] = ($caso->id_estado == 13) ? $caso->total : 0;
-        $result[$sedeNombre]['casos_corrección'] = ($caso->id_estado == 15) ? $caso->total : 0;
+        // Verificar si ya existe una entrada para esta sede en el resultado
+        if (!isset($result[$sedeNombre])) {
+            $result[$sedeNombre] = [];
+        }
+
+        $result[$sedeNombre][] = [
+            'id_secretaria' => $caso->id_secretaria,
+            'Nombresecretaria' => $secretarias[$caso->id_secretaria]->nombre,
+            'casos_nuevos' => ($caso->id_estado == 13) ? $caso->total : 0,
+            'casos_corrección' => ($caso->id_estado == 15) ? $caso->total : 0,
+        ];
     }
 
     return response()->json($result);

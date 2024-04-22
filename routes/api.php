@@ -24,6 +24,7 @@ use App\Http\Controllers\CpuFuncionesTextosController;
 use App\Http\Controllers\CpuYearController;
 use App\Http\Controllers\CpuObjetivoNacionalController;
 use App\Http\Controllers\CpuFuenteInformacionController;
+use App\Http\Controllers\CpuEvidenciaController;
 
 
 // Autenticación
@@ -183,5 +184,16 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::put('actualizar-email/{id}', [LegalizacionMatriculaSecretariaController::class, 'actualizarEmail']);
     Route::get('consultar-num-casos', [LegalizacionMatriculaSecretariaController::class, 'consultarNumCasos']);
     Route::post('reasignar-casos', [LegalizacionMatriculaSecretariaController::class, 'reasignarCasos']);
+    Route::post('delete-records/{id_periodo}', [LegalizacionMatriculaSecretariaController::class, 'deleteRecords']);
+
+
+    // Rutas para el controlador CpuEvidenciaController
+    Route::post('/evidencia/agregar', [CpuEvidenciaController::class, 'agregarEvidencia']);
+    Route::put('/evidencia/{id}/actualizar', [CpuEvidenciaController::class, 'actualizarEvidencia']);
+    Route::delete('/evidencia/{id}/eliminar', [CpuEvidenciaController::class, 'eliminarEvidencia']);
+    Route::get('/evidencia', [CpuEvidenciaController::class, 'consultarEvidencias']);
+    Route::get('obtener-informacion/{ano}', [CpuEvidenciaController::class, 'obtenerInformacionPorAno']);
+    Route::get('descargar-archivo/{ano}/{archivo}', [CpuEvidenciaController::class, 'descargarArchivo'])->name('descargar-archivo');
+
 
 });

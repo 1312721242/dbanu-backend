@@ -22,6 +22,14 @@ class CpuObjetivoNacional extends Model
     // Relación con años
     public function year()
     {
-        return $this->belongsTo(CpuYear::class, 'descripcion', 'id');
+        return
+         $this->belongsTo(CpuYear::class, 'descripcion', 'id');
     }
+
+    public function fuentesInformacion()
+    {
+        return $this->hasMany(CpuFuenteInformacion::class, 'id_objetivo');
+    }
+    
+
 }

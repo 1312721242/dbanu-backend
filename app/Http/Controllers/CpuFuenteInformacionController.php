@@ -3,6 +3,10 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Validator;
+use App\Models\CpuFuenteInformacion;
+
 
 class CpuFuenteInformacionController extends Controller
 {
@@ -15,7 +19,8 @@ class CpuFuenteInformacionController extends Controller
 {
     $validator = Validator::make($request->all(), [
         'id_objetivo' => 'required|integer',
-        'descripcion' => 'required|string|unique:cpu_fuente_informacion',
+        'id_sede' => 'required|integer',
+        'descripcion' => 'required|string',
     ]);
 
     if ($validator->fails()) {
@@ -23,14 +28,16 @@ class CpuFuenteInformacionController extends Controller
     }
 
     $id_objetivo = $request->input('id_objetivo');
+    $id_sede = $request->input('id_sede');
     $descripcion = $request->input('descripcion');
     $usuario = $request->user()->name;
     $ip = $request->ip();
     $nombreequipo = gethostbyaddr($ip);
     $fecha = now();
-    try {
+    
         $fuenteInformacion = CpuFuenteInformacion::create([
             'id_objetivo' => $id_objetivo,
+            'id_sede' => $id_sede,
             'descripcion' => $descripcion,
         ]);
 
@@ -44,23 +51,22 @@ class CpuFuenteInformacionController extends Controller
             'aud_fecha' => $fecha,
             'aud_ip' => $ip,
             'aud_tipoauditoria' => 1,
-            'aud_descripcion' => "CREACION DE OBJETIVO $id_objetivo,$descripcion",
+            'aud_descripcion' => "CREACION DE FUENTE DE INFORMACION $id_objetivo,$descripcion,$id_sede",
             'aud_nombreequipo' => $nombreequipo,
             'created_at' =>$fecha,
             'updated_at' =>$fecha,
         ]);
 
-        return response()->json(['success' => true, 'message' => 'Objetivo agregada correctamente']);
-    } catch (\Throwable $th) {
-        return response()->json(['warning' => true, 'message' => 'El Objetivo que intentas registrar ya existe']);
-    }
+        return response()->json(['success' => true, 'message' => 'Fuente de información agregada correctamente']);
+    
 }
 
 public function modificarFuenteInformacion(Request $request, $id)
 {
     $validator = Validator::make($request->all(), [
         'id_objetivo' => 'required|integer',
-        'descripcion' => 'required|string|unique:cpu_fuente_informacion',
+        'id_sede' => 'required|integer',
+        'descripcion' => 'required|string',
     ]);
 
     if ($validator->fails()) {
@@ -68,6 +74,7 @@ public function modificarFuenteInformacion(Request $request, $id)
     }
 
     $id_objetivo = $request->input('id_objetivo');
+    $is_sede = $request->input('is_sede');
     $descripcion = $request->input('descripcion');
     $usuario = $request->user()->name;
     $ip = $request->ip();
@@ -76,6 +83,7 @@ public function modificarFuenteInformacion(Request $request, $id)
     try {
         DB::table('cpu_fuente_informacion')->where('id', $id)->update([
             'id_objetivo' => $id_objetivo,
+            'id_sede' => $id_sede,
             'descripcion' => $descripcion,
         ]);
 
@@ -89,7 +97,7 @@ public function modificarFuenteInformacion(Request $request, $id)
             'aud_fecha' => $fecha,
             'aud_ip' => $ip,
             'aud_tipoauditoria' => 2,
-            'aud_descripcion' => "MODIFICACIÓN DE OBJETIVO $id_objetivo,$descripcion",
+            'aud_descripcion' => "MODIFICACIÓN DE OBJETIVO $id_objetivo,$descripcion,$id_sede",
             'aud_nombreequipo' => $nombreequipo,
             'created_at' =>$fecha,
             'updated_at' =>$fecha,

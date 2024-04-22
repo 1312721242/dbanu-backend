@@ -246,6 +246,42 @@ public function actualizarEmail(Request $request, $id)
     }
 }
 
+public function deleteRecords(Request $request, $id_periodo)
+{
+    $request->validate([
+        'file' => 'required|mimes:xlsx,xls'
+    ]);
+
+    $file = $request->file('file');
+
+    // Cargar el archivo usando PhpSpreadsheet
+    $reader = new ReaderXlsx();
+    $spreadsheet = $reader->load($file->getRealPath());
+
+    $sheetData = $spreadsheet->getActiveSheet()->toArray(null, true, true, true);
+
+    $identifications = [];
+    foreach ($sheetData as $key => $row) {
+        if ($key > 1) { // Ignorar la primera fila
+            $cedula = $row['A']; // Suponiendo que la columna 'B' contiene la cedula
+
+            // Agregar la identificación a la lista
+            $identifications[] = ['id_periodo' => $id_periodo, 'cedula' => $cedula];
+        }
+    }
+
+    // Eliminar los registros correspondientes de la base de datos
+    $numRegistrosEliminados = 0;
+    foreach ($identifications as $identification) {
+        $numRegistrosEliminados += CpuLegalizacionMatricula::where('id_periodo', $identification['id_periodo'])
+            ->where('cedula', $identification['cedula'])
+            ->delete();
+    }
+
+    return response()->json(['message' => 'Registros eliminados correctamente', 'num_registros_eliminados' => $numRegistrosEliminados]);
+}
+
+
 
 
 }

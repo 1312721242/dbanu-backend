@@ -21,8 +21,10 @@ use App\Http\Controllers\CpuCasosMatriculaController;
 use App\Http\Controllers\CpuNotificacionMatriculaController;
 use App\Http\Controllers\CpuTextosMensajesController;
 use App\Http\Controllers\CpuFuncionesTextosController;
-
-
+use App\Http\Controllers\CpuYearController;
+use App\Http\Controllers\CpuObjetivoNacionalController;
+use App\Http\Controllers\CpuFuenteInformacionController;
+use App\Http\Controllers\CpuEvidenciaController;
 
 
 // Autenticación
@@ -30,7 +32,7 @@ Route::post('/login', [AuthController::class, 'login']);
 Route::post('/loginapp', [AuthController::class, 'loginApp']);
 Route::post('/logout', [AuthController::class, 'logout'])->middleware('auth:sanctum');
 
-Route::get('legalizacion-matricula/export-template', [LegalizacionMatriculaSecretariaController::class, 'exportTemplate']);
+// Route::get('legalizacion-matricula/export-template', [LegalizacionMatriculaSecretariaController::class, 'exportTemplate']);
 Route::middleware(['auth:sanctum'])->group(function () {
     // Menú
     Route::get('/menu', [MenuController::class, 'index']);
@@ -42,8 +44,8 @@ Route::middleware(['auth:sanctum'])->group(function () {
     });
 
     //rutas para manejar el excel de subida de cupos asignados para matriculas
-    //ruta para exportar la platilla de excel
-    // Route::get('legalizacion-matricula/export-template', [LegalizacionMatriculaSecretariaController::class, 'exportTemplate']);
+    // ruta para exportar la platilla de excel
+    Route::get('legalizacion-matricula/export-template', [LegalizacionMatriculaSecretariaController::class, 'exportTemplate']);
 
     // Ruta para subir el archivo con la data de los asignados para que se matriculen
     Route::post('legalizacion-matricula/upload/{id_periodo}', [LegalizacionMatriculaSecretariaController::class, 'upload']);
@@ -67,6 +69,25 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::delete('/eliminar-facultad/{id}', [CpuFacultadController::class, 'eliminarFacultad']);
     Route::get('/consultar-facultades', [CpuFacultadController::class, 'consultarFacultades']);
     Route::get('/consultar-facultades-sede/{id_sede}', [CpuFacultadController::class, 'consultarFacultadesporSede']);
+
+    // años
+    Route::post('/agregar-year', [CpuYearController::class, 'agregarYear']);
+    Route::put('/modificar-year/{id}', [CpuYearController::class, 'modificarYear']);
+    Route::delete('/eliminar-year/{id}', [CpuYearController::class, 'eliminarYear']);
+    Route::get('/consultar-years', [CpuYearController::class, 'consultarYear']);
+
+    // Objetivo Nacional
+    Route::post('/agregar-objetivo', [CpuObjetivoNacionalController::class, 'agregarObjetivoNacional']);
+    Route::put('/modificar-objetivo/{id}', [CpuObjetivoNacionalController::class, 'modificarObjetivoNacional']);
+    Route::delete('/eliminar-objetivo/{id}', [CpuObjetivoNacionalController::class, 'eliminarObjetivoNacional']);
+    Route::get('/consultar-objetivos', [CpuObjetivoNacionalController::class, 'consultarObjetivoNacional']);
+
+    // fuentes de informacion
+    Route::post('/agregar-fuente-informacion', [CpuFuenteInformacionController::class, 'agregarFuenteInformacion']);
+    Route::put('/modificar-fuente-informacion/{id}', [CpuFuenteInformacionController::class, 'modificarFuenteInformacion']);
+    Route::delete('/eliminar-fuente-informacion/{id}', [CpuFuenteInformacionController::class, 'eliminarFuenteInformacion']);
+    Route::get('/consultar-fuente-informacion', [CpuFuenteInformacionController::class, 'consultarFuenteInformacion']);
+
 
     // Carrera
     Route::post('/agregar-carrera', [CpuCarreraController::class, 'agregarCarrera']);
@@ -135,18 +156,13 @@ Route::middleware(['auth:sanctum'])->group(function () {
     //subir documentos matricula
     Route::post('upload-pdf', [CpuLegalizacionMatriculaController::class, 'uploadPdf']);
     Route::get('/person-data', [CpuLegalizacionMatriculaController::class, 'getPersonData']);
-    
-
 
     //tomar los casos de matricula
     Route::get('casos-matricula/{idSecretaria}/{idPeriodo}', [CpuCasosMatriculaController::class, 'index']);
     Route::post('casos-matricula/{idCaso}/revision-documentos', [CpuCasosMatriculaController::class, 'revisionDocumentos']);
     Route::get('matricula-cases/{id_usuario}/{id_periodo}', [CpuCasosMatriculaController::class, 'getMatriculaCases']);
     Route::get('matricula-cases-all/{id_periodo}', [CpuCasosMatriculaController::class, 'getAllMatriculaCases']);
-    Route::get('consultar-num-casos', [LegalizacionMatriculaSecretariaController::class, 'consultarNumCasos']);
-    Route::post('reasignar-casos', [LegalizacionMatriculaSecretariaController::class, 'reasignarCasos']);
-    //eliminar carreras no aperturadas
-    Route::post('delete-carreras-no-aperturadas/{id_periodo}', [LegalizacionMatriculaSecretariaController::class, 'deleteCarrerasNoAperturadas']);
+    
 
     //apis notificaciones para app de pabelco
     Route::get('/notificaciones', [CpuNotificacionMatriculaController::class, 'index']);
@@ -163,5 +179,21 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('/funciones-textos/{id}', [CpuFuncionesTextosController::class, 'show']);
     Route::put('/funciones-textos/{id}', [CpuFuncionesTextosController::class, 'update']);
     Route::delete('/funciones-textos/{id}', [CpuFuncionesTextosController::class, 'destroy']);
+
+    //actualizar email
+    Route::put('actualizar-email/{id}', [LegalizacionMatriculaSecretariaController::class, 'actualizarEmail']);
+    Route::get('consultar-num-casos', [LegalizacionMatriculaSecretariaController::class, 'consultarNumCasos']);
+    Route::post('reasignar-casos', [LegalizacionMatriculaSecretariaController::class, 'reasignarCasos']);
+    Route::post('delete-records/{id_periodo}', [LegalizacionMatriculaSecretariaController::class, 'deleteRecords']);
+
+
+    // Rutas para el controlador CpuEvidenciaController
+    Route::post('/evidencia/agregar', [CpuEvidenciaController::class, 'agregarEvidencia']);
+    Route::put('/evidencia/{id}/actualizar', [CpuEvidenciaController::class, 'actualizarEvidencia']);
+    Route::delete('/evidencia/{id}/eliminar', [CpuEvidenciaController::class, 'eliminarEvidencia']);
+    Route::get('/evidencia', [CpuEvidenciaController::class, 'consultarEvidencias']);
+    Route::get('obtener-informacion/{ano}', [CpuEvidenciaController::class, 'obtenerInformacionPorAno']);
+    Route::get('descargar-archivo/{ano}/{archivo}', [CpuEvidenciaController::class, 'descargarArchivo'])->name('descargar-archivo');
+
 
 });

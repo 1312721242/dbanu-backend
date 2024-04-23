@@ -206,6 +206,42 @@ public function consultarNumCasos()
 }
 
 
+public function consultarNumCasosPorSecretaria()
+{
+    // Consulta para obtener el número de casos pendientes agrupados por secretaria
+    $casosPorSecretaria = CpuCasosMatricula::select('id_secretaria', 'id_estado', DB::raw('count(*) as total'))
+        ->whereIn('id_estado', [13, 15])
+        ->groupBy('id_secretaria', 'id_estado')
+        ->get();
+
+    // Obtener la información de la sede y nombre de cada secretaria
+    $secretarias = CpuSecretariaMatricula::all()->keyBy('id');
+    $sedes = CpuSede::all()->keyBy('id'); // Obtener todas las sedes
+
+    // Organizar la información en el formato deseado
+    $result = [];
+    foreach ($casosPorSecretaria as $caso) {
+        $sedeId = $secretarias[$caso->id_secretaria]->id_sede;
+        $sedeNombre = $sedes[$sedeId]->nombre_sede ?? 'Sede Desconocida'; // Obtener el nombre de la sede
+
+        // Verificar si ya existe una entrada para esta sede en el resultado
+        if (!isset($result[$sedeNombre])) {
+            $result[$sedeNombre] = [];
+        }
+
+        $result[$sedeNombre][] = [
+            'id_secretaria' => $caso->id_secretaria,
+            'Nombresecretaria' => $secretarias[$caso->id_secretaria]->nombre,
+            'casos_nuevos' => ($caso->id_estado == 13) ? $caso->total : 0,
+            'casos_corrección' => ($caso->id_estado == 15) ? $caso->total : 0,
+        ];
+    }
+
+    return response()->json($result);
+}
+
+
+
 //funcion para reasignar casos
 
 public function reasignarCasos(Request $request)
@@ -290,7 +326,7 @@ public function actualizarEmail(Request $request, $id)
         return response()->json(['warning' => true, 'message' => 'No se pudo actualizar el email, ya existe un email']);
     }
 }
-
+//elimina los registros de estudiantes de matricula, por ejemplo los que rechazan cupo o tiene dobles cupos en universidades diferentes, no aceptan reasignacion
 public function deleteRecords(Request $request, $id_periodo)
 {
     $request->validate([
@@ -324,6 +360,47 @@ public function deleteRecords(Request $request, $id_periodo)
     }
 
     return response()->json(['message' => 'Registros eliminados correctamente', 'num_registros_eliminados' => $numRegistrosEliminados]);
+}
+
+//consultar estudiantes que han subido documentos
+public function consultarEstudiantes($id_periodo)
+{
+    // Consulta para obtener el número de estudiantes agrupados por sede y secretaria
+    $estudiantes = CpuLegalizacionMatricula::select('id_sede', 'id_carrera', 'apellidos', 'nombres', 'email', 'copia_identificacion', 'copia_titulo_acta_grado', 'copia_aceptacion_cupo')
+        ->where('id_periodo', $id_periodo)
+        ->where(function($query) {
+            $query->whereNotNull('copia_identificacion')
+                  ->orWhereNotNull('copia_titulo_acta_grado')
+                  ->orWhereNotNull('copia_aceptacion_cupo');
+        })
+        ->get();
+
+    // Obtener la información de la sede
+    $sedes = CpuSede::all()->keyBy('id'); // Obtener todas las sedes
+
+    // Organizar la información en el formato deseado
+    $result = [];
+    foreach ($estudiantes as $estudiante) {
+        $sedeNombre = $sedes[$estudiante->id_sede]->nombre_sede ?? 'Sede Desconocida'; // Obtener el nombre de la sede
+
+        // Verificar si ya existe una entrada para esta sede en el resultado
+        if (!isset($result[$sedeNombre])) {
+            $result[$sedeNombre] = [];
+        }
+
+        $result[$sedeNombre][] = [
+            'id_sede' => $estudiante->id_sede,
+            'id_carrera' => $estudiante->id_carrera,
+            'apellidos' => $estudiante->apellidos,
+            'nombres' => $estudiante->nombres,
+            'email' => $estudiante->email,
+            'copia_identificacion' => $estudiante->copia_identificacion,
+            'copia_titulo_acta_grado' => $estudiante->copia_titulo_acta_grado,
+            'copia_aceptacion_cupo' => $estudiante->copia_aceptacion_cupo,
+        ];
+    }
+
+    return response()->json($result);
 }
 
 

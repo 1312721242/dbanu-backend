@@ -17,76 +17,76 @@ use App\Models\CpuSede;
 class LegalizacionMatriculaSecretariaController extends Controller
 {
     public function exportTemplate()
-{
-    $spreadsheet = new Spreadsheet();
-    $sheet = $spreadsheet->getActiveSheet();
+    {
+        $spreadsheet = new Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
 
-    $headers = [
-        'id_periodo (integer)',
-        'id_registro_nacional (text)',
-        'id_postulacion (integer)',
-        'ciudad_campus (text)',
-        'id_sede (integer)',
-        'id_facultad (integer)',
-        'id_carrera (integer)',
-        'email (text)',
-        'cedula (text)',
-        'apellidos (text)',
-        'nombres (text)',
-        'genero (text)',
-        'etnia (text)',
-        'discapacidad (text)',
-        'segmento_persona (text)',
-        'nota_postulacion (text)',
-        'fecha_nacimiento (date)',
-        'nacionalidad (text)',
-        'provincia_reside (text)',
-        'canton_reside (text)',
-        'parroquia_reside (text)',
-        'instancia_postulacion (text)',
-        'instancia_de_asignacion (text)',
-        'gratuidad (text)',
-        'observacion_gratuidad (text)',
-        'tipo_matricula'
-    ];
+        $headers = [
+            'id_periodo (integer)',
+            'id_registro_nacional (text)',
+            'id_postulacion (integer)',
+            'ciudad_campus (text)',
+            'id_sede (integer)',
+            'id_facultad (integer)',
+            'id_carrera (integer)',
+            'email (text)',
+            'cedula (text)',
+            'apellidos (text)',
+            'nombres (text)',
+            'genero (text)',
+            'etnia (text)',
+            'discapacidad (text)',
+            'segmento_persona (text)',
+            'nota_postulacion (text)',
+            'fecha_nacimiento (date)',
+            'nacionalidad (text)',
+            'provincia_reside (text)',
+            'canton_reside (text)',
+            'parroquia_reside (text)',
+            'instancia_postulacion (text)',
+            'instancia_de_asignacion (text)',
+            'gratuidad (text)',
+            'observacion_gratuidad (text)',
+            'tipo_matricula'
+        ];
 
-    // Set headers
-    $column = 'A';
-    foreach ($headers as $header) {
-        $sheet->setCellValue($column . '1', $header);
-        $column++;
+        // Set headers
+        $column = 'A';
+        foreach ($headers as $header) {
+            $sheet->setCellValue($column . '1', $header);
+            $column++;
+        }
+
+        $writer = new Xlsx($spreadsheet);
+        $filename = 'legalizacion_matricula_template.xlsx';
+        $writer->save($filename);
+
+        // Devolver la respuesta de descarga y eliminar el archivo después de enviarlo
+        return response()->download($filename)->deleteFileAfterSend(true);
     }
 
-    $writer = new Xlsx($spreadsheet);
-    $filename = 'legalizacion_matricula_template.xlsx';
-    $writer->save($filename);
 
-    // Devolver la respuesta de descarga y eliminar el archivo después de enviarlo
-    return response()->download($filename)->deleteFileAfterSend(true);
-}
+    public function upload(Request $request, $id_periodo)
+    {
+        $request->validate([
+            'file' => 'required|mimes:xlsx,xls'
+        ]);
 
+        $file = $request->file('file');
 
-public function upload(Request $request, $id_periodo)
-{
-    $request->validate([
-        'file' => 'required|mimes:xlsx,xls'
-    ]);
+        // Cargar el archivo usando PhpSpreadsheet
+        $reader = new \PhpOffice\PhpSpreadsheet\Reader\Xlsx();
+        $spreadsheet = $reader->load($file->getRealPath());
 
-    $file = $request->file('file');
+        $sheetData = $spreadsheet->getActiveSheet()->toArray(null, true, true, true);
 
-    // Cargar el archivo usando PhpSpreadsheet
-    $reader = new \PhpOffice\PhpSpreadsheet\Reader\Xlsx();
-    $spreadsheet = $reader->load($file->getRealPath());
-
-    $sheetData = $spreadsheet->getActiveSheet()->toArray(null, true, true, true);
-
-    $firstRow = true; // Variable para controlar la primera fila
-    foreach ($sheetData as $key => $row) {
+        $firstRow = true; // Variable para controlar la primera fila
+        foreach ($sheetData as $key => $row) {
             if ($firstRow) {
                 $firstRow = false;
                 continue; // Saltar la primera fila
             }
-    
+
             $data = [
                 'id_periodo' => $id_periodo,
                 'id_registro_nacional' => $row['B'] ?? null,
@@ -113,15 +113,15 @@ public function upload(Request $request, $id_periodo)
                 'instancia_de_asignacion' => $row['W'] ?? null,
                 'gratuidad' => $row['X'] ?? null,
                 'observacion_gratuidad' => $row['Y'] ?? null,
-                'tipo_matricula' => $row['Z']?? null,
+                'tipo_matricula' => $row['Z'] ?? null,
             ];
-    
+
             // Check if record already exists
             if ($data['id_periodo'] && $data['cedula']) {
                 $existingRecord = CpuLegalizacionMatricula::where('id_periodo', $data['id_periodo'])
                     ->where('cedula', $data['cedula'])
                     ->exists();
-    
+
                 if (!$existingRecord) {
                     $model = new CpuLegalizacionMatricula();
                     $model->fill($data);
@@ -129,240 +129,288 @@ public function upload(Request $request, $id_periodo)
                 }
             }
         }
-   
-    return response()->json(['message' => 'Archivo cargado exitosamente']);
-}
 
-//eliminar registros de carreras no aperturadas
-public function deleteCarrerasNoAperturadas(Request $request, $id_periodo)
-{
-    $request->validate([
-        'file' => 'required|mimes:xlsx,xls'
-    ]);
-
-    $file = $request->file('file');
-
-    // Cargar el archivo usando PhpSpreadsheet
-    $reader = new ReaderXlsx();
-    $spreadsheet = $reader->load($file->getRealPath());
-
-    $sheetData = $spreadsheet->getActiveSheet()->toArray(null, true, true, true);
-
-    $identifications = [];
-    foreach ($sheetData as $key => $row) {
-        if ($key > 1) { // Ignorar la primera fila
-            $cedula = $row['A']; // Suponiendo que la columna 'B' contiene la cedula
-
-            // Agregar la identificación a la lista
-            $identifications[] = ['id_periodo' => $id_periodo, 'cedula' => $cedula];
-        }
+        return response()->json(['message' => 'Archivo cargado exitosamente']);
     }
 
-    // Eliminar los registros correspondientes de la base de datos
-    $numRegistrosEliminados = 0;
-    foreach ($identifications as $identification) {
-        $numRegistrosEliminados += CpuLegalizacionMatricula::where('id_periodo', $identification['id_periodo'])
-            ->where('cedula', $identification['cedula'])
-            ->delete();
-    }
-
-    return response()->json(['message' => 'Registros de Carreras no aperturadas eliminados correctamente', 'num_registros_eliminados' => $numRegistrosEliminados]);
-}
-
-
-//cuenta casos matricula
-public function consultarNumCasos()
-{
-    // Consulta para obtener el número de casos pendientes agrupados por sede y secretaria
-    $casosPorSecretaria = CpuCasosMatricula::select('id_secretaria', 'id_estado', DB::raw('count(*) as total'))
-        ->whereIn('id_estado', [13, 15])
-        ->groupBy('id_secretaria', 'id_estado')
-        ->get();
-
-    // Obtener la información de la sede y nombre de cada secretaria
-    $secretarias = CpuSecretariaMatricula::all()->keyBy('id');
-    $sedes = CpuSede::all()->keyBy('id'); // Obtener todas las sedes
-
-    // Organizar la información en el formato deseado
-    $result = [];
-    foreach ($casosPorSecretaria as $caso) {
-        $sedeId = $secretarias[$caso->id_secretaria]->id_sede;
-        $sedeNombre = $sedes[$sedeId]->nombre_sede ?? 'Sede Desconocida'; // Obtener el nombre de la sede
-
-        // Verificar si ya existe una entrada para esta sede en el resultado
-        if (!isset($result[$sedeNombre])) {
-            $result[$sedeNombre] = [];
-        }
-
-        $result[$sedeNombre][] = [
-            'id_secretaria' => $caso->id_secretaria,
-            'Nombresecretaria' => $secretarias[$caso->id_secretaria]->nombre,
-            'casos_nuevos' => ($caso->id_estado == 13) ? $caso->total : 0,
-            'casos_corrección' => ($caso->id_estado == 15) ? $caso->total : 0,
-        ];
-    }
-
-    return response()->json($result);
-}
-
-
-//funcion para reasignar casos
-
-public function reasignarCasos(Request $request)
-{
-    $request->validate([
-        'id_sede' => 'required|integer',
-        'id_periodo' => 'required|integer',
-    ]);
-
-    // Consultar el número total de casos con estado 13
-    $numCasosEstado13 = CpuCasosMatricula::where('id_estado', 13)->count();
-
-    // Consultar el número de secretarias habilitadas en la sede
-    $numSecretariasHabilitadas = CpuSecretariaMatricula::where('id_sede', $request->id_sede)
-        ->where('habilitada', true)
-        ->count();
-
-    // Verificar que hay al menos una secretaria habilitada para reasignar casos
-    if ($numSecretariasHabilitadas == 0) {
-        return response()->json(['message' => 'No hay secretarias habilitadas para reasignar casos'], 400);
-    }
-
-    // Calcular el número de casos a reasignar por secretaria
-    $casosPorSecretaria = $numCasosEstado13 / $numSecretariasHabilitadas;
-
-    // Obtener las secretarias habilitadas de la sede
-    $secretariasHabilitadas = CpuSecretariaMatricula::where('id_sede', $request->id_sede)
-        ->where('habilitada', true)
-        ->pluck('id');
-
-    // Reasignar casos a las secretarias
-    $casos = CpuCasosMatricula::where('id_estado', 13)
-        ->whereIn('id_secretaria', $secretariasHabilitadas)
-        ->orderBy('fecha_creacion', 'ASC')
-        ->limit($casosPorSecretaria)
-        ->get();
-
-    foreach ($casos as $caso) {
-        $caso->id_secretaria = $request->id_secretaria;
-        $caso->save();
-    }
-
-    return response()->json(['message' => 'Casos reasignados correctamente']);
-}
-//actualizar el email
-public function actualizarEmail(Request $request, $id)
-{
-    $request->validate([
-        'email' => 'required|email|unique:cpu_legalizacion_matricula,email'
-    ]);
-
-    $email = $request->input('email');
-    $usuario = $request->user()->name;
-    $ip = $request->ip();
-    $nombreequipo = gethostbyaddr($ip);
-    $fecha = now();
-
-    try {
-        DB::table('cpu_legalizacion_matricula')->where('id', $id)->update([
-            'email' => $email,
-            'updated_at' => $fecha,
+    //eliminar registros de carreras no aperturadas
+    public function deleteCarrerasNoAperturadas(Request $request, $id_periodo)
+    {
+        $request->validate([
+            'file' => 'required|mimes:xlsx,xls'
         ]);
 
-        DB::table('cpu_auditoria')->insert([
-            'aud_user' => $usuario,
-            'aud_tabla' => 'cpu_legalizacion_matricula',
-            'aud_campo' => 'email',
-            'aud_dataold' => '',
-            'aud_datanew' => $email,
-            'aud_tipo' => 'MODIFICACIÓN',
-            'aud_fecha' => $fecha,
-            'aud_ip' => $ip,
-            'aud_tipoauditoria' => 2,
-            'aud_descripcion' => "MODIFICACIÓN DE EMAIL $email",
-            'aud_nombreequipo' => $nombreequipo,
-            'created_at' => $fecha,
-            'updated_at' => $fecha,
+        $file = $request->file('file');
+
+        // Cargar el archivo usando PhpSpreadsheet
+        $reader = new ReaderXlsx();
+        $spreadsheet = $reader->load($file->getRealPath());
+
+        $sheetData = $spreadsheet->getActiveSheet()->toArray(null, true, true, true);
+
+        $identifications = [];
+        foreach ($sheetData as $key => $row) {
+            if ($key > 1) { // Ignorar la primera fila
+                $cedula = $row['A']; // Suponiendo que la columna 'B' contiene la cedula
+
+                // Agregar la identificación a la lista
+                $identifications[] = ['id_periodo' => $id_periodo, 'cedula' => $cedula];
+            }
+        }
+
+        // Eliminar los registros correspondientes de la base de datos
+        $numRegistrosEliminados = 0;
+        foreach ($identifications as $identification) {
+            $numRegistrosEliminados += CpuLegalizacionMatricula::where('id_periodo', $identification['id_periodo'])
+                ->where('cedula', $identification['cedula'])
+                ->delete();
+        }
+
+        return response()->json(['message' => 'Registros de Carreras no aperturadas eliminados correctamente', 'num_registros_eliminados' => $numRegistrosEliminados]);
+    }
+
+
+    //cuenta casos matricula
+    public function consultarNumCasos()
+    {
+        // Consulta para obtener el número de casos pendientes agrupados por sede y secretaria
+        $casosPorSecretaria = CpuCasosMatricula::select('id_secretaria', 'id_estado', DB::raw('count(*) as total'))
+            ->whereIn('id_estado', [13, 15])
+            ->groupBy('id_secretaria', 'id_estado')
+            ->get();
+
+        // Obtener la información de la sede y nombre de cada secretaria
+        $secretarias = CpuSecretariaMatricula::all()->keyBy('id');
+        $sedes = CpuSede::all()->keyBy('id'); // Obtener todas las sedes
+
+        // Organizar la información en el formato deseado
+        $result = [];
+        foreach ($casosPorSecretaria as $caso) {
+            $sedeId = $secretarias[$caso->id_secretaria]->id_sede;
+            $sedeNombre = $sedes[$sedeId]->nombre_sede ?? 'Sede Desconocida'; // Obtener el nombre de la sede
+
+            // Verificar si ya existe una entrada para esta sede en el resultado
+            if (!isset($result[$sedeNombre])) {
+                $result[$sedeNombre] = [];
+            }
+
+            $result[$sedeNombre][] = [
+                'id_secretaria' => $caso->id_secretaria,
+                'Nombresecretaria' => $secretarias[$caso->id_secretaria]->nombre,
+                'casos_nuevos' => ($caso->id_estado == 13) ? $caso->total : 0,
+                'casos_corrección' => ($caso->id_estado == 15) ? $caso->total : 0,
+            ];
+        }
+
+        return response()->json($result);
+    }
+
+
+    public function consultarNumCasosPorSecretaria()
+    {
+        // Consulta para obtener el número de casos pendientes agrupados por secretaria
+        $casosPorSecretaria = CpuCasosMatricula::select('id_secretaria', 'id_estado', DB::raw('count(*) as total'))
+            ->whereIn('id_estado', [13, 15])
+            ->groupBy('id_secretaria', 'id_estado')
+            ->get();
+
+        // Obtener la información de la sede y nombre de cada secretaria
+        $secretarias = CpuSecretariaMatricula::all()->keyBy('id');
+        $sedes = CpuSede::all()->keyBy('id'); // Obtener todas las sedes
+
+        // Organizar la información en el formato deseado
+        $result = [];
+        foreach ($casosPorSecretaria as $caso) {
+            $sedeId = $secretarias[$caso->id_secretaria]->id_sede;
+            $sedeNombre = $sedes[$sedeId]->nombre_sede ?? 'Sede Desconocida'; // Obtener el nombre de la sede
+
+            // Verificar si ya existe una entrada para esta sede en el resultado
+            if (!isset($result[$sedeNombre])) {
+                $result[$sedeNombre] = [];
+            }
+
+            $result[$sedeNombre][] = [
+                'id_secretaria' => $caso->id_secretaria,
+                'Nombresecretaria' => $secretarias[$caso->id_secretaria]->nombre,
+                'casos_nuevos' => ($caso->id_estado == 13) ? $caso->total : 0,
+                'casos_corrección' => ($caso->id_estado == 15) ? $caso->total : 0,
+            ];
+        }
+
+        return response()->json($result);
+    }
+
+
+
+    //funcion para reasignar casos
+
+    public function reasignarCasos(Request $request)
+    {
+        $request->validate([
+            'id_sede' => 'required|integer',
+            'id_periodo' => 'required|integer',
         ]);
 
-        return response()->json(['success' => true, 'message' => 'Email actualizado correctamente']);
-    } catch (\Throwable $th) {
-        return response()->json(['warning' => true, 'message' => 'No se pudo actualizar el email, ya existe un email']);
+        // Consultar el número total de casos con estado 13
+        $numCasosEstado13 = CpuCasosMatricula::where('id_estado', 13)->count();
+
+        // Consultar el número de secretarias habilitadas en la sede
+        $numSecretariasHabilitadas = CpuSecretariaMatricula::where('id_sede', $request->id_sede)
+            ->where('habilitada', true)
+            ->count();
+
+        // Verificar que hay al menos una secretaria habilitada para reasignar casos
+        if ($numSecretariasHabilitadas == 0) {
+            return response()->json(['message' => 'No hay secretarias habilitadas para reasignar casos'], 400);
+        }
+
+        // Calcular el número de casos a reasignar por secretaria
+        $casosPorSecretaria = $numCasosEstado13 / $numSecretariasHabilitadas;
+
+        // Obtener las secretarias habilitadas de la sede
+        $secretariasHabilitadas = CpuSecretariaMatricula::where('id_sede', $request->id_sede)
+            ->where('habilitada', true)
+            ->pluck('id');
+
+        // Reasignar casos a las secretarias
+        $casos = CpuCasosMatricula::where('id_estado', 13)
+            ->whereIn('id_secretaria', $secretariasHabilitadas)
+            ->orderBy('fecha_creacion', 'ASC')
+            ->limit($casosPorSecretaria)
+            ->get();
+
+        foreach ($casos as $caso) {
+            $caso->id_secretaria = $request->id_secretaria;
+            $caso->save();
+        }
+
+        return response()->json(['message' => 'Casos reasignados correctamente']);
     }
-}
 
-public function deleteRecords(Request $request, $id_periodo)
-{
-    $request->validate([
-        'file' => 'required|mimes:xlsx,xls'
-    ]);
+    //actualizar el email
+    public function actualizarEmail(Request $request, $id)
+    {
+        $request->validate([
+            'email' => 'required|string|required|string|max:50',
+            'cedula' => 'required|string|required|string|max:15',
+            'apellidos' => 'required|string|required|string|max:50',
+            'nombres' => 'required|string|required|string|max:50'
+        ]);
 
-    $file = $request->file('file');
+        $email = $request->input('email');
+        $cedula = $request->input('cedula');
+        $apellidos = $request->input('apellidos');
+        $nombres = $request->input('nombres');
+        $usuario = $request->user()->name;
+        $ip = $request->ip();
+        $nombreequipo = gethostbyaddr($ip);
+        $fecha = now();
 
-    // Cargar el archivo usando PhpSpreadsheet
-    $reader = new ReaderXlsx();
-    $spreadsheet = $reader->load($file->getRealPath());
+        try {
+            DB::table('cpu_legalizacion_matricula')->where('id', $id)->update([
+                'email' => $email,
+                'cedula' => $cedula,
+                'apellidos' => $apellidos,
+                'nombres' => $nombres,
+                'updated_at' => $fecha,
+            ]);
 
-    $sheetData = $spreadsheet->getActiveSheet()->toArray(null, true, true, true);
+            DB::table('cpu_auditoria')->insert([
+                'aud_user' => $usuario,
+                'aud_tabla' => 'cpu_legalizacion_matricula',
+                'aud_campo' => 'email,cedula,apellidos,nombres',
+                'aud_dataold' => '',
+                'aud_datanew' => $email, $cedula, $apellidos, $nombres,
+                'aud_tipo' => 'MODIFICACIÓN',
+                'aud_fecha' => $fecha,
+                'aud_ip' => $ip,
+                'aud_tipoauditoria' => 2,
+                'aud_descripcion' => "MODIFICACIÓN DE DATOS PERSONALES $email $cedula $apellidos $nombres",
+                'aud_nombreequipo' => $nombreequipo,
+                'created_at' => $fecha,
+                'updated_at' => $fecha,
+            ]);
 
-    $identifications = [];
-    foreach ($sheetData as $key => $row) {
-        if ($key > 1) { // Ignorar la primera fila
-            $cedula = $row['A']; // Suponiendo que la columna 'B' contiene la cedula
-
-            // Agregar la identificación a la lista
-            $identifications[] = ['id_periodo' => $id_periodo, 'cedula' => $cedula];
+            return response()->json(['success' => true, 'message' => 'Datos persomasles actualizado correctamente']);
+        } catch (\Throwable $th) {
+            return response()->json(['warning' => true, 'message' => 'No se pudo actualizar los datos persomasles, ya existe un email']);
         }
     }
 
-    // Eliminar los registros correspondientes de la base de datos
-    $numRegistrosEliminados = 0;
-    foreach ($identifications as $identification) {
-        $numRegistrosEliminados += CpuLegalizacionMatricula::where('id_periodo', $identification['id_periodo'])
-            ->where('cedula', $identification['cedula'])
-            ->delete();
-    }
+    //elimina los registros de estudiantes de matricula, por ejemplo los que rechazan cupo o tiene dobles cupos en universidades diferentes, no aceptan reasignacion
+    public function deleteRecords(Request $request, $id_periodo)
+    {
+        $request->validate([
+            'file' => 'required|mimes:xlsx,xls'
+        ]);
 
-    return response()->json(['message' => 'Registros eliminados correctamente', 'num_registros_eliminados' => $numRegistrosEliminados]);
-}
+        $file = $request->file('file');
 
-//actualizar registros discapacidad
-public function updateDiscapacidad(Request $request, $id_periodo)
-{
-    $request->validate([
-        'file' => 'required|mimes:xlsx,xls'
-    ]);
+        // Cargar el archivo usando PhpSpreadsheet
+        $reader = new ReaderXlsx();
+        $spreadsheet = $reader->load($file->getRealPath());
 
-    $file = $request->file('file');
+        $sheetData = $spreadsheet->getActiveSheet()->toArray(null, true, true, true);
 
-    // Cargar el archivo usando PhpSpreadsheet
-    $reader = new ReaderXlsx();
-    $spreadsheet = $reader->load($file->getRealPath());
+        $identifications = [];
+        foreach ($sheetData as $key => $row) {
+            if ($key > 1) { // Ignorar la primera fila
+                $cedula = $row['A']; // Suponiendo que la columna 'B' contiene la cedula
 
-    $sheetData = $spreadsheet->getActiveSheet()->toArray(null, true, true, true);
-
-    $updates = [];
-    foreach ($sheetData as $key => $row) {
-        if ($key > 1) { // Ignorar la primera fila
-            $cedula = $row['A']; // Suponiendo que la columna 'A' contiene la cedula
-            $discapacidad = $row['B']; // Suponiendo que la columna 'B' contiene la discapacidad
-
-            // Agregar la actualización a la lista
-            $updates[] = ['id_periodo' => $id_periodo, 'cedula' => $cedula, 'discapacidad' => $discapacidad];
+                // Agregar la identificación a la lista
+                $identifications[] = ['id_periodo' => $id_periodo, 'cedula' => $cedula];
+            }
         }
+
+        // Eliminar los registros correspondientes de la base de datos
+        $numRegistrosEliminados = 0;
+        foreach ($identifications as $identification) {
+            $numRegistrosEliminados += CpuLegalizacionMatricula::where('id_periodo', $identification['id_periodo'])
+                ->where('cedula', $identification['cedula'])
+                ->delete();
+        }
+
+        return response()->json(['message' => 'Registros eliminados correctamente', 'num_registros_eliminados' => $numRegistrosEliminados]);
     }
 
-    // Actualizar los registros correspondientes en la base de datos
-    $numRegistrosActualizados = 0;
-    foreach ($updates as $update) {
-        $numRegistrosActualizados += CpuLegalizacionMatricula::where('id_periodo', $update['id_periodo'])
-            ->where('cedula', $update['cedula'])
-            ->update(['discapacidad' => $update['discapacidad']]);
+    //consultar estudiantes que han subido documentos
+    public function consultarEstudiantes($id_periodo)
+    {
+        // Consulta para obtener el número de estudiantes agrupados por sede y secretaria
+        $estudiantes = CpuLegalizacionMatricula::select('id_sede', 'id_carrera', 'apellidos', 'nombres', 'email', 'copia_identificacion', 'copia_titulo_acta_grado', 'copia_aceptacion_cupo')
+            ->where('id_periodo', $id_periodo)
+            ->where(function ($query) {
+                $query->whereNotNull('copia_identificacion')
+                    ->orWhereNotNull('copia_titulo_acta_grado')
+                    ->orWhereNotNull('copia_aceptacion_cupo');
+            })
+            ->get();
+
+        // Obtener la información de la sede
+        $sedes = CpuSede::all()->keyBy('id'); // Obtener todas las sedes
+
+        // Organizar la información en el formato deseado
+        $result = [];
+        foreach ($estudiantes as $estudiante) {
+            $sedeNombre = $sedes[$estudiante->id_sede]->nombre_sede ?? 'Sede Desconocida'; // Obtener el nombre de la sede
+
+            // Verificar si ya existe una entrada para esta sede en el resultado
+            if (!isset($result[$sedeNombre])) {
+                $result[$sedeNombre] = [];
+            }
+
+            $result[$sedeNombre][] = [
+                'id_sede' => $estudiante->id_sede,
+                'id_carrera' => $estudiante->id_carrera,
+                'apellidos' => $estudiante->apellidos,
+                'nombres' => $estudiante->nombres,
+                'email' => $estudiante->email,
+                'copia_identificacion' => $estudiante->copia_identificacion,
+                'copia_titulo_acta_grado' => $estudiante->copia_titulo_acta_grado,
+                'copia_aceptacion_cupo' => $estudiante->copia_aceptacion_cupo,
+            ];
+        }
+
+        return response()->json($result);
     }
-
-    return response()->json(['message' => 'Registros actualizados correctamente', 'num_registros_actualizados' => $numRegistrosActualizados]);
-}
-
-
-
 }

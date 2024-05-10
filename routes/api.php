@@ -190,7 +190,8 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('consultar-num-casos', [LegalizacionMatriculaSecretariaController::class, 'consultarNumCasos']);
     Route::post('reasignar-casos', [LegalizacionMatriculaSecretariaController::class, 'reasignarCasos']);
     Route::post('delete-records/{id_periodo}', [LegalizacionMatriculaSecretariaController::class, 'deleteRecords']);
-    Route::post('actualizar-discapacidad/{id_periodo}', [LegalizacionMatriculaSecretariaController::class, 'updateDiscapacidad']);
+    Route::get('obtener-estudiantes/{id_periodo}', [LegalizacionMatriculaSecretariaController::class, 'consultarEstudiantes']);
+    Route::get('consultar-num-casos-por-secretaria', [LegalizacionMatriculaSecretariaController::class, 'consultarNumCasosPorSecretaria']);
 
     // Rutas para el controlador CpuEvidenciaController
     Route::post('/evidencia/agregar', [CpuEvidenciaController::class, 'agregarEvidencia']);

@@ -9,19 +9,19 @@ class CpuEvidencia extends Model
     protected $table = 'cpu_evidencia';
 
     protected $fillable = [
-        'id_fuente_informacion', 'descripcion', 'enlace_evidencia'
+        'id_elemento_fundamental', 'descripcion', 'enlace_evidencia'
     ];
 
     public function fuenteInformacion()
     {
-        return $this->belongsTo(CpuFuenteInformacion::class, 'id_fuente_informacion');
+        return $this->belongsTo(CpuElementoFundamental::class, 'id_elemento_fundamental');
     }
 
     public function objetivoNacional()
     {
-        return $this->belongsTo(CpuObjetivoNacional::class, 'id_fuente_informacion', 'id_objetivo');
+        return $this->belongsTo(CpuObjetivoNacional::class, 'id_elemento_fundamental', 'id_objetivo');
     }
-    
+
 
 
 }

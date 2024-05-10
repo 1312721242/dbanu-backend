@@ -26,10 +26,9 @@ class CpuObjetivoNacional extends Model
          $this->belongsTo(CpuYear::class, 'descripcion', 'id');
     }
 
-    public function fuentesInformacion()
+    public function estandares()
     {
-        return $this->hasMany(CpuFuenteInformacion::class, 'id_objetivo');
+        return $this->hasMany(CpuEstandar::class, 'id_objetivo');
     }
-    
 
 }

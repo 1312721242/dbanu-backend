@@ -6,6 +6,8 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Hash;
 use App\Models\User;
+use Illuminate\Support\Facades\Auth;
+
 
 class UsuarioController extends Controller
 {
@@ -93,6 +95,37 @@ class UsuarioController extends Controller
 
             return response()->json(['success' => true, 'message' => 'Contraseña cambiada correctamente']);
         }
+
+        public function cambiarPasswordApp(Request $request)
+        {
+            $validator = Validator::make($request->all(), [
+                'current_password' => 'required|string|min:6',
+                'new_password' => 'required|string|min:6',
+            ]);
+        
+            if ($validator->fails()) {
+                return response()->json(['error' => $validator->errors()], 400);
+            }
+        
+            $usuario = Auth::user();
+        
+            if (!$usuario) {
+                return response()->json(['error' => 'Usuario no encontrado'], 404);
+            }
+        
+            // Validar la contraseña actual
+            if (!Hash::check($request->input('current_password'), $usuario->password)) {
+                return response()->json(['error' => 'La contraseña actual es incorrecta'], 400);
+            }
+        
+            // Cambiar la contraseña
+            $usuario->update(['password' => Hash::make($request->input('new_password'))]);
+        
+            return response()->json(['success' => true, 'message' => 'Contraseña cambiada correctamente']);
+        }
+        
+        
+
 
 
         public function actualizarInformacionPersonal(Request $request, $id)

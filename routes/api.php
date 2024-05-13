@@ -26,9 +26,12 @@ use App\Http\Controllers\CpuObjetivoNacionalController;
 use App\Http\Controllers\CpuFuenteInformacionController;
 use App\Http\Controllers\CpuEvidenciaController;
 use App\Http\Controllers\CpuBecadoController;
+use App\Http\Controllers\CpuConsumoBecadoController;
 
 
 // Autenticación
+Route::get('credencial-pdf/{identificacion}/{periodo}', [CpuBecadoController::class, 'generarCredencialPDF']);
+
 Route::post('/login', [AuthController::class, 'login']);
 Route::post('/loginapp', [AuthController::class, 'loginApp']);
 Route::post('/logout', [AuthController::class, 'logout'])->middleware('auth:sanctum');
@@ -202,7 +205,15 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('descargar-archivo/{ano}/{archivo}', [CpuEvidenciaController::class, 'descargarArchivo'])->name('descargar-archivo');
 
     //becados
-    Route::post('consultar-becado', [CpuBecadoController::class, 'consultar']);
+    Route::get('consultar-becado/{identificacion}/{periodo}', [CpuBecadoController::class, 'consultarPorIdentificacionYPeriodo']);
     Route::post('generar-plantilla-becados', [CpuBecadoController::class, 'generarExcel']);
     Route::post('cargar-becados', [CpuBecadoController::class, 'importarExcel']);
+    Route::get('qr-code/{identificacion}/{periodo}', [CpuBecadoController::class, 'generarQRCode']);
+    
+
+    Route::post('/registrar-consumo', [CpuConsumoBecadoController::class, 'registrarConsumo']);
+    Route::get('registros-por-fecha/{fecha}', [CpuConsumoBecadoController::class, 'registrosPorFecha']);
+    Route::get('detalle-registro/{fecha}', [CpuConsumoBecadoController::class,'detalleRegistro']);
+    
+
 });

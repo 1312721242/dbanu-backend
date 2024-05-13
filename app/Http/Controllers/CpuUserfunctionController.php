@@ -112,4 +112,6 @@ class CpuUserfunctionController extends Controller
             'updated_at' =>$fecha,
         ]);
     }
+
+    //funcion para consultar los 
 }

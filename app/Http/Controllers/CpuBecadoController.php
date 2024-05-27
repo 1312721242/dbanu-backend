@@ -13,19 +13,23 @@ use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 use PhpOffice\PhpSpreadsheet\Reader\Xlsx as ReaderXlsx;
 use PhpOffice\PhpSpreadsheet\IOFactory;
+use Dompdf\Dompdf;
+use Dompdf\Options;
+use SimpleSoftwareIO\QrCode\Facades\QrCode;
+use Endroid\QrCode\QrCode as EndroidQrCode;
 
 class CpuBecadoController extends Controller
 {
-    public function __construct()
-    {
-        $this->middleware('auth:api');
-    }
+    // public function __construct()
+    // {
+    //     $this->middleware('auth:api');
+    // }
 
     public function consultarPorIdentificacionYPeriodo($identificacion, $periodo)
     {
         $becado = CpuBecado::where('identificacion', $identificacion)
                             ->where('periodo', $periodo)
-                            ->select('identificacion', 'periodo', 'nombres', 'apellidos', 'sexo', 'tipo_beca_otorgada', 'beca', 'monto_otorgado','monto_consumido', 'fecha_aprobacion_denegacion')
+                            ->select('id','identificacion', 'periodo', 'nombres', 'apellidos', 'sexo', 'tipo_beca_otorgada', 'beca', 'monto_otorgado','monto_consumido', 'fecha_aprobacion_denegacion')
                             ->first();
 
         if ($becado) {
@@ -114,6 +118,131 @@ class CpuBecadoController extends Controller
     }
 }
 
+public function generarQRCode($identificacion, $periodo)
+{
+    $contenidoQR = $identificacion . '-' . $periodo;
+
+    // Generar el código QR y guardarlo en una variable
+    $qrCode = QrCode::format('png')->size(300)->generate($contenidoQR);
+
+    // Devolver el código QR como una respuesta de tipo imagen PNG
+    return response($qrCode)->header('Content-Type', 'image/png');
+}
+
+
+
+public function generarCredencialPDF($identificacion, $periodo)
+{
+    $becado = CpuBecado::where('identificacion', $identificacion)
+                        ->where('periodo', $periodo)
+                        ->first();
+
+    if (!$becado) {
+        return response()->json(['message' => 'No se encontró el o la estudiante'], 404);
+    }
+
+    // Crear una nueva instancia de Dompdf
+    $dompdf = new Dompdf();
+
+    // Opciones para personalizar Dompdf (opcional)
+    $options = new Options();
+    $options->set('isHtml5ParserEnabled', true);
+    $options->set('isPhpEnabled', true);
+
+    // Crear el contenido HTML del PDF directamente en una cadena
+    $html = '<!DOCTYPE html>
+            <html lang="es">
+            <head>
+                <meta charset="UTF-8">
+                <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                <title>Gafete</title>
+                <style>
+                    /* Estilos generales */
+                    body {
+                        font-family: Arial, sans-serif;
+                        margin: 0;
+                        padding: 0;
+                    }
+
+                    .gafete {
+                        width: 200px; /* Ajusta el ancho del gafete */
+                        height: 100px; /* Ajusta la altura del gafete */
+                        background-color: #fff;
+                        border: 1px solid #ccc;
+                        padding: 10px;
+                        text-align: center;
+                    }
+
+                    .logo {
+                        width: 100px; /* Ajusta el ancho del logo */
+                        height: auto; /* Conserva la proporción de altura del logo */
+                        margin-bottom: 10px;
+                    }
+
+                    .nombre {
+                        font-size: 16px; /* Ajusta el tamaño de la fuente del nombre */
+                        font-weight: bold;
+                    }
+
+                    .cargo {
+                        font-size: 12px; /* Ajusta el tamaño de la fuente del cargo */
+                    }
+
+                    .slogan {
+                        font-size: 10px; /* Ajusta el tamaño de la fuente del slogan */
+                        margin-top: 10px;
+                    }
+
+                    .qr-code {
+                        margin-top: 10px;
+                    }
+                </style>
+            </head>
+            <body>
+                <div class="gafete">
+                    <img src="logo.png" alt="Logo" class="logo">
+                    <div class="informacion">
+                        <p class="nombre">' . $becado->nombres . ' ' . $becado->apellidos . '</p>
+                        <p class="cargo">' . $becado->cargo . '</p>
+                        <p class="slogan">' . $becado->slogan . '</p>
+                    </div>
+                    <div class="qr-code">
+                        <img src="' . $this->generarQR($becado->identificacion, $becado->periodo) . '" alt="QR Code">
+                    </div>
+                </div>
+            </body>
+            </html>';
+
+    // Cargar el contenido HTML en Dompdf
+    $dompdf->loadHtml($html);
+
+    // Renderizar el PDF
+    $dompdf->render();
+
+    // Devolver el PDF como una respuesta de tipo application/pdf
+    return $dompdf->stream('credencial.pdf');
+}
+
+public function generarQR($identificacion, $periodo)
+{
+    $qrText = $identificacion . '-' . $periodo;
+    // $qrCode = new EndroidQrCode($qrText);
+    // Crear una instancia de QrCode
+    $qrCode = new QrCode($qrText);
+
+    // Generar el código QR
+$qrCode = QrCode::format('png')->size(200)->generate($qrText);
+
+// Guardar el código QR en un archivo
+file_put_contents('ruta/del/archivo.png', $qrCode);
+
+    // Guardar el QR code en un archivo temporal
+    $tempFilePath = storage_path('app/temp/qr_code.png');
+    $qrCode->writeFile($tempFilePath);
+
+    // Devolver la ruta del archivo temporal
+    return $tempFilePath;
+}
 
 
 }

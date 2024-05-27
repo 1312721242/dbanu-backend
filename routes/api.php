@@ -1,4 +1,5 @@
 <?php
+
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
@@ -25,6 +26,7 @@ use App\Http\Controllers\CpuYearController;
 use App\Http\Controllers\CpuObjetivoNacionalController;
 use App\Http\Controllers\CpuFuenteInformacionController;
 use App\Http\Controllers\CpuEvidenciaController;
+use App\Http\Controllers\CpuCertificadoNivelacionController;
 
 
 // Autenticación
@@ -162,7 +164,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::post('casos-matricula/{idCaso}/revision-documentos', [CpuCasosMatriculaController::class, 'revisionDocumentos']);
     Route::get('matricula-cases/{id_usuario}/{id_periodo}', [CpuCasosMatriculaController::class, 'getMatriculaCases']);
     Route::get('matricula-cases-all/{id_periodo}', [CpuCasosMatriculaController::class, 'getAllMatriculaCases']);
-    
+
 
     //apis notificaciones para app de pabelco
     Route::get('/notificaciones', [CpuNotificacionMatriculaController::class, 'index']);
@@ -196,5 +198,8 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('obtener-informacion/{ano}', [CpuEvidenciaController::class, 'obtenerInformacionPorAno']);
     Route::get('descargar-archivo/{ano}/{archivo}', [CpuEvidenciaController::class, 'descargarArchivo'])->name('descargar-archivo');
 
-
+    // Ruta para certificados
+    Route::get('/certificados/{periodo_certificado}/{sede}/{carrera}', [CpuCertificadoNivelacionController::class, 'datosCertificado']);
+    Route::get('/sedes-periodo-certificado/{periodo}', [CpuCertificadoNivelacionController::class, 'getSedesByPeriodo']);
+    Route::get('/carreras-certificado/{periodo_certificado}/{sede}', [CpuCertificadoNivelacionController::class, 'getCarrerasByPeriodoAndSede']);
 });

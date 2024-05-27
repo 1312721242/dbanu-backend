@@ -26,13 +26,17 @@ use App\Http\Controllers\CpuYearController;
 use App\Http\Controllers\CpuObjetivoNacionalController;
 use App\Http\Controllers\CpuFuenteInformacionController;
 use App\Http\Controllers\CpuEvidenciaController;
-use App\Http\Controllers\CpuCertificadoNivelacionController;
+use App\Http\Controllers\CpuBecadoController;
+use App\Http\Controllers\CpuConsumoBecadoController;
 
 
 // Autenticación
+Route::get('credencial-pdf/{identificacion}/{periodo}', [CpuBecadoController::class, 'generarCredencialPDF']);
+
 Route::post('/login', [AuthController::class, 'login']);
 Route::post('/loginapp', [AuthController::class, 'loginApp']);
 Route::post('/logout', [AuthController::class, 'logout'])->middleware('auth:sanctum');
+Route::get('/me', [AuthController::class, 'me'])->middleware('auth:sanctum');
 
 // Route::get('legalizacion-matricula/export-template', [LegalizacionMatriculaSecretariaController::class, 'exportTemplate']);
 Route::middleware(['auth:sanctum'])->group(function () {
@@ -44,6 +48,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('/user', function (Request $request) {
         return $request->user();
     });
+
 
     //rutas para manejar el excel de subida de cupos asignados para matriculas
     // ruta para exportar la platilla de excel
@@ -105,6 +110,8 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::put('/cambiar-password/{id}', [UsuarioController::class, 'cambiarPassword']);
     Route::put('/actualizar-informacion-personal/{id}', [UsuarioController::class, 'actualizarInformacionPersonal']);
     Route::get('/users/search', [UsuarioController::class, 'search']);
+    Route::post('cambiar-password-app', [UsuarioController::class, 'cambiarPasswordApp']);
+
 
     //profesiones
     Route::post('/agregar-profesion', [CpuProfesionController::class, 'agregarProfesion']);
@@ -198,8 +205,16 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('obtener-informacion/{ano}', [CpuEvidenciaController::class, 'obtenerInformacionPorAno']);
     Route::get('descargar-archivo/{ano}/{archivo}', [CpuEvidenciaController::class, 'descargarArchivo'])->name('descargar-archivo');
 
-    // Ruta para certificados
-    Route::get('/certificados/{periodo_certificado}/{sede}/{carrera}', [CpuCertificadoNivelacionController::class, 'datosCertificado']);
-    Route::get('/sedes-periodo-certificado/{periodo}', [CpuCertificadoNivelacionController::class, 'getSedesByPeriodo']);
-    Route::get('/carreras-certificado/{periodo_certificado}/{sede}', [CpuCertificadoNivelacionController::class, 'getCarrerasByPeriodoAndSede']);
+    //becados
+    Route::get('consultar-becado/{identificacion}/{periodo}', [CpuBecadoController::class, 'consultarPorIdentificacionYPeriodo']);
+    Route::post('generar-plantilla-becados', [CpuBecadoController::class, 'generarExcel']);
+    Route::post('cargar-becados', [CpuBecadoController::class, 'importarExcel']);
+    Route::get('qr-code/{identificacion}/{periodo}', [CpuBecadoController::class, 'generarQRCode']);
+
+
+    Route::post('/registrar-consumo', [CpuConsumoBecadoController::class, 'registrarConsumo']);
+    Route::get('registros-por-fecha/{fecha}', [CpuConsumoBecadoController::class, 'registrosPorFecha']);
+    Route::get('detalle-registro/{fecha}', [CpuConsumoBecadoController::class,'detalleRegistro']);
+
+
 });

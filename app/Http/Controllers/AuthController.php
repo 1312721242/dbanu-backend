@@ -12,6 +12,7 @@ use App\Models\CpuSede;
 use App\Models\CpuFacultad;
 use App\Models\CpuCarrera;
 use Illuminate\Validation\ValidationException;
+use Illuminate\Support\Facades\Hash;
 
 class AuthController extends Controller
 {
@@ -161,6 +162,28 @@ public function loginApp(Request $request)
         $request->user()->tokens()->delete();
 
         return response()->json(['message' => 'Desconectado/a']);
+    }
+
+    public function me(Request $request)
+    {
+        $user = Auth::user();
+
+        if (!$user) {
+            return response()->json(['message' => 'Usuario no encontrado'], 404);
+        }
+
+        $userData = [
+            'id' => $user->id,
+            'name' => $user->name,
+            'email' => $user->email,
+            'usr_tipo' => $user->tipoUsuario ? $user->tipoUsuario->role : null,
+        ];
+
+        // Desencriptar el campo password
+        // $userData['password'] = Hash::make($user->password);
+        $userData['password'] = $user->password;
+
+        return response()->json($userData);
     }
 }
 

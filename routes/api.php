@@ -202,7 +202,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('descargar-archivo/{ano}/{archivo}', [CpuEvidenciaController::class, 'descargarArchivo'])->name('descargar-archivo');
 
     //becados
-    Route::post('consultar-becado', [CpuBecadoController::class, 'consultar']);
+    Route::get('consultar-becado/{identificacion}/{periodo}', [CpuBecadoController::class, 'consultarPorIdentificacionYPeriodo']);
     Route::post('generar-plantilla-becados', [CpuBecadoController::class, 'generarExcel']);
     Route::post('cargar-becados', [CpuBecadoController::class, 'importarExcel']);
 });

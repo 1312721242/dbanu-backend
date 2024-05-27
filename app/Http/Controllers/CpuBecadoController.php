@@ -25,7 +25,7 @@ class CpuBecadoController extends Controller
     {
         $becado = CpuBecado::where('identificacion', $identificacion)
                             ->where('periodo', $periodo)
-                            ->select('identificacion', 'periodo', 'nombres', 'apellidos', 'sexo', 'tipo_beca_otorgada', 'beca', 'monto_otorgado', 'fecha_aprobacion_denegacion')
+                            ->select('identificacion', 'periodo', 'nombres', 'apellidos', 'sexo', 'tipo_beca_otorgada', 'beca', 'monto_otorgado','monto_consumido', 'fecha_aprobacion_denegacion')
                             ->first();
 
         if ($becado) {
@@ -43,7 +43,7 @@ class CpuBecadoController extends Controller
 
     try {
         $imported = 0;
-        $errors = 0;
+        $errors = [];
 
         $file = $request->file('archivo');
 
@@ -70,7 +70,7 @@ class CpuBecadoController extends Controller
                     'telefono' => $row[6],
                     'beca' => $row[7],
                     'tipo_beca_otorgada' => $row[8],
-                    'monto_otorgado' => $row[9],
+                    'monto_otorgado' => is_numeric(str_replace(',', '.', $row[9])) ? number_format(floatval(str_replace(',', '.', $row[9])), 2, '.', '') : null,
                     'porcentaje_valor_arancel' => $row[10],
                     'estado_postulante' => $row[11],
                     'fecha_aprobacion_denegacion' => $row[12],
@@ -96,13 +96,15 @@ class CpuBecadoController extends Controller
                 ]);
                 $imported++;
             } catch (\Exception $e) {
-                // Imprimir información de la fila y el error
-                $errors++;
-                error_log('Error en fila ' . ($key + 1) . ': ' . $e->getMessage());
+                // Guardar información del error
+                $errors[] = [
+                    'fila' => $key + 1,
+                    'error' => $e->getMessage(),
+                ];
             }
         }
 
-        if ($errors > 0) {
+        if (!empty($errors)) {
             return response()->json(['message' => 'Hubo errores durante la importación', 'imported' => $imported, 'errors' => $errors], 422);
         } else {
             return response()->json(['message' => 'Datos importados correctamente', 'imported' => $imported, 'errors' => $errors], 200);
@@ -111,6 +113,7 @@ class CpuBecadoController extends Controller
         return response()->json(['message' => 'Error en la importación: ' . $e->getMessage(), 'errors' => 1], 422);
     }
 }
+
 
 
 }

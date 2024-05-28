@@ -19,5 +19,6 @@ class VerifyCsrfToken extends Middleware
         '/api/obtener-funciones-distinct',
         '/api/agregar-usuario', 
         '/api/agregar-funcion', 
+        '/api/agregarFunciones', 
     ];
 }

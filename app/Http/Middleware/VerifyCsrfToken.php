@@ -17,8 +17,8 @@ class VerifyCsrfToken extends Middleware
         'api/upload-pdf',
         '/api/obtener-funciones-distinct-role', 
         '/api/obtener-funciones-distinct',
-        '/api/agregar-usuario', 
-        '/api/agregar-funcion', 
-        '/api/agregarFunciones', 
+        // '/api/agregar-usuario', 
+        // '/api/agregar-funcion', 
+        // '/api/agregarFunciones', 
     ];
 }

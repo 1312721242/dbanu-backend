@@ -107,6 +107,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     //administracion de usuarios
     Route::post('/agregar-usuario', [UsuarioController::class, 'agregarUsuario']);
     Route::put('/dar-de-baja-usuario/{id}', [UsuarioController::class, 'darDeBajaUsuario']);
+    Route::put('/actualizar-estado-usuario/{userId}', [UsuarioController::class, 'darDeBajaUsuario']);
     Route::put('/dar-de-alta-usuario/{id}', [UsuarioController::class, 'darDeAltaUsuario']);
     Route::put('/cambiar-password/{id}', [UsuarioController::class, 'cambiarPassword']);
     Route::put('/actualizar-informacion-personal/{id}', [UsuarioController::class, 'actualizarInformacionPersonal']);

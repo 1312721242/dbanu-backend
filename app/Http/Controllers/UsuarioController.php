@@ -16,35 +16,38 @@ class UsuarioController extends Controller
         $this->middleware('auth:api');
     }
     public function agregarUsuario(Request $request)
-        {
-            $validator = Validator::make($request->all(), [
-                'name' => 'required|string|max:255',
-                'email' => 'required|email|unique:users',
-                'password' => 'required|string|min:6',
-                'usr_tipo' => 'required|exists:cpu_userrole,id_userrole',
-                'usr_sede' => 'required|exists:cpu_sede,id',
-                'usr_facultad' => 'sometimes|exists:cpu_facultad,id',
-                'usr_carrera' => 'sometimes|exists:cpu_carrera,id',
-                'usr_profesion' => 'required|exists:cpu_profesion,id',
-            ]);
+    {
+        $validator = Validator::make($request->all(), [
+            'name' => 'required|string|max:255',
+            'email' => 'required|email|unique:users',
+            'password' => 'required|string|min:6',
+            'usr_tipo' => 'required|exists:cpu_userrole,id_userrole',
+            'usr_sede' => 'required|exists:cpu_sede,id',
+            'usr_facultad' => 'sometimes|exists:cpu_facultad,id',
+            'usr_carrera' => 'sometimes|exists:cpu_carrera,id',
+            'usr_profesion' => 'required|exists:cpu_profesion,id',
+            'api_token' => 'required|string|max:10',
+        ]);
 
-            if ($validator->fails()) {
-                return response()->json(['error' => $validator->errors()], 400);
-            }
-
-            $usuario = User::create([
-                'name' => $request->input('name'),
-                'email' => $request->input('email'),
-                'password' => Hash::make($request->input('password')),
-                'usr_tipo' => $request->input('usr_tipo'),
-                'usr_sede' => $request->input('usr_sede'),
-                'usr_facultad' => $request->input('usr_facultad'),
-                'usr_carrera' => $request->input('usr_carrera'),
-                'usr_profesion' => $request->input('usr_profesion'),
-            ]);
-
-            return response()->json(['success' => true, 'message' => 'Usuario agregado correctamente']);
+        if ($validator->fails()) {
+            return response()->json(['error' => $validator->errors()], 400);
         }
+
+        $usuario = User::create([
+            'name' => $request->input('name'),
+            'email' => $request->input('email'),
+            'password' => Hash::make($request->input('password')),
+            'usr_tipo' => $request->input('usr_tipo'),
+            'usr_sede' => $request->input('usr_sede'),
+            'usr_facultad' => $request->input('usr_facultad'),
+            'usr_carrera' => $request->input('usr_carrera'),
+            'usr_profesion' => $request->input('usr_profesion'),
+            'api_token' => $request->input('api_token'),
+        ]);
+
+        return response()->json(['success' => true, 'message' => 'Usuario agregado correctamente', 'user' => ['id' => $usuario->id]]);
+    }
+
 
 
         public function darDeBajaUsuario(Request $request, $id)

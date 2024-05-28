@@ -11,7 +11,7 @@ class CpuUserrolefunctionController extends Controller
 {
     public function __construct()
     {
-        $this->middleware('auth:api');
+        $this->middleware('auth:sanctum');
     }
 
     public function agregarFuncion(Request $request)
@@ -88,6 +88,35 @@ class CpuUserrolefunctionController extends Controller
         return response()->json($funciones);
     }
 
+    public function obtenerFuncionesDistinct()
+    {
+        $funciones = DB::table('cpu_userrolefunction')
+            ->select('nombre', 'id_usermenu', 'accion', 'id_menu')
+            ->distinct()
+            ->orderBy('nombre', 'asc')
+            ->get();
+
+        return response()->json($funciones);
+    }
+
+    public function obtenerFuncionesDistinctRole(Request $request)
+    {
+        $role = $request->input('role');
+
+        if (!$role) {
+            return response()->json(['error' => 'Role is required'], 400);
+        }
+
+        $funciones = DB::table('cpu_userrolefunction')
+            ->select('nombre', 'id_usermenu', 'accion', 'id_menu')
+            ->where('id_userrole', $role)
+            ->distinct()
+            ->orderBy('nombre', 'asc')
+            ->get();
+
+        return response()->json($funciones);
+    }
+
     private function crearAuditoria($usuario, $tabla, $campo, $dataold, $datanew, $tipo)
     {
         $ip = request()->ip();
@@ -106,8 +135,8 @@ class CpuUserrolefunctionController extends Controller
             'aud_tipoauditoria' => ($tipo == 'ELIMINACION') ? 3 : (($tipo == 'MODIFICACION') ? 2 : 1),
             'aud_descripcion' => strtoupper($tipo) . " DE FUNCION",
             'aud_nombreequipo' => $nombreequipo,
-            'created_at' =>$fecha,
-            'updated_at' =>$fecha,
+            'created_at' => $fecha,
+            'updated_at' => $fecha,
         ]);
     }
 }

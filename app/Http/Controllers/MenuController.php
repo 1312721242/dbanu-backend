@@ -58,5 +58,12 @@ class MenuController extends Controller
     
         return response()->json(['menuItems' => $menuItems]);
     }
+
+    // Nueva función para obtener todos los elementos del menú
+    public function getAllMenuItems()
+    {
+        $menuItems = UserMenu::orderBy('menu', 'asc')->get();
+        return response()->json(['menuItems' => $menuItems]);
+    }
     
 }

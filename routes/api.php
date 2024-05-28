@@ -44,6 +44,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('/menu', [MenuController::class, 'index']);
     // menu aspirantes
     Route::get('/menuaspirantes', [MenuController::class, 'menuaspirantes']);
+    Route::get('/all-menu-items', [MenuController::class, 'getAllMenuItems']);
     // Usuario
     Route::get('/user', function (Request $request) {
         return $request->user();
@@ -142,7 +143,8 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::put('/modificar-userrolefuncion/{id}', [CpuUserrolefunctionController::class, 'modificarFuncion']);
     Route::delete('/eliminar-fuserroleuncion/{id}', [CpuUserrolefunctionController::class, 'eliminarFuncion']);
     Route::get('/consultar-userrolefunciones', [CpuUserrolefunctionController::class, 'consultarFunciones']);
-
+    Route::get('/obtener-funciones-distinct', [CpuUserrolefunctionController::class, 'obtenerFuncionesDistinct']);
+    Route::post('/obtener-funciones-distinct-role', [CpuUserrolefunctionController::class, 'obtenerFuncionesDistinctRole']);
     //periodos
     Route::get('/consultar-periodos', [CpuPeriodosController::class, 'consultarPeriodos']);
 

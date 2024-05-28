@@ -15,5 +15,9 @@ class VerifyCsrfToken extends Middleware
         //
         'api/login',
         'api/upload-pdf',
+        '/api/obtener-funciones-distinct-role', 
+        '/api/obtener-funciones-distinct',
+        '/api/agregar-usuario', 
+        '/api/agregar-funcion', 
     ];
 }

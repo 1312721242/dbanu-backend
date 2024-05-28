@@ -18,6 +18,8 @@ class User extends Authenticatable
         'usr_tipo',
         'usr_sede',
         'usr_profesion',
+        'usr_facultad',
+        'api_token',
     ];
 
     protected $hidden = [

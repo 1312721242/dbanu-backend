@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use App\Models\Userrolefunction;
+use App\Models\Userfunction; // Asegúrate de importar el modelo correcto
 
 class CpuUserrolefunctionController extends Controller
 {
@@ -32,7 +33,25 @@ class CpuUserrolefunctionController extends Controller
         $data['created_at'] = now();
         $data['updated_at'] = now();
 
+        // Agregar la nueva función a la tabla cpu_userrolefunction
         $newUserfunction = Userrolefunction::create($data);
+
+        // Obtener todos los usuarios que pertenecen al rol especificado
+        $usuarios = DB::table('users')->where('usr_tipo', $data['id_userrole'])->get();
+
+        // Agregar la nueva función a cada usuario que pertenece al rol especificado
+        foreach ($usuarios as $usuario) {
+            Userfunction::create([
+                'id_users' => $usuario->id,
+                'id_usermenu' => $data['id_usermenu'],
+                'id_userrole' => $data['id_userrole'],
+                'nombre' => $data['nombre'],
+                'accion' => $data['accion'],
+                'id_menu' => $data['id_menu'],
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+        }
 
         $this->crearAuditoria($usuario = $request->user() ? $request->user()->name : 'Usuario no encontrado', 'cpu_userrolefunction', 'id_userrole, nombre, accion, id_menu, id_usermenu', '', 
         "{$data['id_userrole']}, {$data['nombre']}, {$data['accion']}, {$data['id_menu']}, {$data['id_usermenu']}", 'INSERCION');

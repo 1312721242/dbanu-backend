@@ -30,6 +30,7 @@ use App\Http\Controllers\CpuBecadoController;
 use App\Http\Controllers\CpuConsumoBecadoController;
 
 
+
 // Autenticación
 Route::get('credencial-pdf/{identificacion}/{periodo}', [CpuBecadoController::class, 'generarCredencialPDF']);
 
@@ -64,6 +65,9 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::put('/modificar-role-usuario/{id}', [RoleController::class, 'modificarRoleUsuario']);
     Route::delete('/eliminar-role-usuario/{id}', [RoleController::class, 'eliminarRoleUsuario']);
     Route::get('/consultar-roles', [RoleController::class, 'consultarRoles']);
+
+    //menus
+    Route::post('/agregar-menu', [MenuController::class, 'agregarMenu']);
 
     // Sede
     Route::post('/agregar-sede', [CpuSedeController::class, 'agregarSede']);
@@ -138,10 +142,11 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::delete('/eliminar-funcion/{id}', [CpuUserfunctionController::class, 'eliminarFuncion']);
     Route::get('/consultar-funciones', [CpuUserfunctionController::class, 'consultarFunciones']);
     Route::post('/agregarFunciones', [CpuUserfunctionController::class, 'agregarFunciones']);
-
+ 
 
     //userrolefunction
-    Route::post('/agregar-userrolefuncion', [CpuUserrolefunctionController::class, 'agregarFuncion']);
+    Route::post('/agregar-funcion-rol', [CpuUserrolefunctionController::class, 'agregarFuncion']);
+    // Route::post('/agregar-userrolefuncion', [CpuUserrolefunctionController::class, 'agregarFuncion']);
     Route::put('/modificar-userrolefuncion/{id}', [CpuUserrolefunctionController::class, 'modificarFuncion']);
     Route::delete('/eliminar-fuserroleuncion/{id}', [CpuUserrolefunctionController::class, 'eliminarFuncion']);
     Route::get('/consultar-userrolefunciones', [CpuUserrolefunctionController::class, 'consultarFunciones']);

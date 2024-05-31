@@ -20,5 +20,8 @@ class VerifyCsrfToken extends Middleware
         '/api/agregar-usuario', 
         '/api/agregar-funcion', 
         '/api/agregarFunciones', 
+        '/api/agregar-role-usuario',
+        '/api/agregar-menu',
+        'api/agregar-funcion-rol',
     ];
 }

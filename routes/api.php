@@ -28,8 +28,8 @@ use App\Http\Controllers\CpuFuenteInformacionController;
 use App\Http\Controllers\CpuEvidenciaController;
 use App\Http\Controllers\CpuBecadoController;
 use App\Http\Controllers\CpuConsumoBecadoController;
-
-
+use App\Http\Controllers\TurnosController;
+use App\Http\Controllers\CpuPersonaController;
 
 // Autenticación
 Route::get('credencial-pdf/{identificacion}/{periodo}', [CpuBecadoController::class, 'generarCredencialPDF']);
@@ -226,5 +226,17 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('registros-por-fecha/{fecha}', [CpuConsumoBecadoController::class, 'registrosPorFecha']);
     Route::get('detalle-registro/{fecha}', [CpuConsumoBecadoController::class,'detalleRegistro']);
 
+    // routes/api.php
+
+
+    Route::post('/agregarTurnos', [TurnosController::class, 'agregarTurnos']);
+    Route::post('/turnos', [TurnosController::class, 'listarTurnos']); // Cambiar a POST
+    Route::post('/turnos/eliminar', [TurnosController::class, 'eliminarTurno']);
+
+    //rutas para registros
+    Route::get('/cpu-persona/{cedula}', [CpuPersonaController::class, 'show']);
+    
 
 });
+
+Route::put('/cpu-persona-update/{cedula}', [CpuPersonaController::class, 'update']);

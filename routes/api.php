@@ -148,6 +148,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('/consultar-userrolefunciones', [CpuUserrolefunctionController::class, 'consultarFunciones']);
     Route::get('/obtener-funciones-distinct', [CpuUserrolefunctionController::class, 'obtenerFuncionesDistinct']);
     Route::post('/obtener-funciones-distinct-role', [CpuUserrolefunctionController::class, 'obtenerFuncionesDistinctRole']);
+    Route::get('/funciones-con-asignadas', [CpuUserrolefunctionController::class, 'obtenerFuncionesConAsignadas']);
     //periodos
     Route::get('/consultar-periodos', [CpuPeriodosController::class, 'consultarPeriodos']);
 

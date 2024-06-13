@@ -117,6 +117,39 @@ class CpuUserrolefunctionController extends Controller
         return response()->json($funciones);
     }
 
+    public function obtenerFuncionesConAsignadas(Request $request)
+    {
+        $usuarioId = $request->input('usuario_id');
+
+        if (!$usuarioId) {
+            return response()->json(['error' => 'Usuario ID is required'], 400);
+        }
+
+        // Obtener todas las funciones distintas
+        $funciones = DB::table('cpu_userrolefunction')
+            ->select('nombre', 'id_usermenu', 'accion', 'id_menu')
+            ->distinct()
+            ->orderBy('nombre', 'asc')
+            ->get();
+
+        // Obtener las funciones asignadas al usuario
+        $funcionesAsignadas = DB::table('cpu_userrolefunction')
+            ->select('id_usermenu')
+            ->where('id_usuario', $usuarioId)
+            ->distinct()
+            ->pluck('id_usermenu')
+            ->toArray();
+
+        // Marcar las funciones asignadas
+        $funciones = $funciones->map(function ($funcion) use ($funcionesAsignadas) {
+            $funcion->asignada = in_array($funcion->id_usermenu, $funcionesAsignadas);
+            return $funcion;
+        });
+
+        return response()->json($funciones);
+    }
+
+
     private function crearAuditoria($usuario, $tabla, $campo, $dataold, $datanew, $tipo)
     {
         $ip = request()->ip();

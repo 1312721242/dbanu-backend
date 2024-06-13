@@ -16,7 +16,7 @@ class RoleController extends Controller
     public function agregarRoleUsuario(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'role' => 'required|string|max:255',
+            'role' => 'required|string|max:255', 
         ]);
 
         if ($validator->fails()) {

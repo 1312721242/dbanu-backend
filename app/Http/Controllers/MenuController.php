@@ -3,22 +3,18 @@
 namespace App\Http\Controllers;
 
 use App\Models\UserMenu;
-use App\Models\UserFunction;
 use Illuminate\Http\Request;
 
 class MenuController extends Controller
-
 {
     public function __construct()
     {
         $this->middleware('auth:sanctum');
-    } 
+    }
+
     public function index()
     {
-        // Recupera el ID de usuario desde la sesión (suponiendo que se ha implementado la autenticación)
         $id_users = auth()->user()->id;
-    
-        // Realiza la consulta para obtener los datos del menú y los subelementos
         $menuItems = UserMenu::with(['userFunctions' => function ($query) use ($id_users) {
                 $query->where('id_users', $id_users);
             }])
@@ -38,10 +34,7 @@ class MenuController extends Controller
 
     public function menuaspirantes()
     {
-        // Recupera el ID de usuario desde la sesión (suponiendo que se ha implementado la autenticación)
         $id_users = 0;
-    
-        // Realiza la consulta para obtener los datos del menú y los subelementos
         $menuItems = UserMenu::with(['userFunctions' => function ($query) use ($id_users) {
                 $query->where('id_users', $id_users);
             }])
@@ -59,11 +52,26 @@ class MenuController extends Controller
         return response()->json(['menuItems' => $menuItems]);
     }
 
-    // Nueva función para obtener todos los elementos del menú
     public function getAllMenuItems()
     {
         $menuItems = UserMenu::orderBy('menu', 'asc')->get();
         return response()->json(['menuItems' => $menuItems]);
     }
     
+    public function agregarMenu(Request $request)
+    {
+        $request->validate([
+            'menu' => 'required|string|max:255',
+            'icono' => 'nullable|string|max:255',
+        ]);
+
+        $menu = new UserMenu();
+        $menu->menu = $request->menu;
+        $menu->icono = $request->icono;
+        $menu->created_at = now();
+        $menu->updated_at = now();
+        $menu->save();
+
+        return response()->json(['success' => true, 'menu' => $menu]);
+    }
 }

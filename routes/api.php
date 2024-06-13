@@ -28,7 +28,8 @@ use App\Http\Controllers\CpuFuenteInformacionController;
 use App\Http\Controllers\CpuEvidenciaController;
 use App\Http\Controllers\CpuBecadoController;
 use App\Http\Controllers\CpuConsumoBecadoController;
-
+use App\Http\Controllers\TurnosController;
+use App\Http\Controllers\CpuPersonaController;
 
 // Autenticación
 Route::get('credencial-pdf/{identificacion}/{periodo}', [CpuBecadoController::class, 'generarCredencialPDF']);
@@ -64,6 +65,9 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::put('/modificar-role-usuario/{id}', [RoleController::class, 'modificarRoleUsuario']);
     Route::delete('/eliminar-role-usuario/{id}', [RoleController::class, 'eliminarRoleUsuario']);
     Route::get('/consultar-roles', [RoleController::class, 'consultarRoles']);
+
+    //menus
+    Route::post('/agregar-menu', [MenuController::class, 'agregarMenu']);
 
     // Sede
     Route::post('/agregar-sede', [CpuSedeController::class, 'agregarSede']);
@@ -139,10 +143,11 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::delete('/eliminar-funcion/{id}', [CpuUserfunctionController::class, 'eliminarFuncion']);
     Route::get('/consultar-funciones', [CpuUserfunctionController::class, 'consultarFunciones']);
     Route::post('/agregarFunciones', [CpuUserfunctionController::class, 'agregarFunciones']);
-
+ 
 
     //userrolefunction
-    Route::post('/agregar-userrolefuncion', [CpuUserrolefunctionController::class, 'agregarFuncion']);
+    Route::post('/agregar-funcion-rol', [CpuUserrolefunctionController::class, 'agregarFuncion']);
+    // Route::post('/agregar-userrolefuncion', [CpuUserrolefunctionController::class, 'agregarFuncion']);
     Route::put('/modificar-userrolefuncion/{id}', [CpuUserrolefunctionController::class, 'modificarFuncion']);
     Route::delete('/eliminar-fuserroleuncion/{id}', [CpuUserrolefunctionController::class, 'eliminarFuncion']);
     Route::get('/consultar-userrolefunciones', [CpuUserrolefunctionController::class, 'consultarFunciones']);
@@ -222,5 +227,17 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('registros-por-fecha/{fecha}', [CpuConsumoBecadoController::class, 'registrosPorFecha']);
     Route::get('detalle-registro/{fecha}', [CpuConsumoBecadoController::class,'detalleRegistro']);
 
+    // routes/api.php
+
+
+    Route::post('/agregarTurnos', [TurnosController::class, 'agregarTurnos']);
+    Route::post('/turnos', [TurnosController::class, 'listarTurnos']); // Cambiar a POST
+    Route::post('/turnos/eliminar', [TurnosController::class, 'eliminarTurno']);
+
+    //rutas para registros
+    Route::get('/cpu-persona/{cedula}', [CpuPersonaController::class, 'show']);
+    
 
 });
+
+Route::put('/cpu-persona-update/{cedula}', [CpuPersonaController::class, 'update']);

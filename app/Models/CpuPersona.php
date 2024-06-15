@@ -9,25 +9,24 @@ class CpuPersona extends Model
 {
     use HasFactory;
 
-    protected $fillable = [
-        'cedula',
-        'nombres',
-        'nacionalidad',
-        'provincia',
-        'ciudad',
-        'parroquia',
-        'direccion',
-        'sexo',
-        'fechanaci',
-        'celular',
-        'tipoetnia',
-        'discapacidad'
-    ];
+    protected $table = 'cpu_personas';
 
-    protected $hidden = ['created_at', 'updated_at'];
+    protected $fillable = [
+        'cedula', 'nombres', 'nacionalidad', 'provincia', 'ciudad', 'parroquia', 'direccion', 'sexo', 'fechanaci', 'celular', 'tipoetnia', 'discapacidad'
+    ];
 
     public function datosEmpleados()
     {
         return $this->hasOne(CpuDatosEmpleado::class, 'id_persona');
+    }
+
+    public function datosMedicos()
+    {
+        return $this->hasOne(CpuDatosMedicos::class, 'id_persona');
+    }
+
+    public function datosEstudiantes()
+    {
+        return $this->hasOne(CpuDatosEstudiantes::class, 'id_persona');
     }
 }

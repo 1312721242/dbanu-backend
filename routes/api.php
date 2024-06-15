@@ -30,6 +30,8 @@ use App\Http\Controllers\CpuBecadoController;
 use App\Http\Controllers\CpuConsumoBecadoController;
 use App\Http\Controllers\TurnosController;
 use App\Http\Controllers\CpuPersonaController;
+use App\Http\Controllers\CpuTipoDiscapacidadController;
+use App\Http\Controllers\CpuTipoSangreController;
 
 // Autenticación
 Route::get('credencial-pdf/{identificacion}/{periodo}', [CpuBecadoController::class, 'generarCredencialPDF']);
@@ -234,10 +236,26 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::post('/turnos', [TurnosController::class, 'listarTurnos']); // Cambiar a POST
     Route::post('/turnos/eliminar', [TurnosController::class, 'eliminarTurno']);
 
-    //rutas para registros
+    //rutas para registros medico ocupaconal
     Route::get('/cpu-persona/{cedula}', [CpuPersonaController::class, 'show']);
+    Route::put('/cpu-persona-update/{cedula}', [CpuPersonaController::class, 'update']);
+    //registros bienestar
+    Route::get('/cpu-persona-bienestar/{cedula}', [CpuPersonaController::class, 'showBienestar']);
+    Route::put('/cpu-persona-update-bienestar/{cedula}', [CpuPersonaController::class, 'updateBienestar']);
     
+
+    //tipos discapacidad
+    Route::get('/cpu-tipos-discapacidad', [CpuTipoDiscapacidadController::class, 'index']);
+    Route::post('/cpu-tipos-discapacidad', [CpuTipoDiscapacidadController::class, 'store']);
+    Route::get('/cpu-tipos-discapacidad/{id}', [CpuTipoDiscapacidadController::class, 'show']);
+    Route::put('/cpu-tipos-discapacidad/{id}', [CpuTipoDiscapacidadController::class, 'update']);
+    Route::delete('/cpu-tipos-discapacidad/{id}', [CpuTipoDiscapacidadController::class, 'destroy']);
+
+    //tipo de sangre
+    
+    Route::get('/tipos-sangre', [CpuTipoSangreController::class, 'index']);
+
 
 });
 
-Route::put('/cpu-persona-update/{cedula}', [CpuPersonaController::class, 'update']);
+// Route::put('/cpu-persona-update/{cedula}', [CpuPersonaController::class, 'update']);

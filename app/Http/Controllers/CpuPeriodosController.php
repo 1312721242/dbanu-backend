@@ -14,7 +14,8 @@ class CpuPeriodosController extends Controller
     {
         $this->middleware('auth:api');
     }
-
+    
+   
     public function consultarPeriodos()
     {
         $periodos = CpuPeriodos::all();

@@ -145,7 +145,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::delete('/eliminar-funcion/{id}', [CpuUserfunctionController::class, 'eliminarFuncion']);
     Route::get('/consultar-funciones', [CpuUserfunctionController::class, 'consultarFunciones']);
     Route::post('/agregarFunciones', [CpuUserfunctionController::class, 'agregarFunciones']);
- 
+
 
     //userrolefunction
     Route::post('/agregar-funcion-rol', [CpuUserrolefunctionController::class, 'agregarFuncion']);
@@ -161,10 +161,10 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
     //generar plantilla y subir arhivo de excel a la base de datos
     // Ruta para generar la plantilla de archivo
-    // Route::get('legalizacion-matricula/export-template', [LegalizacionMatriculaSecretariaController::class, 'exportTemplate']);
+    Route::get('legalizacion-matricula/export-template', [LegalizacionMatriculaSecretariaController::class, 'exportTemplate']);
 
     // // Ruta para subir el archivo con la data de los asignados para que se matriculen
-    // Route::post('legalizacion-matricula/upload', [LegalizacionMatriculaSecretariaController::class, 'upload']);
+    Route::post('legalizacion-matricula/upload', [LegalizacionMatriculaSecretariaController::class, 'upload']);
 
 
     // Rutas para el controlador CpuMatriculaConfiguracionController
@@ -242,7 +242,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     //registros bienestar
     Route::get('/cpu-persona-bienestar/{cedula}', [CpuPersonaController::class, 'showBienestar']);
     Route::put('/cpu-persona-update-bienestar/{cedula}', [CpuPersonaController::class, 'updateBienestar']);
-    
+
 
     //tipos discapacidad
     Route::get('/cpu-tipos-discapacidad', [CpuTipoDiscapacidadController::class, 'index']);
@@ -252,7 +252,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::delete('/cpu-tipos-discapacidad/{id}', [CpuTipoDiscapacidadController::class, 'destroy']);
 
     //tipo de sangre
-    
+
     Route::get('/tipos-sangre', [CpuTipoSangreController::class, 'index']);
 
 

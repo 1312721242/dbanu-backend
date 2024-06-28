@@ -4,7 +4,7 @@ namespace App\Http\Controllers;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Http\Request;
-use App\Models\cpu_indicador;
+use App\Models\CpuIndicador;
 
 class CpuIndicadorController extends Controller
 {
@@ -15,7 +15,9 @@ class CpuIndicadorController extends Controller
     public function agregarIndicador(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'descripcion' => 'required|integer',
+            'descripcion' => 'required|string',
+            'id_year' => 'required|integer',
+            //'anio' => 'required|integer',
         ]);
 
         if ($validator->fails()) {
@@ -23,19 +25,21 @@ class CpuIndicadorController extends Controller
         }
 
         $indicador = $request->input('descripcion');
+        $ano = $request->input('id_year');
         $usuario = $request->user()->name;
         $ip = $request->ip();
         $nombreequipo = gethostbyaddr($ip);
         $fecha = now();
         try {
-            $Indicador = CpuIndicador::create([
+            $indicador = CpuIndicador::create([
                 'descripcion' => $indicador,
+                'id_year' => $ano,
             ]);
     
             DB::table('cpu_auditoria')->insert([
                 'aud_user' => $usuario,
                 'aud_tabla' => 'cpu_indicador',
-                'aud_campo' => 'descripcion',
+                'aud_campo' => 'descripcion',   
                 'aud_dataold' => '',
                 'aud_datanew' => $indicador,
                 'aud_tipo' => 'INSERCIÓN',
@@ -58,7 +62,7 @@ class CpuIndicadorController extends Controller
     public function modificarIndicador(Request $request, $id)
     {
         $validator = Validator::make($request->all(), [
-            'descripcion' => 'required|integer',
+            'descripcion' => 'required|string',
         ]);
 
         if ($validator->fails()) {
@@ -126,12 +130,16 @@ class CpuIndicadorController extends Controller
 
         return response()->json(['success' => true, 'message' => 'Año eliminado correctamente']);
     }
-
-    public function consultarIndicador(){
     
-        $indicador = DB::table('cpu_indicador')->get();
-
+    public function consultarIndicador(){
+        $indicador = DB::table('cpu_indicador as indi')
+            ->join('cpu_years as cm', 'indi.id_year', '=', 'cm.id')
+            ->select('indi.descripcion as indicador_descripcion', 'cm.descripcion as year_descripcion')
+            ->get();
+        
         return response()->json($indicador);
     }
+    
+    
 
 }

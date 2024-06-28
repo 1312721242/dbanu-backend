@@ -19,7 +19,7 @@ class CpuEvidencia extends Model
 
     public function objetivoNacional()
     {
-        return $this->belongsTo(CpuObjetivoNacional::class, 'id_elemento_fundamental', 'id_objetivo');
+        return $this->belongsTo(cpu_indicador::class, 'id_elemento_fundamental', 'id_indicador');
     }
 
 

@@ -16,7 +16,7 @@ class CpuObjetivoNacionalController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'id_year' => 'required|integer',
-            'descripcion' => 'required|string|unique:cpu_objetivo_nacional',
+            'descripcion' => 'required|string|unique:cpu_indicador',
         ]);
 
         if ($validator->fails()) {
@@ -37,7 +37,7 @@ class CpuObjetivoNacionalController extends Controller
     
             DB::table('cpu_auditoria')->insert([
                 'aud_user' => $usuario,
-                'aud_tabla' => 'cpu_objetivo_nacional',
+                'aud_tabla' => 'cpu_indicador',
                 'aud_campo' => 'descripcion',
                 'aud_dataold' => '',
                 'aud_datanew' => $ano,$descripcion,
@@ -76,14 +76,14 @@ class CpuObjetivoNacionalController extends Controller
         $nombreequipo = gethostbyaddr($ip);
         $fecha = now();
         try {
-            DB::table('cpu_objetivo_nacional')->where('id', $id)->update([
+            DB::table('cpu_indicador')->where('id', $id)->update([
                 'id_year' => $ano,
                 'descripcion' => $descripcion,
             ]);
     
             DB::table('cpu_auditoria')->insert([
                 'aud_user' => $usuario,
-                'aud_tabla' => 'cpu_objetivo_nacional',
+                'aud_tabla' => 'cpu_indicador',
                 'aud_campo' => 'descripcion',
                 'aud_dataold' => '',
                 'aud_datanew' => $ano,
@@ -106,17 +106,17 @@ class CpuObjetivoNacionalController extends Controller
 
     public function eliminarObjetivoNacional(Request $request, $id)
     {
-        $descripcion = DB::table('cpu_objetivo_nacional')->where('id', $id)->value('descripcion');
+        $descripcion = DB::table('cpu_indicador')->where('id', $id)->value('descripcion');
         $usuario = $request->user()->name;
         $ip = $request->ip();
         $nombreequipo = gethostbyaddr($ip);
         $fecha = now();
 
-        DB::table('cpu_objetivo_nacional')->where('id', $id)->delete();
+        DB::table('cpu_indicador')->where('id', $id)->delete();
 
         DB::table('cpu_auditoria')->insert([
             'aud_user' => $usuario,
-            'aud_tabla' => 'cpu_objetivo_nacional',
+            'aud_tabla' => 'cpu_indicador',
             'aud_campo' => 'descripcion',
             'aud_dataold' => $descripcion,
             'aud_datanew' => '',
@@ -135,7 +135,7 @@ class CpuObjetivoNacionalController extends Controller
 
     public function consultarObjetivoNacional(){
     
-        $ano = DB::table('cpu_objetivo_nacional')->get();
+        $ano = DB::table('cpu_indicador')->get();
 
         return response()->json($ano);
     }

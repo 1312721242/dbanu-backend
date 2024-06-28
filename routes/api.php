@@ -32,6 +32,7 @@ use App\Http\Controllers\TurnosController;
 use App\Http\Controllers\CpuPersonaController;
 use App\Http\Controllers\CpuTipoDiscapacidadController;
 use App\Http\Controllers\CpuTipoSangreController;
+use App\Http\Controllers\CpuIndicadorController;
 
 // Autenticación
 Route::get('credencial-pdf/{identificacion}/{periodo}', [CpuBecadoController::class, 'generarCredencialPDF']);
@@ -90,6 +91,12 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::delete('/eliminar-year/{id}', [CpuYearController::class, 'eliminarYear']);
     Route::get('/consultar-years', [CpuYearController::class, 'consultarYear']);
 
+    // Indicadores
+    Route::post('/agregar-indicador', [CpuIndicadorController::class, 'agregarIndicador']);
+    Route::put('/modificar-indicador/{id}', [CpuIndicadorController::class, 'modificarIndicador']);
+    Route::delete('/eliminar-indicador/{id}', [CpuIndicadorController::class, 'eliminarIndicador']);
+    Route::get('/consultar-indicador', [CpuIndicadorController::class, 'consultarIndicador']);
+
     // Objetivo Nacional
     Route::post('/agregar-objetivo', [CpuObjetivoNacionalController::class, 'agregarObjetivoNacional']);
     Route::put('/modificar-objetivo/{id}', [CpuObjetivoNacionalController::class, 'modificarObjetivoNacional']);
@@ -132,6 +139,12 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::put('/modificar-estado/{id}', [CpuEstadosController::class, 'modificarEstado']);
     Route::delete('/eliminar-estado/{id}', [CpuEstadosController::class, 'eliminarEstado']);
     Route::get('/consultar-estados', [CpuEstadosController::class, 'consultarEstados']);
+    
+    //periodos
+    Route::post('/agregar-periodos', [CpuPeriodosController::class, 'agregarPeriodos']);
+    Route::put('/modificar-periodos/{id}', [CpuPeriodosController::class, 'modificarPeriodos']);
+    Route::delete('/eliminar-periodos/{id}', [CpuPeriodosController::class, 'eliminarPeriodos']);
+    Route::get('/consultar-periodos', [CpuPeriodosController::class, 'consultarPeriodos']);
 
     //menu
     Route::post('/agregar-menu', [CpuUsermenuController::class, 'agregarMenu']);
@@ -145,7 +158,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::delete('/eliminar-funcion/{id}', [CpuUserfunctionController::class, 'eliminarFuncion']);
     Route::get('/consultar-funciones', [CpuUserfunctionController::class, 'consultarFunciones']);
     Route::post('/agregarFunciones', [CpuUserfunctionController::class, 'agregarFunciones']);
- 
+
 
     //userrolefunction
     Route::post('/agregar-funcion-rol', [CpuUserrolefunctionController::class, 'agregarFuncion']);
@@ -157,14 +170,14 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::post('/obtener-funciones-distinct-role', [CpuUserrolefunctionController::class, 'obtenerFuncionesDistinctRole']);
     Route::get('/funciones-con-asignadas', [CpuUserrolefunctionController::class, 'obtenerFuncionesConAsignadas']);
     //periodos
-    Route::get('/consultar-periodos', [CpuPeriodosController::class, 'consultarPeriodos']);
+    //Route::get('/consultar-periodos', [CpuPeriodosController::class, 'consultarPeriodos']);
 
     //generar plantilla y subir arhivo de excel a la base de datos
     // Ruta para generar la plantilla de archivo
-    // Route::get('legalizacion-matricula/export-template', [LegalizacionMatriculaSecretariaController::class, 'exportTemplate']);
+    Route::get('legalizacion-matricula/export-template', [LegalizacionMatriculaSecretariaController::class, 'exportTemplate']);
 
     // // Ruta para subir el archivo con la data de los asignados para que se matriculen
-    // Route::post('legalizacion-matricula/upload', [LegalizacionMatriculaSecretariaController::class, 'upload']);
+    Route::post('legalizacion-matricula/upload', [LegalizacionMatriculaSecretariaController::class, 'upload']);
 
 
     // Rutas para el controlador CpuMatriculaConfiguracionController
@@ -242,7 +255,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     //registros bienestar
     Route::get('/cpu-persona-bienestar/{cedula}', [CpuPersonaController::class, 'showBienestar']);
     Route::put('/cpu-persona-update-bienestar/{cedula}', [CpuPersonaController::class, 'updateBienestar']);
-    
+
 
     //tipos discapacidad
     Route::get('/cpu-tipos-discapacidad', [CpuTipoDiscapacidadController::class, 'index']);
@@ -252,7 +265,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::delete('/cpu-tipos-discapacidad/{id}', [CpuTipoDiscapacidadController::class, 'destroy']);
 
     //tipo de sangre
-    
+
     Route::get('/tipos-sangre', [CpuTipoSangreController::class, 'index']);
 
     //buscar funcionario por rol

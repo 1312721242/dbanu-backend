@@ -67,7 +67,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::put('/modificar-role-usuario/{id}', [RoleController::class, 'modificarRoleUsuario']);
     Route::delete('/eliminar-role-usuario/{id}', [RoleController::class, 'eliminarRoleUsuario']);
     Route::get('/consultar-roles', [RoleController::class, 'consultarRoles']);
-
+ 
     //menus
     Route::post('/agregar-menu', [MenuController::class, 'agregarMenu']);
 
@@ -254,6 +254,10 @@ Route::middleware(['auth:sanctum'])->group(function () {
     //tipo de sangre
     
     Route::get('/tipos-sangre', [CpuTipoSangreController::class, 'index']);
+
+    //buscar funcionario por rol
+    Route::post('/users/buscarfuncionariorol', [UsuarioController::class, 'buscarfuncionariorol']);
+
 
 
 });

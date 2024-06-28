@@ -172,8 +172,23 @@ class UsuarioController extends Controller
 
                 return response()->json($users);
             }
-
-
-
-
+        
+            public function buscarfuncionariorol(Request $request)
+            {
+                $validator = Validator::make($request->all(), [
+                    'usr_tipo' => 'required|integer|exists:users,usr_tipo',
+                ]);
+            
+                if ($validator->fails()) {
+                    return response()->json(['error' => $validator->errors()], 400);
+                }
+            
+                $usr_tipo = $request->input('usr_tipo');
+                $users = User::where('usr_tipo', $usr_tipo)
+                             ->where('usr_estado', 1)
+                             ->get();
+            
+                return response()->json($users);
+            }
+     
 }

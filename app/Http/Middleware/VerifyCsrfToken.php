@@ -26,6 +26,7 @@ class VerifyCsrfToken extends Middleware
         'api/turnos',
         'api/turnos/eliminar',
         'api/cpu-persona/{cedula}',
-        'api/cpu-persona-update/{cedula}'
+        'api/cpu-persona-update/{cedula}',
+        'api/users/buscarfuncionariorol',
     ];
 }

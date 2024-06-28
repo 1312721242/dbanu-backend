@@ -7,6 +7,7 @@ use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Hash;
 use App\Models\User;
 use Illuminate\Support\Facades\Auth;
+use App\Models\CpuProfesion;
 
 
 class UsuarioController extends Controller
@@ -173,22 +174,47 @@ class UsuarioController extends Controller
                 return response()->json($users);
             }
         
-            public function buscarfuncionariorol(Request $request)
-            {
-                $validator = Validator::make($request->all(), [
-                    'usr_tipo' => 'required|integer|exists:users,usr_tipo',
-                ]);
-            
-                if ($validator->fails()) {
-                    return response()->json(['error' => $validator->errors()], 400);
-                }
-            
-                $usr_tipo = $request->input('usr_tipo');
-                $users = User::where('usr_tipo', $usr_tipo)
-                             ->where('usr_estado', 1)
-                             ->get();
-            
-                return response()->json($users);
+        public function buscarfuncionariorol(Request $request)
+        {
+            $validator = Validator::make($request->all(), [
+                'usr_tipo' => 'required|integer|exists:users,usr_tipo',
+            ]);
+        
+            if ($validator->fails()) {
+                return response()->json(['error' => $validator->errors()], 400);
             }
-     
+        
+            $usr_tipo = $request->input('usr_tipo');
+            $users = User::where('usr_tipo', $usr_tipo)
+                            ->where('usr_estado', 8)
+                            ->get();
+        
+            return response()->json($users);
+        }
+
+        public function obtenerInformacion($id)
+        {
+            try {
+                $funcionario = User::find($id);
+                if (!$funcionario) {
+                    \Log::error("Funcionario no encontrado con ID: $id");
+                    return response()->json(['error' => 'Funcionario no encontrado'], 404);
+                }
+
+                $profesion = CpuProfesion::find($funcionario->usr_profesion);
+                if (!$profesion) {
+                    \Log::error("Profesion no encontrada para ID: " . $funcionario->usr_profesion);
+                }
+
+                return response()->json([
+                    'name' => $funcionario->name,
+                    'profesion' => $profesion ? $profesion->profesion : null,
+                ]);
+            } catch (\Exception $e) {
+                \Log::error('Error al obtener información del funcionario: ' . $e->getMessage());
+                return response()->json(['error' => 'Error interno del servidor'], 500);
+            }
+        }
+            
+            
 }

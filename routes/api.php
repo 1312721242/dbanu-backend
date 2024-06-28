@@ -33,6 +33,8 @@ use App\Http\Controllers\CpuPersonaController;
 use App\Http\Controllers\CpuTipoDiscapacidadController;
 use App\Http\Controllers\CpuTipoSangreController;
 use App\Http\Controllers\CpuIndicadorController;
+use App\Http\Controllers\CpuAtencionesController;
+
 
 // Autenticación
 Route::get('credencial-pdf/{identificacion}/{periodo}', [CpuBecadoController::class, 'generarCredencialPDF']);
@@ -126,6 +128,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::put('/actualizar-informacion-personal/{id}', [UsuarioController::class, 'actualizarInformacionPersonal']);
     Route::get('/users/search', [UsuarioController::class, 'search']);
     Route::post('cambiar-password-app', [UsuarioController::class, 'cambiarPasswordApp']);
+    Route::get('funcionarios/{id}', [UsuarioController::class, 'obtenerInformacion']);
 
 
     //profesiones
@@ -248,6 +251,9 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::post('/agregarTurnos', [TurnosController::class, 'agregarTurnos']);
     Route::post('/turnos', [TurnosController::class, 'listarTurnos']); // Cambiar a POST
     Route::post('/turnos/eliminar', [TurnosController::class, 'eliminarTurno']);
+    Route::post('/turnos/funcionario', [TurnosController::class, 'listarTurnosPorFuncionario']);
+    Route::post('/turnos/actualizar', [TurnosController::class, 'reservarTurno']);
+
 
     //rutas para registros medico ocupaconal
     Route::get('/cpu-persona/{cedula}', [CpuPersonaController::class, 'show']);
@@ -268,9 +274,12 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
     Route::get('/tipos-sangre', [CpuTipoSangreController::class, 'index']);
 
-    //buscar funcionario por rol
+    // buscar funcionario por rol
     Route::post('/users/buscarfuncionariorol', [UsuarioController::class, 'buscarfuncionariorol']);
 
+    //guardar atenciones
+    Route::post('/atenciones/guardar', [CpuAtencionesController::class, 'guardarAtencion']);
+    
 
 
 });

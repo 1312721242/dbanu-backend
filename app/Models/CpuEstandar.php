@@ -15,7 +15,7 @@ class CpuEstandar extends Model
     // Define las relaciones
     public function objetivo()
     {
-        return $this->belongsTo(CpuObjetivoNacional::class, 'id_objetivo', 'id');
+        return $this->belongsTo(cpu_indicador::class, 'id_indicador', 'id');
     }
 
     // Define la relación con la tabla "estandar"

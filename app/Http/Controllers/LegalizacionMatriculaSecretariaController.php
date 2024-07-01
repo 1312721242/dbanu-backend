@@ -22,7 +22,7 @@ class LegalizacionMatriculaSecretariaController extends Controller
         $sheet = $spreadsheet->getActiveSheet();
 
         $headers = [
-            'id_periodo (integer)',
+            // 'id_periodo (integer)',
             'id_registro_nacional (text)',
             'id_postulacion (integer)',
             'ciudad_campus (text)',
@@ -81,6 +81,10 @@ class LegalizacionMatriculaSecretariaController extends Controller
         $sheetData = $spreadsheet->getActiveSheet()->toArray(null, true, true, true);
 
         $firstRow = true; // Variable para controlar la primera fila
+        $insertedCount = 0; // Contador de registros insertados
+        $omittedCount = 0; // Contador de registros omitidos
+        $omittedReasons = []; // Array para almacenar las razones de omisión
+
         foreach ($sheetData as $key => $row) {
             if ($firstRow) {
                 $firstRow = false;
@@ -89,31 +93,31 @@ class LegalizacionMatriculaSecretariaController extends Controller
 
             $data = [
                 'id_periodo' => $id_periodo,
-                'id_registro_nacional' => $row['B'] ?? null,
-                'id_postulacion' => $row['C'] ?? null,
-                'ciudad_campus' => $row['D'] ?? null,
-                'id_sede' => $row['E'] ?? null,
-                'id_facultad' => $row['F'] ?? null,
-                'id_carrera' => $row['G'] ?? null,
-                'email' => $row['H'] ?? null,
-                'cedula' => $row['I'] ?? null,
-                'apellidos' => $row['J'] ?? null,
-                'nombres' => $row['K'] ?? null,
-                'genero' => $row['L'] ?? null,
-                'etnia' => $row['M'] ?? null,
-                'discapacidad' => $row['N'] ?? null,
-                'segmento_persona' => $row['O'] ?? null,
-                'nota_postulacion' => $row['P'] ?? null,
+                'id_registro_nacional' => $row['A'] ?? null,
+                'id_postulacion' => $row['B'] ?? null,
+                'ciudad_campus' => $row['C'] ?? null,
+                'id_sede' => $row['D'] ?? null,
+                'id_facultad' => $row['E'] ?? null,
+                'id_carrera' => $row['F'] ?? null,
+                'email' => $row['G'] ?? null,
+                'cedula' => $row['H'] ?? null,
+                'apellidos' => $row['I'] ?? null,
+                'nombres' => $row['J'] ?? null,
+                'genero' => $row['K'] ?? null,
+                'etnia' => $row['L'] ?? null,
+                'discapacidad' => $row['M'] ?? null,
+                'segmento_persona' => $row['N'] ?? null,
+                'nota_postulacion' => $row['O'] ?? null,
                 'fecha_nacimiento' => null, // Asignar null al campo fecha_nacimiento
-                'nacionalidad' => $row['R'] ?? null,
-                'provincia_reside' => $row['S'] ?? null,
-                'canton_reside' => $row['T'] ?? null,
-                'parroquia_reside' => $row['U'] ?? null,
-                'instancia_postulacion' => $row['V'] ?? null,
-                'instancia_de_asignacion' => $row['W'] ?? null,
-                'gratuidad' => $row['X'] ?? null,
-                'observacion_gratuidad' => $row['Y'] ?? null,
-                'tipo_matricula' => $row['Z'] ?? null,
+                'nacionalidad' => $row['Q'] ?? null,
+                'provincia_reside' => $row['R'] ?? null,
+                'canton_reside' => $row['S'] ?? null,
+                'parroquia_reside' => $row['T'] ?? null,
+                'instancia_postulacion' => $row['U'] ?? null,
+                'instancia_de_asignacion' => $row['V'] ?? null,
+                'gratuidad' => $row['W'] ?? null,
+                'observacion_gratuidad' => $row['X'] ?? null,
+                'tipo_matricula' => $row['Y'] ?? null,
             ];
 
             // Check if record already exists
@@ -126,11 +130,29 @@ class LegalizacionMatriculaSecretariaController extends Controller
                     $model = new CpuLegalizacionMatricula();
                     $model->fill($data);
                     $model->save();
+                    $insertedCount++;
+                } else {
+                    $omittedCount++;
+                    $omittedReasons[] = [
+                        'row' => $key,
+                        'reason' => 'Registro existente para el período y cédula.'
+                    ];
                 }
+            } else {
+                $omittedCount++;
+                $omittedReasons[] = [
+                    'row' => $key,
+                    'reason' => 'Datos incompletos: id_periodo o cedula faltante.'
+                ];
             }
         }
 
-        return response()->json(['message' => 'Archivo cargado exitosamente']);
+        return response()->json([
+            'message' => 'Archivo cargado exitosamente',
+            'inserted' => $insertedCount,
+            'omitted' => $omittedCount,
+            'omitted_reasons' => $omittedReasons
+        ]);
     }
 
     //eliminar registros de carreras no aperturadas

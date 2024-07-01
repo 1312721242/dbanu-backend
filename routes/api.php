@@ -68,7 +68,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::put('/modificar-role-usuario/{id}', [RoleController::class, 'modificarRoleUsuario']);
     Route::delete('/eliminar-role-usuario/{id}', [RoleController::class, 'eliminarRoleUsuario']);
     Route::get('/consultar-roles', [RoleController::class, 'consultarRoles']);
- 
+
     //menus
     Route::post('/agregar-menu', [MenuController::class, 'agregarMenu']);
 
@@ -139,7 +139,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::put('/modificar-estado/{id}', [CpuEstadosController::class, 'modificarEstado']);
     Route::delete('/eliminar-estado/{id}', [CpuEstadosController::class, 'eliminarEstado']);
     Route::get('/consultar-estados', [CpuEstadosController::class, 'consultarEstados']);
-    
+
     //periodos
     Route::post('/agregar-periodos', [CpuPeriodosController::class, 'agregarPeriodos']);
     Route::put('/modificar-periodos/{id}', [CpuPeriodosController::class, 'modificarPeriodos']);

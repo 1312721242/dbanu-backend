@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use App\Models\CpuTurno;
 use Illuminate\Support\Facades\Auth;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Validator;
 
 class TurnosController extends Controller
 {
@@ -99,6 +100,38 @@ class TurnosController extends Controller
         return response()->json($turnos);
     }
 
+    public function listarTurnosPorFuncionario(Request $request)
+    {
+        $idFuncionario = $request->input('funcionario');
+        $fecha = $request->input('fecha');
+        $area = $request->input('area');
+        $horaActual = Carbon::now()->format('H:i:s');
+
+        // Log para depuración
+        \Log::info("Funcionario: $idFuncionario, Fecha: $fecha, Área: $area, Hora Actual: $horaActual");
+
+        $turnosQuery = CpuTurno::where('id_medico', $idFuncionario)
+            ->where('estado', 1)
+            ->where('area', $area);
+
+        if ($fecha == Carbon::now()->format('Y-m-d')) {
+            $turnosQuery->where('hora', '>', $horaActual);
+        }
+
+        $turnos = $turnosQuery->whereDate('fehca_turno', $fecha)->get();
+
+        // Formatear las fechas y horas
+        $turnos = $turnos->map(function($turno) {
+            $turno->fehca_turno = Carbon::parse($turno->fehca_turno)->format('Y-m-d');
+            $turno->hora = Carbon::parse($turno->hora)->format('H:i:s');
+            return $turno;
+        });
+
+        \Log::info("Turnos encontrados: " . $turnos->count());
+
+        return response()->json($turnos);
+    }
+
     public function eliminarTurno(Request $request)
     {
         $turnoId = $request->input('id');
@@ -113,4 +146,25 @@ class TurnosController extends Controller
             return response()->json(['success' => false], 404);
         }
     }
+
+    public function reservarTurno(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'id_turno' => 'required|integer|exists:cpu_turnos,id_turnos',
+            'id_paciente' => 'required|integer',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['error' => $validator->errors()], 400);
+        }
+
+        $turno = CpuTurno::find($request->input('id_turno'));
+        $turno->id_paciente = $request->input('id_paciente');
+        $turno->estado = 7; // Cambia el estado según sea necesario
+        $turno->save();
+
+        return response()->json(['success' => true]);
+    }
+
+
 }

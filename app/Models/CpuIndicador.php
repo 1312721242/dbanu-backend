@@ -16,5 +16,17 @@ class CpuIndicador extends Model
         'descripcion',
         'created_at',
         'update_at',
+        'id_year',
     ];
+    // Relación con años
+    public function year()
+    {
+        return
+         $this->belongsTo(CpuYear::class, 'descripcion', 'id');
+    }
+
+    public function estandares()
+    {
+        return $this->hasMany(CpuEstandar::class, 'id_objetivo');
+    }
 }

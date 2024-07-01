@@ -49,5 +49,6 @@ class User extends Authenticatable
     {
         return $this->belongsTo(CpuProfesion::class, 'usr_profesion', 'id');
     }
+    
 }
 

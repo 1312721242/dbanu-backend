@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 class CpuObjetivoNacional extends Model
 {
     use HasFactory;
-    protected $table = 'cpu_objetivo_nacional'; // Nombre de la tabla en la base de datos
+    protected $table = 'cpu_indicador'; // Nombre de la tabla en la base de datos
     protected $primaryKey = 'id'; // Nombre de la columna de clave primaria
     // public $timestamps = false; // Indica que no hay columnas para timestamps (created_at, updated_at)
 
@@ -28,7 +28,7 @@ class CpuObjetivoNacional extends Model
 
     public function estandares()
     {
-        return $this->hasMany(CpuEstandar::class, 'id_objetivo');
+        return $this->hasMany(CpuEstandar::class, 'id_indicador');
     }
 
 }

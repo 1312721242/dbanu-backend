@@ -4,7 +4,6 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Models\CpuEstandar;
-use App\Models\CpuIndicador;
 
 class CpuEstandarController extends Controller
 {
@@ -69,11 +68,8 @@ class CpuEstandarController extends Controller
     /**
      * Obtener los estándares por año e indicador.
      */
-    public function obtenerEstandares(Request $request)
+    public function obtenerEstandares($id_year, $id_indicador)
     {
-        $id_year = $request->input('id_year');
-        $id_indicador = $request->input('id_indicador');
-
         $estandares = CpuEstandar::whereHas('indicador', function($query) use ($id_year, $id_indicador) {
             $query->where('id_year', $id_year)
                   ->where('id', $id_indicador);

@@ -97,7 +97,9 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::post('/agregar-indicador', [CpuIndicadorController::class, 'agregarIndicador']);
     Route::put('/modificar-indicador/{id}', [CpuIndicadorController::class, 'modificarIndicador']);
     Route::delete('/eliminar-indicador/{id}', [CpuIndicadorController::class, 'eliminarIndicador']);
-    Route::get('/consultar-indicador', [CpuIndicadorController::class, 'consultarIndicador']);
+    // Route::get('/consultar-indicador', [CpuIndicadorController::class, 'consultarIndicador']);
+    Route::get('/consultar-indicador/{id_year}', [CpuIndicadorController::class, 'consultarIndicador']);
+
 
     // Objetivo Nacional
     Route::post('/agregar-objetivo', [CpuObjetivoNacionalController::class, 'agregarObjetivoNacional']);
@@ -279,7 +281,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
     //guardar atenciones
     Route::post('/atenciones/guardar', [CpuAtencionesController::class, 'guardarAtencion']);
-    
+
 
 
 });

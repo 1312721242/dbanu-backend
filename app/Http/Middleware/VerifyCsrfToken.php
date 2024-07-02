@@ -30,6 +30,8 @@ class VerifyCsrfToken extends Middleware
         'api/users/buscarfuncionariorol',
         'api/turnos/funcionario',
         'api/turnos/actualizar',
-        'api/atenciones/guardar'
+        'api/atenciones/guardar',
+        'api/agregar-indicador',
+        'api/modificar-indicador/{id}'
     ];
 }

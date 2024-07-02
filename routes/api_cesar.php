@@ -34,7 +34,7 @@ use App\Http\Controllers\CpuTipoDiscapacidadController;
 use App\Http\Controllers\CpuTipoSangreController;
 use App\Http\Controllers\CpuIndicadorController;
 use App\Http\Controllers\CpuAtencionesController;
-use App\Http\Controllers\CpuEstandarController;
+
 
 // Autenticación
 Route::get('credencial-pdf/{identificacion}/{periodo}', [CpuBecadoController::class, 'generarCredencialPDF']);
@@ -100,8 +100,6 @@ Route::middleware(['auth:sanctum'])->group(function () {
     // Route::get('/consultar-indicador', [CpuIndicadorController::class, 'consultarIndicador']);
     Route::get('/consultar-indicador/{id_year}', [CpuIndicadorController::class, 'consultarIndicador']);
 
-    //Estándares
-    Route::get('/obtener-estandares/{id_year}/{id_indicador}', [CpuEstandarController::class, 'obtenerEstandares']);
 
     // Objetivo Nacional
     Route::post('/agregar-objetivo', [CpuObjetivoNacionalController::class, 'agregarObjetivoNacional']);

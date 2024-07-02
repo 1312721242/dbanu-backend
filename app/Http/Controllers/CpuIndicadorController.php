@@ -16,7 +16,7 @@ class CpuIndicadorController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'descripcion' => 'required|string',
-            'id_year' => 'required|integer',
+            'anioindicador' => 'required|integer',
             //'anio' => 'required|integer',
         ]);
 
@@ -25,7 +25,7 @@ class CpuIndicadorController extends Controller
         }
 
         $indicador = $request->input('descripcion');
-        $ano = $request->input('id_year');
+        $ano = $request->input('anioindicador');
         $usuario = $request->user()->name;
         $ip = $request->ip();
         $nombreequipo = gethostbyaddr($ip);

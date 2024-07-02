@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
+use App\Models\CpuEstandar;
 
 class CpuEstandarController extends Controller
 {
@@ -11,7 +12,9 @@ class CpuEstandarController extends Controller
      */
     public function index()
     {
-        //
+        // Este método podría ser utilizado para devolver todos los registros, si es necesario
+        $estandares = CpuEstandar::all();
+        return response()->json($estandares);
     }
 
     /**
@@ -60,5 +63,18 @@ class CpuEstandarController extends Controller
     public function destroy(string $id)
     {
         //
+    }
+
+    /**
+     * Obtener los estándares por año e indicador.
+     */
+    public function obtenerEstandares($id_year, $id_indicador)
+    {
+        $estandares = CpuEstandar::whereHas('indicador', function($query) use ($id_year, $id_indicador) {
+            $query->where('id_year', $id_year)
+                  ->where('id', $id_indicador);
+        })->get();
+
+        return response()->json($estandares);
     }
 }

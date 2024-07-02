@@ -12,17 +12,13 @@ class CpuEstandar extends Model
     protected $table = 'cpu_estandar';
     protected $primaryKey = 'id';
 
-    // Define las relaciones
-    public function objetivo()
+    // Define la relación con la tabla "cpu_indicador"
+    public function indicador()
     {
-        return $this->belongsTo(cpu_indicador::class, 'id_indicador', 'id');
+        return $this->belongsTo(CpuIndicador::class, 'id_indicador', 'id');
     }
 
-    // Define la relación con la tabla "estandar"
-    public function estandar()
-    {
-        return $this->belongsTo(CpuEstandar::class, 'id_estandar', 'id');
-    }
+    // Define la relación con la tabla "cpu_elemento_fundamental"
     public function elementosFundamentales()
     {
         return $this->hasMany(CpuElementoFundamental::class, 'id_estandar');

@@ -102,6 +102,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
     //Estándares
     Route::get('/obtener-estandares/{id_year}/{id_indicador}', [CpuEstandarController::class, 'obtenerEstandares']);
+    Route::post('/estandares', [CpuEstandarController::class, 'store']);
 
     // Objetivo Nacional
     Route::post('/agregar-objetivo', [CpuObjetivoNacionalController::class, 'agregarObjetivoNacional']);

@@ -30,7 +30,20 @@ class CpuEstandarController extends Controller
      */
     public function store(Request $request)
     {
-        //
+        $request->validate([
+            'id_indicador' => 'required|exists:cpu_indicador,id',
+            'descripcion' => 'required|string',
+        ]);
+
+        $estandar = new CpuEstandar();
+        $estandar->id_indicador = $request->input('id_indicador');
+        $estandar->descripcion = $request->input('descripcion');
+        $estandar->save();
+
+        return response()->json([
+            'message' => 'Estandar creado exitosamente',
+            'estandar' => $estandar
+        ], 201);
     }
 
     /**
@@ -77,4 +90,5 @@ class CpuEstandarController extends Controller
 
         return response()->json($estandares);
     }
+
 }

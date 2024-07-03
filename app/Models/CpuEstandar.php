@@ -12,6 +12,11 @@ class CpuEstandar extends Model
     protected $table = 'cpu_estandar';
     protected $primaryKey = 'id';
 
+    protected $fillable = [
+        'id_indicador',
+        'descripcion',
+    ];
+
     // Define la relación con la tabla "cpu_indicador"
     public function indicador()
     {

@@ -1,6 +1,7 @@
 <?php
 
 namespace App\Models;
+
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
@@ -21,7 +22,4 @@ class CpuEvidencia extends Model
     {
         return $this->belongsTo(cpu_indicador::class, 'id_elemento_fundamental', 'id_indicador');
     }
-
-
-
 }

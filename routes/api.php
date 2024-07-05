@@ -104,6 +104,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     //Estándares
     Route::get('/obtener-estandares/{id_year}/{id_indicador}', [CpuEstandarController::class, 'obtenerEstandares']);
     Route::post('/estandares', [CpuEstandarController::class, 'store']);
+    Route::put('/actualizar-estandar/{id}', [CpuEstandarController::class, 'edit']);
 
     //Elementos Fundamentales
     Route::get('/consultar-fuente-informacion/{id_sede}', [CpuElementoFundamentalController::class, 'consultarFuenteInformacionsede']);
@@ -237,7 +238,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
     // Rutas para el controlador CpuEvidenciaController
     Route::post('/evidencia/agregar', [CpuEvidenciaController::class, 'agregarEvidencia']);
-    Route::put('/evidencia/{id}/actualizar', [CpuEvidenciaController::class, 'actualizarEvidencia']);
+    Route::put('/evidencia/actualizar/{id}', [CpuEvidenciaController::class, 'actualizarEvidencia']);
     Route::delete('/evidencia/{id}/eliminar', [CpuEvidenciaController::class, 'eliminarEvidencia']);
     Route::get('/evidencia', [CpuEvidenciaController::class, 'consultarEvidencias']);
     Route::get('obtener-informacion/{ano}', [CpuEvidenciaController::class, 'obtenerInformacionPorAno']);

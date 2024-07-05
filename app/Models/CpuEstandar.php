@@ -28,4 +28,6 @@ class CpuEstandar extends Model
     {
         return $this->hasMany(CpuElementoFundamental::class, 'id_estandar');
     }
+
+    public $timestamps = true;
 }

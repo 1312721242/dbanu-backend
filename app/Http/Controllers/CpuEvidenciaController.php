@@ -28,14 +28,26 @@ class CpuEvidenciaController extends Controller
             'id_elemento_fundamental' => 'required|integer',
             'descripcion' => 'required|string',
             'evidencia' => 'required|file|mimes:pdf|max:50000', // Max 50MB
+            'year' => 'required|integer',  // Añade validación para el año
         ]);
 
         $fuenteId = $request->input('id_elemento_fundamental');
         $descripcion = $request->input('descripcion');
         $evidenciaFile = $request->file('evidencia');
+        $yearId = $request->input('year');
 
-        $year = CpuYear::find($fuenteId); // Assuming you have a CpuYear model
-        $fuente = CpuElementoFundamental::find($fuenteId); // Assuming you have a CpuElementoFundamental model
+        // Verificar si la entrada 'year' es válida
+        $year = CpuYear::find($yearId);
+        if (!$year) {
+            return response()->json(['error' => 'Año no encontrado'], 404);
+        }
+
+        // Verificar si la entrada 'id_elemento_fundamental' es válida
+        $fuente = CpuElementoFundamental::find($fuenteId);
+        if (!$fuente) {
+            return response()->json(['error' => 'Elemento fundamental no encontrado'], 404);
+        }
+
         $fileName = $year->descripcion . '_' . str_replace(' ', '_', $descripcion) . '.pdf';
 
         // Verificar si la carpeta 'evidencias' existe en public/file
@@ -63,6 +75,7 @@ class CpuEvidenciaController extends Controller
 
         return response()->json(['message' => 'Evidencia agregada correctamente']);
     }
+
 
     public function actualizarEvidencia(Request $request, $id)
     {

@@ -1,10 +1,12 @@
 <?php
 
 namespace App\Http\Controllers;
+
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Http\Request;
 use App\Models\CpuIndicador;
+use Illuminate\Support\Facades\Log;
 
 class CpuIndicadorController extends Controller
 {
@@ -35,11 +37,11 @@ class CpuIndicadorController extends Controller
                 'descripcion' => $indicador,
                 'id_year' => $ano,
             ]);
-    
+
             DB::table('cpu_auditoria')->insert([
                 'aud_user' => $usuario,
                 'aud_tabla' => 'cpu_indicador',
-                'aud_campo' => 'descripcion',   
+                'aud_campo' => 'descripcion',
                 'aud_dataold' => '',
                 'aud_datanew' => $indicador,
                 'aud_tipo' => 'INSERCIÓN',
@@ -48,15 +50,14 @@ class CpuIndicadorController extends Controller
                 'aud_tipoauditoria' => 1,
                 'aud_descripcion' => "CREACION DE INDICADOR $indicador",
                 'aud_nombreequipo' => $nombreequipo,
-                'created_at' =>$fecha,
-                'updated_at' =>$fecha,
+                'created_at' => $fecha,
+                'updated_at' => $fecha,
             ]);
-    
+
             return response()->json(['success' => true, 'message' => 'Indicador se agregada correctamente']);
         } catch (\Throwable $th) {
             return response()->json(['warning' => true, 'message' => 'El Indicador que intentas registrar ya existe']);
         }
-       
     }
 
     public function modificarIndicador(Request $request, $id)
@@ -78,7 +79,7 @@ class CpuIndicadorController extends Controller
             DB::table('cpu_indicador')->where('id', $id)->update([
                 'descripcion' => $indicador,
             ]);
-    
+
             DB::table('cpu_auditoria')->insert([
                 'aud_user' => $usuario,
                 'aud_tabla' => 'cpu_indicador',
@@ -91,15 +92,14 @@ class CpuIndicadorController extends Controller
                 'aud_tipoauditoria' => 2,
                 'aud_descripcion' => "MODIFICACIÓN DE AÑO $indicador",
                 'aud_nombreequipo' => $nombreequipo,
-                'created_at' =>$fecha,
-                'updated_at' =>$fecha,
+                'created_at' => $fecha,
+                'updated_at' => $fecha,
             ]);
-    
+
             return response()->json(['success' => true, 'message' => 'Indicador modificado correctamente']);
         } catch (\Throwable $th) {
             return response()->json(['warning' => true, 'message' => 'Ya existe un registro con este Indicador por lo que la modificación que intentas hacer ha sido abortada']);
         }
-       
     }
 
     public function eliminarInidcador(Request $request, $id)
@@ -124,22 +124,34 @@ class CpuIndicadorController extends Controller
             'aud_tipoauditoria' => 3,
             'aud_descripcion' => "ELIMINACIÓN DE AÑO $indicador",
             'aud_nombreequipo' => $nombreequipo,
-            'created_at' =>$fecha,
-            'updated_at' =>$fecha,
+            'created_at' => $fecha,
+            'updated_at' => $fecha,
         ]);
 
         return response()->json(['success' => true, 'message' => 'Año eliminado correctamente']);
     }
-    
-    public function consultarIndicador(){
+
+    public function consultarIndicador($id_year)
+    {
+
+        // Realiza la consulta filtrando por id_year y selecciona todas las columnas necesarias
         $indicador = DB::table('cpu_indicador as indi')
             ->join('cpu_years as cm', 'indi.id_year', '=', 'cm.id')
-            ->select('indi.descripcion as indicador_descripcion', 'cm.descripcion as year_descripcion')
+            ->select('indi.*', 'cm.descripcion as year_descripcion')
+            ->when($id_year, function ($query, $id_year) {
+                return $query->where('indi.id_year', $id_year);
+            });
+
+        // Ejecutar la consulta y obtener los resultados
+        $indicador = DB::table('cpu_indicador as indi')
+            ->join('cpu_years as cm', 'indi.id_year', '=', 'cm.id')
+            ->select('indi.*', 'cm.descripcion as year_descripcion')
+            ->when($id_year, function ($query, $id_year) {
+                return $query->where('indi.id_year', $id_year);
+            })
             ->get();
-        
+
+        // Retorna la respuesta en formato JSON
         return response()->json($indicador);
     }
-    
-    
-
 }

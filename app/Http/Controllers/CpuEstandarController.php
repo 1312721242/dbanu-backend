@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Models\CpuEstandar;
+use Illuminate\Support\Facades\Validator;
 
 class CpuEstandarController extends Controller
 {
@@ -30,7 +31,20 @@ class CpuEstandarController extends Controller
      */
     public function store(Request $request)
     {
-        //
+        $request->validate([
+            'id_indicador' => 'required|exists:cpu_indicador,id',
+            'descripcion' => 'required|string',
+        ]);
+
+        $estandar = new CpuEstandar();
+        $estandar->id_indicador = $request->input('id_indicador');
+        $estandar->descripcion = $request->input('descripcion');
+        $estandar->save();
+
+        return response()->json([
+            'message' => 'Estandar creado exitosamente',
+            'estandar' => $estandar
+        ], 201);
     }
 
     /**
@@ -44,9 +58,31 @@ class CpuEstandarController extends Controller
     /**
      * Show the form for editing the specified resource.
      */
-    public function edit(string $id)
+
+    public function edit(Request $request, $id)
     {
-        //
+        // Validar los datos de la solicitud
+        $validator = Validator::make($request->all(), [
+            'id_indicador' => 'required|integer|exists:cpu_indicador,id',
+            'descripcion' => 'required|string|max:255',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['error' => $validator->errors()], 400);
+        }
+
+        // Buscar el estándar por ID
+        $estandar = CpuEstandar::find($id);
+        if (!$estandar) {
+            return response()->json(['error' => 'Estándar no encontrado'], 404);
+        }
+
+        // Actualizar los datos del estándar
+        $estandar->id_indicador = $request->input('id_indicador');
+        $estandar->descripcion = $request->input('descripcion');
+        $estandar->save();
+
+        return response()->json(['message' => 'Estándar actualizado exitosamente'], 200);
     }
 
     /**
@@ -77,4 +113,5 @@ class CpuEstandarController extends Controller
 
         return response()->json($estandares);
     }
+
 }

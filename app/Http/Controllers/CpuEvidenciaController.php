@@ -11,6 +11,7 @@ use App\Models\CpuObjetivoNacional;
 use App\Models\CpuElementoFundamental;
 use App\Models\CpuYear;
 use App\Models\CpuSede;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\URL;
 
 
@@ -27,14 +28,26 @@ class CpuEvidenciaController extends Controller
             'id_elemento_fundamental' => 'required|integer',
             'descripcion' => 'required|string',
             'evidencia' => 'required|file|mimes:pdf|max:50000', // Max 50MB
+            'year' => 'required|integer',  // Añade validación para el año
         ]);
 
         $fuenteId = $request->input('id_elemento_fundamental');
         $descripcion = $request->input('descripcion');
         $evidenciaFile = $request->file('evidencia');
+        $yearId = $request->input('year');
 
-        $year = CpuYear::find($fuenteId); // Assuming you have a CpuYear model
-        $fuente = CpuElementoFundamental::find($fuenteId); // Assuming you have a CpuElementoFundamental model
+        // Verificar si la entrada 'year' es válida
+        $year = CpuYear::find($yearId);
+        if (!$year) {
+            return response()->json(['error' => 'Año no encontrado'], 404);
+        }
+
+        // Verificar si la entrada 'id_elemento_fundamental' es válida
+        $fuente = CpuElementoFundamental::find($fuenteId);
+        if (!$fuente) {
+            return response()->json(['error' => 'Elemento fundamental no encontrado'], 404);
+        }
+
         $fileName = $year->descripcion . '_' . str_replace(' ', '_', $descripcion) . '.pdf';
 
         // Verificar si la carpeta 'evidencias' existe en public/file
@@ -67,43 +80,51 @@ class CpuEvidenciaController extends Controller
     public function actualizarEvidencia(Request $request, $id)
     {
         $request->validate([
+            'id_elemento_fundamental' => 'required|integer',
             'descripcion' => 'required|string',
-            'evidencia' => 'required|file|mimes:pdf|max:50000', // Max 50MB
+            'evidencia' => 'file|mimes:pdf|max:50000', // Max 50MB
         ]);
 
+        $evidencia = CpuEvidencia::find($id);
+
+        if (!$evidencia) {
+            return response()->json(['warning' => true, 'message' => 'Evidencia no encontrada'], 404);
+        }
+
+        $fuenteId = $request->input('id_elemento_fundamental');
         $descripcion = $request->input('descripcion');
         $evidenciaFile = $request->file('evidencia');
 
-        $evidencia = CpuEvidencia::findOrFail($id);
-
-        $year = CpuYear::find($evidencia->id_elemento_fundamental);
-
-        // Construir la ruta del archivo existente en la carpeta publica
-        $filePath = public_path('Files/evidencias/' . $year->descripcion . '/' . basename($evidencia->enlace_evidencia));
-
-        if (file_exists($filePath)) {
-            // Eliminar el archivo existente
-            unlink($filePath);
-        }
-
-        // Verificar si la carpeta del año existe en public/Files/evidencias
-        $yearFolder = public_path('Files/evidencias/' . $year->descripcion);
-        if (!file_exists($yearFolder)) {
-            mkdir($yearFolder, 0777, true); // Crear la carpeta del año
-        }
-
-        $fileName = str_replace(' ', '_', $descripcion) . '.pdf';
+        $year = CpuYear::find($fuenteId);
+        $fileName = $year->descripcion . '_' . str_replace(' ', '_', $descripcion) . '.pdf';
         $filePath = 'Files/evidencias/' . $year->descripcion . '/' . $fileName;
-        $evidenciaFile->move($yearFolder, $fileName); // Mover el archivo a la carpeta del año
 
-        // Actualizar la descripción y la ruta de la evidencia en la base de datos
+        if ($evidenciaFile) {
+            // Verificar si la carpeta 'evidencias' existe en public/file
+            $evidenciasFolder = public_path('Files/evidencias');
+            if (!file_exists($evidenciasFolder)) {
+                mkdir($evidenciasFolder, 0777, true); // Crear la carpeta 'evidencias'
+            }
+
+            // Verificar si la carpeta del año existe en public/file/evidencias
+            $yearFolder = $evidenciasFolder . '/' . $year->descripcion;
+            if (!file_exists($yearFolder)) {
+                mkdir($yearFolder, 0777, true); // Crear la carpeta del año
+            }
+
+            // Mover el archivo a la carpeta del año
+            $evidenciaFile->move($yearFolder, $fileName);
+
+            // Actualizar el enlace de evidencia
+            $evidencia->enlace_evidencia = $filePath;
+        }
+
+        $evidencia->id_elemento_fundamental = $fuenteId;
         $evidencia->descripcion = $descripcion;
-        $evidencia->enlace_evidencia = $filePath;
         $evidencia->save();
 
         return response()->json(['message' => 'Evidencia actualizada correctamente']);
     }
-
 
 
     public function eliminarEvidencia($id)
@@ -171,81 +192,81 @@ class CpuEvidenciaController extends Controller
     }
 
     public function obtenerInformacionPorAno($ano)
-{
-    // Obtener los objetivos nacionales que pertenecen al año dado
-    $objetivos = CpuObjetivoNacional::where('id_year', $ano)
-        ->with([
-            'estandares.elementosFundamentales.evidencias',
-        ])
-        ->get();
+    {
+        // Obtener los objetivos nacionales que pertenecen al año dado
+        $objetivos = CpuObjetivoNacional::where('id_year', $ano)
+            ->with([
+                'estandares.elementosFundamentales.evidencias',
+            ])
+            ->get();
 
-    // URL base de la aplicación
-    $baseUrl = URL::to('/');
+        // URL base de la aplicación
+        $baseUrl = URL::to('/');
 
-    // Preparar la respuesta
-    $response = [];
-    foreach ($objetivos as $objetivo) {
-        $estandares = [];
-        foreach ($objetivo->estandares as $estandar) {
-            $elementosFundamentales = [];
-            foreach ($estandar->elementosFundamentales as $elemento) {
-                // Obtener la sede basada en el campo id_sede
-                $sede = CpuSede::find($elemento->id_sede);
+        // Preparar la respuesta
+        $response = [];
+        foreach ($objetivos as $objetivo) {
+            $estandares = [];
+            foreach ($objetivo->estandares as $estandar) {
+                $elementosFundamentales = [];
+                foreach ($estandar->elementosFundamentales as $elemento) {
+                    // Obtener la sede basada en el campo id_sede
+                    $sede = CpuSede::find($elemento->id_sede);
 
-                $evidencias = [];
-                foreach ($elemento->evidencias as $evidencia) {
-                    // Generar URL firmada para la evidencia
-                    $urlFirmada = URL::temporarySignedRoute(
-                        'descargar-archivo',
-                        now()->addMinutes(30), // La URL expirará en 30 minutos
-                        ['ano' => $ano, 'archivo' => 'Files/evidencias/' . $evidencia->enlace_evidencia]
-                    );
+                    $evidencias = [];
+                    foreach ($elemento->evidencias as $evidencia) {
+                        // Generar URL firmada para la evidencia
+                        $urlFirmada = URL::temporarySignedRoute(
+                            'descargar-archivo',
+                            now()->addMinutes(30), // La URL expirará en 30 minutos
+                            ['ano' => $ano, 'archivo' => 'Files/evidencias/' . $evidencia->enlace_evidencia]
+                        );
 
-                    // Construir la URL de la evidencia sin firmar
-                    $urlEvidencia = $baseUrl . '/' . $evidencia->enlace_evidencia;
+                        // Construir la URL de la evidencia sin firmar
+                        $urlEvidencia = $baseUrl . '/' . $evidencia->enlace_evidencia;
 
-                    // Remover parte no deseada de la URL
-                    $urlFirmada = str_replace('api/descargar-archivo/1/', '', $urlFirmada);
+                        // Remover parte no deseada de la URL
+                        $urlFirmada = str_replace('api/descargar-archivo/1/', '', $urlFirmada);
 
-                    // Asignar ambas URLs a la evidencia
-                    $evidenciaData = [
-                        'id' => $evidencia->id,
-                        'descripcion' => $evidencia->descripcion,
-                        'enlace_evidencia' => [
-                            'url_firmada' => $urlFirmada
-                        ]
+                        // Asignar ambas URLs a la evidencia
+                        $evidenciaData = [
+                            'id' => $evidencia->id,
+                            'descripcion' => $evidencia->descripcion,
+                            'enlace_evidencia' => [
+                                'url_firmada' => $urlFirmada
+                            ]
+                        ];
+                        $evidencias[] = $evidenciaData;
+                    }
+
+                    $elementoFundamentalData = [
+                        'id' => $elemento->id,
+                        'descripcion' => $elemento->descripcion,
+                        'sede' => [
+                            'id' => $sede->id,
+                            'nombre' => $sede->nombre_sede,
+                        ],
+                        'evidencias' => $evidencias
                     ];
-                    $evidencias[] = $evidenciaData;
+                    $elementosFundamentales[] = $elementoFundamentalData;
                 }
-
-                $elementoFundamentalData = [
-                    'id' => $elemento->id,
-                    'descripcion' => $elemento->descripcion,
-                    'sede' => [
-                        'id' => $sede->id,
-                        'nombre' => $sede->nombre_sede,
-                    ],
-                    'evidencias' => $evidencias
+                $estandarData = [
+                    'id' => $estandar->id,
+                    'descripcion' => $estandar->descripcion,
+                    'elementos_fundamentales' => $elementosFundamentales
                 ];
-                $elementosFundamentales[] = $elementoFundamentalData;
+                $estandares[] = $estandarData;
             }
-            $estandarData = [
-                'id' => $estandar->id,
-                'descripcion' => $estandar->descripcion,
-                'elementos_fundamentales' => $elementosFundamentales
+            $objetivoData = [
+                'id' => $objetivo->id,
+                'descripcion' => $objetivo->descripcion,
+                'estandares' => $estandares
             ];
-            $estandares[] = $estandarData;
+            $response[] = $objetivoData;
         }
-        $objetivoData = [
-            'id' => $objetivo->id,
-            'descripcion' => $objetivo->descripcion,
-            'estandares' => $estandares
-        ];
-        $response[] = $objetivoData;
-    }
 
-    return response()->json(['ano' => $ano, 'objetivos_nacionales' => $response]);
-}
+        return response()->json(['ano' => $ano, 'objetivos_nacionales' => $response]);
+    }
 
 
 

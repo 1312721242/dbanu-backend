@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use App\Models\CpuEstandar;
+use App\Models\CpuElementoFundamental;
 
 
 class CpuElementoFundamentalController extends Controller
@@ -138,9 +139,12 @@ public function eliminarFuenteInformacion(Request $request, $id)
     return response()->json(['success' => true, 'message' => 'Objetivo eliminado correctamente']);
 }
 
-public function consultarFuenteInformacion(){
-    $objetivos = DB::table('cpu_elemento_fundamental')->get();
-    return response()->json($objetivos);
-}
+public function consultarFuenteInformacionsede($id_sede)
+    {
+        $objetivos = DB::table('cpu_elemento_fundamental')
+                        ->where('id_sede', $id_sede)
+                        ->get();
+        return response()->json($objetivos);
+    }
 
 }

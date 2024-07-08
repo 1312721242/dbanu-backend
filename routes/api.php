@@ -108,7 +108,9 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
     //Elementos Fundamentales
     Route::get('/consultar-fuente-informacion/{id_sede}', [CpuElementoFundamentalController::class, 'consultarFuenteInformacionsede']);
-    // Route::post('/elementos', [CpuElementoFundamentalController::class, 'agregarFuenteInformacion']);
+    Route::post('/elementos', [CpuElementoFundamentalController::class, 'agregarFuenteInformacione']);
+    Route::put('/actualizar-elemento/{id}', [CpuElementoFundamentalController::class, 'modificarFuenteInformacion']);
+
 
     // Objetivo Nacional
     Route::post('/agregar-objetivo', [CpuObjetivoNacionalController::class, 'agregarObjetivoNacional']);

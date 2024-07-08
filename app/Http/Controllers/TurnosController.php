@@ -12,7 +12,7 @@ class TurnosController extends Controller
 {
     public function agregarTurnos(Request $request)
     {
-        $user = auth()->user();
+        $user = Auth::user();
         $area = $user->usr_tipo; // Obtener el área del usuario autenticado
         $doctor = $user->id; // Obtener el ID del doctor del usuario autenticado
         $turnos = $request->input('turnos');
@@ -73,20 +73,16 @@ class TurnosController extends Controller
         // Depuración
         \Log::info("Usuario: $id_funcionario, Fecha Inicio: $ini, Fecha Fin: $hasta, Fecha Actual: $fechaActual, Hora Actual: $horaActual");
 
+        $turnosQuery = CpuTurno::where('id_medico', $id_funcionario)
+            ->where('estado', 1)
+            ->whereBetween('fehca_turno', [$ini, $hasta]);
+
         if ($ini == $fechaActual) {
             \Log::info("Consulta para el mismo día");
-            $turnos = CpuTurno::where('id_medico', $id_funcionario)
-                ->where('estado', 1)
-                ->whereBetween('fehca_turno', [$ini, $hasta])
-                ->where('hora', '>', $horaActual)
-                ->get();
-        } else {
-            \Log::info("Consulta para diferentes días");
-            $turnos = CpuTurno::where('id_medico', $id_funcionario)
-                ->where('estado', 1)
-                ->whereBetween('fehca_turno', [$ini, $hasta])
-                ->get();
+            $turnosQuery->where('hora', '>', $horaActual);
         }
+
+        $turnos = $turnosQuery->get();
 
         // Formatear las fechas y horas
         $turnos = $turnos->map(function($turno) {
@@ -112,13 +108,18 @@ class TurnosController extends Controller
 
         $turnosQuery = CpuTurno::where('id_medico', $idFuncionario)
             ->where('estado', 1)
-            ->where('area', $area);
+            ->where('area', $area)
+            ->whereDate('fehca_turno', $fecha);
 
         if ($fecha == Carbon::now()->format('Y-m-d')) {
             $turnosQuery->where('hora', '>', $horaActual);
         }
 
-        $turnos = $turnosQuery->whereDate('fehca_turno', $fecha)->get();
+        $turnos = $turnosQuery->get();
+
+        // Depuración de SQL
+        \Log::info("Consulta SQL: " . $turnosQuery->toSql());
+        \Log::info("Parámetros de consulta: " . json_encode($turnosQuery->getBindings()));
 
         // Formatear las fechas y horas
         $turnos = $turnos->map(function($turno) {
@@ -128,6 +129,7 @@ class TurnosController extends Controller
         });
 
         \Log::info("Turnos encontrados: " . $turnos->count());
+        \Log::info("Turnos: " . json_encode($turnos));
 
         return response()->json($turnos);
     }
@@ -165,6 +167,4 @@ class TurnosController extends Controller
 
         return response()->json(['success' => true]);
     }
-
-
 }

@@ -16,7 +16,7 @@ class CpuElementoFundamentalController extends Controller
         $this->middleware('auth:api');
     }
 
-    public function agregarFuenteInformacion(Request $request)
+    public function agregarFuenteInformacione(Request $request)
 {
     $validator = Validator::make($request->all(), [
         'id_estandar' => 'required|integer',
@@ -36,7 +36,7 @@ class CpuElementoFundamentalController extends Controller
     $nombreequipo = gethostbyaddr($ip);
     $fecha = now();
 
-        $fuenteInformacion = CpuEstandar::create([
+        $fuenteInformacion = CpuElementoFundamental::create([
             'id_estandar' => $id_estandar,
             'id_sede' => $id_sede,
             'descripcion' => $descripcion,

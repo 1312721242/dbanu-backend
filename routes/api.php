@@ -36,6 +36,8 @@ use App\Http\Controllers\CpuIndicadorController;
 use App\Http\Controllers\CpuAtencionesController;
 use App\Http\Controllers\CpuEstandarController;
 use App\Http\Controllers\CpuElementoFundamentalController;
+use App\Http\Controllers\CpuDerivacionController;
+
 
 // Autenticación
 Route::get('credencial-pdf/{identificacion}/{periodo}', [CpuBecadoController::class, 'generarCredencialPDF']);
@@ -249,6 +251,8 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::post('generar-plantilla-becados', [CpuBecadoController::class, 'generarExcel']);
     Route::post('cargar-becados', [CpuBecadoController::class, 'importarExcel']);
     Route::get('qr-code/{identificacion}/{periodo}', [CpuBecadoController::class, 'generarQRCode']);
+    Route::get('/consultar-por-codigo-tarjeta/{codigoTarjeta}', [CpuBecadoController::class, 'consultarPorCodigoTarjeta']);
+ 
 
 
     Route::post('/registrar-consumo', [CpuConsumoBecadoController::class, 'registrarConsumo']);
@@ -289,6 +293,13 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
     //guardar atenciones
     Route::post('/atenciones/guardar', [CpuAtencionesController::class, 'guardarAtencion']);
+
+    //apis para derivaciones
+    Route::get('/derivaciones', [CpuDerivacionController::class, 'index']);
+    Route::get('/derivaciones/{id}', [CpuDerivacionController::class, 'show']);
+    Route::post('/derivaciones', [CpuDerivacionController::class, 'store']);
+    Route::put('/derivaciones/{id}', [CpuDerivacionController::class, 'update']);
+    Route::delete('/derivaciones/{id}', [CpuDerivacionController::class, 'destroy']);
 
 
 

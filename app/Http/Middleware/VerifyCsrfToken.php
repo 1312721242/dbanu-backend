@@ -32,6 +32,7 @@ class VerifyCsrfToken extends Middleware
         'api/turnos/actualizar',
         'api/atenciones/guardar',
         'api/agregar-role-usuario',
-        '/consultar-por-codigo-tarjeta/{codigoTarjeta}'
+        '/consultar-por-codigo-tarjeta/{codigoTarjeta}',
+        'api/registrar-consumo'
     ];
 }

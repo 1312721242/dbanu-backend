@@ -36,7 +36,6 @@ use App\Http\Controllers\CpuIndicadorController;
 use App\Http\Controllers\CpuAtencionesController;
 use App\Http\Controllers\CpuEstandarController;
 use App\Http\Controllers\CpuElementoFundamentalController;
-use App\Http\Controllers\CpuTipoComidaController;
 
 // Autenticación
 Route::get('credencial-pdf/{identificacion}/{periodo}', [CpuBecadoController::class, 'generarCredencialPDF']);
@@ -258,6 +257,8 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::post('generar-plantilla-becados', [CpuBecadoController::class, 'generarExcel']);
     Route::post('cargar-becados', [CpuBecadoController::class, 'importarExcel']);
     Route::get('qr-code/{identificacion}/{periodo}', [CpuBecadoController::class, 'generarQRCode']);
+    Route::get('/consultar-por-codigo-tarjeta/{codigoTarjeta}', [CpuBecadoController::class, 'consultarPorCodigoTarjeta']);
+
 
 
     Route::post('/registrar-consumo', [CpuConsumoBecadoController::class, 'registrarConsumo']);
@@ -298,6 +299,9 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
     //guardar atenciones
     Route::post('/atenciones/guardar', [CpuAtencionesController::class, 'guardarAtencion']);
+
+
+
 });
 
 // Route::put('/cpu-persona-update/{cedula}', [CpuPersonaController::class, 'update']);

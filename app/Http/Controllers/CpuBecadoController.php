@@ -17,6 +17,7 @@ use Dompdf\Dompdf;
 use Dompdf\Options;
 use SimpleSoftwareIO\QrCode\Facades\QrCode;
 use Endroid\QrCode\QrCode as EndroidQrCode;
+use Carbon\Carbon; // Asegúrate de importar Carbon
 
 class CpuBecadoController extends Controller
 {
@@ -37,6 +38,23 @@ class CpuBecadoController extends Controller
         }
 
         return response()->json(['message' => 'No se encontró el o la estudiante'], 404);
+    }
+
+    public function consultarPorCodigoTarjeta($codigoTarjeta)
+    {
+        $currentDate = Carbon::now();
+
+        $becado = CpuBecado::where('codigo_tarjeta', $codigoTarjeta)
+                            ->where('fecha_inicio_valido', '<=', $currentDate)
+                            ->where('fecha_fin_valido', '>=', $currentDate)
+                            ->select('id', 'identificacion', 'periodo', 'nombres', 'apellidos', 'sexo', 'email', 'telefono', 'beca', 'tipo_beca_otorgada', 'monto_otorgado', 'monto_consumido', 'fecha_inicio_valido', 'fecha_fin_valido')
+                            ->first();
+
+        if ($becado) {
+            return response()->json($becado);
+        }
+
+        return response()->json(['message' => 'No se encontró un registro válido para el código de tarjeta'], 404);
     }
 
     public function importarExcel(Request $request)

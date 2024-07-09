@@ -283,6 +283,8 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
     //guardar atenciones
     Route::post('/atenciones/guardar', [CpuAtencionesController::class, 'guardarAtencion']);
+    //Elementos Fundamentales
+    Route::get('/consultar-fuente-informacion/{id_sede}', [CpuElementoFundamentalController::class, 'consultarFuenteInformacionsede']);
 
 
 

@@ -83,8 +83,8 @@ public function modificarFuenteInformacion(Request $request, $id)
     $fecha = now();
     try {
         DB::table('cpu_elemento_fundamental')->where('id', $id)->update([
-            'id_estandar' => $id_estandar,
-            'id_sede' => $id_sede,
+            // 'id_estandar' => $id_estandar,
+            // 'id_sede' => $id_sede,
             'descripcion' => $descripcion,
         ]);
 

@@ -36,6 +36,7 @@ use App\Http\Controllers\CpuIndicadorController;
 use App\Http\Controllers\CpuAtencionesController;
 use App\Http\Controllers\CpuEstandarController;
 use App\Http\Controllers\CpuElementoFundamentalController;
+use App\Http\Controllers\CpuTipoComidaController;
 
 // Autenticación
 Route::get('credencial-pdf/{identificacion}/{periodo}', [CpuBecadoController::class, 'generarCredencialPDF']);
@@ -74,6 +75,11 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
     //menus
     Route::post('/agregar-menu', [MenuController::class, 'agregarMenu']);
+    Route::get('/cpu_tipo_comida', [CpuTipoComidaController::class, 'index']);
+    Route::post('/cpu_tipo_comida', [CpuTipoComidaController::class, 'store']);
+    Route::get('/cpu_tipo_comida/{id}', [CpuTipoComidaController::class, 'show']);
+    Route::put('/cpu_tipo_comida/{id}', [CpuTipoComidaController::class, 'update']);
+    Route::delete('/cpu_tipo_comida/{id}', [CpuTipoComidaController::class, 'destroy']);
 
     // Sede
     Route::post('/agregar-sede', [CpuSedeController::class, 'agregarSede']);
@@ -256,7 +262,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
     Route::post('/registrar-consumo', [CpuConsumoBecadoController::class, 'registrarConsumo']);
     Route::get('registros-por-fecha/{fecha}', [CpuConsumoBecadoController::class, 'registrosPorFecha']);
-    Route::get('detalle-registro/{fecha}', [CpuConsumoBecadoController::class,'detalleRegistro']);
+    Route::get('detalle-registro/{fecha}', [CpuConsumoBecadoController::class, 'detalleRegistro']);
 
     // routes/api.php
 
@@ -292,9 +298,6 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
     //guardar atenciones
     Route::post('/atenciones/guardar', [CpuAtencionesController::class, 'guardarAtencion']);
-
-
-
 });
 
 // Route::put('/cpu-persona-update/{cedula}', [CpuPersonaController::class, 'update']);

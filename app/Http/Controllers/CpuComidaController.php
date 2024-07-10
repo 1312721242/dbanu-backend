@@ -70,18 +70,18 @@ class CpuComidaController extends Controller
     }
 
     public function update(Request $request, $id)
-    {
-        $request->validate([
-            'id_tipo_comida' => 'required|exists:cpu_tipo_comida,id',
-            'descripcion' => 'required|string|max:255',
-            'precio' => 'required|numeric',
-        ]);
+{
+    $request->validate([
+        'id_tipo_comida' => 'required|exists:cpu_tipo_comida,id',
+        'descripcion' => 'required|string|max:255',
+        'precio' => 'required|numeric',
+    ]);
 
-        $comida = CpuComida::findOrFail($id);
-        $comida->update($request->all());
+    $comida = CpuComida::findOrFail($id);
+    $comida->update($request->all());
 
-        return response()->json($comida, 200);
-    }
+    return response()->json($comida, 200);
+}
 
     public function destroy($id)
     {

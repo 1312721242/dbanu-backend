@@ -33,6 +33,18 @@ class VerifyCsrfToken extends Middleware
         'api/atenciones/guardar',
         'api/agregar-role-usuario',
         '/consultar-por-codigo-tarjeta/{codigoTarjeta}',
-        'api/registrar-consumo'
+        'api/registrar-consumo',
+        'api/agregar-menu',
+        'api/cpu_tipo_comida',
+        'api/cpu_tipo_comida',
+        'api/cpu_tipo_comida/{id}',
+        'api/cpu_tipo_comida/{id}',
+        'api/cpu_tipo_comida/{id}',
+        'api/cpu_comidas',
+        'api/cpu_comidas-tipo-comida',
+        'api/cpu_comidas',
+        'api/cpu_comidas/{id}',
+        'api/cpu_comidas/{id}',
+        'api/cpu_comidas/{id}',
     ];
 }

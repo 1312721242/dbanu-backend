@@ -74,19 +74,19 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::delete('/eliminar-role-usuario/{id}', [RoleController::class, 'eliminarRoleUsuario']);
     Route::get('/consultar-roles', [RoleController::class, 'consultarRoles']);
 
-    //menus
-    Route::post('/agregar-menu', [MenuController::class, 'agregarMenu']);
-    Route::get('/cpu_tipo_comida', [CpuTipoComidaController::class, 'index']);
-    Route::post('/cpu_tipo_comida', [CpuTipoComidaController::class, 'store']);
-    Route::get('/cpu_tipo_comida/{id}', [CpuTipoComidaController::class, 'show']);
-    Route::put('/cpu_tipo_comida/{id}', [CpuTipoComidaController::class, 'update']);
-    Route::delete('/cpu_tipo_comida/{id}', [CpuTipoComidaController::class, 'destroy']);
-    Route::get('/cpu_comidas', [CpuComidaController::class, 'index']);
-    Route::get('/cpu_comidas-tipo-comida', [CpuComidaController::class, 'indexTipoComida']);
-    Route::post('/cpu_comidas', [CpuComidaController::class, 'store']);
-    Route::get('/cpu_comidas/{id}', [CpuComidaController::class, 'show']);
-    Route::put('/cpu_comidas/{id}', [CpuComidaController::class, 'update']);
-    Route::delete('/cpu_comidas/{id}', [CpuComidaController::class, 'destroy']);
+   //menus
+   Route::post('/agregar-menu', [MenuController::class, 'agregarMenu']);
+   Route::get('/cpu_tipo_comida', [CpuTipoComidaController::class, 'index']);
+   Route::post('/cpu_tipo_comida', [CpuTipoComidaController::class, 'store']);
+   Route::get('/cpu_tipo_comida/{id}', [CpuTipoComidaController::class, 'show']);
+   Route::put('/cpu_tipo_comida/{id}', [CpuTipoComidaController::class, 'update']);
+   Route::delete('/cpu_tipo_comida/{id}', [CpuTipoComidaController::class, 'destroy']);
+   Route::get('/cpu_comidas', [CpuComidaController::class, 'index']);
+   Route::get('/cpu_comidas-tipo-comida', [CpuComidaController::class, 'indexTipoComida']);
+   Route::post('/cpu_comidas', [CpuComidaController::class, 'store']);
+   Route::get('/cpu_comidas/{id}', [CpuComidaController::class, 'show']);
+   Route::put('/cpu_comidas/{id}', [CpuComidaController::class, 'update']);
+   Route::delete('/cpu_comidas/{id}', [CpuComidaController::class, 'destroy']);
 
     // Sede
     Route::post('/agregar-sede', [CpuSedeController::class, 'agregarSede']);

@@ -36,7 +36,7 @@ class CpuConsumoBecadoController extends Controller
         $becado->monto_consumido += $request->monto_facturado;
         $becado->save();
 
-        return response()->json(['message' => 'Consumo registrado correctamente'], 200);
+        return response()->json(['message' => 'Consumo registrado correctamente', 'code' => 200], 200);
     }
     //buscar consolidado por fechas
     public function registrosPorFecha($fecha)

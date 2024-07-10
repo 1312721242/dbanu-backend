@@ -47,7 +47,7 @@ class CpuBecadoController extends Controller
         $becado = CpuBecado::where('codigo_tarjeta', $codigoTarjeta)
                             ->where('fecha_inicio_valido', '<=', $currentDate)
                             ->where('fecha_fin_valido', '>=', $currentDate)
-                            ->select('id', 'identificacion', 'periodo', 'nombres', 'apellidos', 'sexo', 'email', 'telefono', 'beca', 'tipo_beca_otorgada', 'monto_otorgado', 'monto_consumido', 'fecha_inicio_valido', 'fecha_fin_valido')
+                            ->select('id', 'identificacion', 'periodo', 'nombres', 'apellidos', 'sexo', 'email', 'telefono', 'beca', 'tipo_beca_otorgada', 'monto_otorgado', 'monto_consumido', 'fecha_inicio_valido', 'fecha_fin_valido', 'carrera')
                             ->first();
 
         if ($becado) {

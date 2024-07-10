@@ -34,6 +34,7 @@ use App\Http\Controllers\CpuTipoDiscapacidadController;
 use App\Http\Controllers\CpuTipoSangreController;
 use App\Http\Controllers\CpuIndicadorController;
 use App\Http\Controllers\CpuAtencionesController;
+use App\Http\Controllers\CpuComidaController;
 use App\Http\Controllers\CpuEstandarController;
 use App\Http\Controllers\CpuElementoFundamentalController;
 use App\Http\Controllers\CpuTipoComidaController;
@@ -80,6 +81,12 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('/cpu_tipo_comida/{id}', [CpuTipoComidaController::class, 'show']);
     Route::put('/cpu_tipo_comida/{id}', [CpuTipoComidaController::class, 'update']);
     Route::delete('/cpu_tipo_comida/{id}', [CpuTipoComidaController::class, 'destroy']);
+    Route::get('/cpu_comidas', [CpuComidaController::class, 'index']);
+    Route::get('/cpu_comidas-tipo-comida', [CpuComidaController::class, 'indexTipoComida']);
+    Route::post('/cpu_comidas', [CpuComidaController::class, 'store']);
+    Route::get('/cpu_comidas/{id}', [CpuComidaController::class, 'show']);
+    Route::put('/cpu_comidas/{id}', [CpuComidaController::class, 'update']);
+    Route::delete('/cpu_comidas/{id}', [CpuComidaController::class, 'destroy']);
 
     // Sede
     Route::post('/agregar-sede', [CpuSedeController::class, 'agregarSede']);
@@ -300,9 +307,6 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
     //guardar atenciones
     Route::post('/atenciones/guardar', [CpuAtencionesController::class, 'guardarAtencion']);
-
-
-
 });
 
 // Route::put('/cpu-persona-update/{cedula}', [CpuPersonaController::class, 'update']);

@@ -126,7 +126,7 @@ public function eliminarFuenteSInformacion(Request $request, $id)
         'aud_campo' => 'descripcion',
         'aud_dataold' => $descripcion,
         'aud_datanew' => '',
-        'aud_tipo' => 'ELIMINACIÓN',    
+        'aud_tipo' => 'ELIMINACIÓN',
         'aud_fecha' => $fecha,
         'aud_ip' => $ip,
         'aud_tipoauditoria' => 3,

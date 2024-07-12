@@ -268,6 +268,8 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('qr-code/{identificacion}/{periodo}', [CpuBecadoController::class, 'generarQRCode']);
     Route::get('/consultar-por-codigo-tarjeta/{codigoTarjeta}', [CpuBecadoController::class, 'consultarPorCodigoTarjeta']);
     Route::get('/cpu_becados', [CpuBecadoController::class, 'index']);
+    Route::put('/cpu_becado/actualizarCodigoTarjeta/{id}', [CpuBecadoController::class, 'actualizarCodigoTarjeta']);
+
 
 
 

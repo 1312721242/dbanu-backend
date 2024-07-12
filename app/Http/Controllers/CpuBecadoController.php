@@ -280,4 +280,22 @@ class CpuBecadoController extends Controller
 
         return response()->json($results);
     }
+
+    public function actualizarCodigoTarjeta(Request $request, $id)
+    {
+        $request->validate([
+            'codigo_tarjeta' => 'required|string|max:255|unique:cpu_becados,codigo_tarjeta,' . $id,
+        ]);
+
+        $becado = CpuBecado::find($id);
+
+        if (!$becado) {
+            return response()->json(['message' => 'No se encontró el registro del estudiante'], 404);
+        }
+
+        $becado->codigo_tarjeta = $request->input('codigo_tarjeta');
+        $becado->save();
+
+        return response()->json(['message' => 'Código de tarjeta actualizado correctamente', 'becado' => $becado], 200);
+    }
 }

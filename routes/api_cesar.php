@@ -34,7 +34,10 @@ use App\Http\Controllers\CpuTipoDiscapacidadController;
 use App\Http\Controllers\CpuTipoSangreController;
 use App\Http\Controllers\CpuIndicadorController;
 use App\Http\Controllers\CpuAtencionesController;
-
+use App\Http\Controllers\CpuComidaController;
+use App\Http\Controllers\CpuEstandarController;
+use App\Http\Controllers\CpuElementoFundamentalController;
+use App\Http\Controllers\CpuTipoComidaController;
 
 // Autenticación
 Route::get('credencial-pdf/{identificacion}/{periodo}', [CpuBecadoController::class, 'generarCredencialPDF']);
@@ -71,8 +74,19 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::delete('/eliminar-role-usuario/{id}', [RoleController::class, 'eliminarRoleUsuario']);
     Route::get('/consultar-roles', [RoleController::class, 'consultarRoles']);
 
-    //menus
-    Route::post('/agregar-menu', [MenuController::class, 'agregarMenu']);
+   //menus
+   Route::post('/agregar-menu', [MenuController::class, 'agregarMenu']);
+   Route::get('/cpu_tipo_comida', [CpuTipoComidaController::class, 'index']);
+   Route::post('/cpu_tipo_comida', [CpuTipoComidaController::class, 'store']);
+   Route::get('/cpu_tipo_comida/{id}', [CpuTipoComidaController::class, 'show']);
+   Route::put('/cpu_tipo_comida/{id}', [CpuTipoComidaController::class, 'update']);
+   Route::delete('/cpu_tipo_comida/{id}', [CpuTipoComidaController::class, 'destroy']);
+   Route::get('/cpu_comidas', [CpuComidaController::class, 'index']);
+   Route::get('/cpu_comidas-tipo-comida', [CpuComidaController::class, 'indexTipoComida']);
+   Route::post('/cpu_comidas', [CpuComidaController::class, 'store']);
+   Route::get('/cpu_comidas/{id}', [CpuComidaController::class, 'show']);
+   Route::put('/cpu_comidas/{id}', [CpuComidaController::class, 'update']);
+   Route::delete('/cpu_comidas/{id}', [CpuComidaController::class, 'destroy']);
 
     // Sede
     Route::post('/agregar-sede', [CpuSedeController::class, 'agregarSede']);
@@ -100,6 +114,16 @@ Route::middleware(['auth:sanctum'])->group(function () {
     // Route::get('/consultar-indicador', [CpuIndicadorController::class, 'consultarIndicador']);
     Route::get('/consultar-indicador/{id_year}', [CpuIndicadorController::class, 'consultarIndicador']);
 
+    //Estándares
+    Route::get('/obtener-estandares/{id_year}/{id_indicador}', [CpuEstandarController::class, 'obtenerEstandares']);
+    Route::post('/estandares', [CpuEstandarController::class, 'store']);
+    Route::put('/actualizar-estandar/{id}', [CpuEstandarController::class, 'edit']);
+
+    //Elementos Fundamentales
+    Route::get('/consultar-fuente-informacion/{id_sede}/{id_estandar}', [CpuElementoFundamentalController::class, 'consultarFuenteInformacionsede']);
+    Route::post('/elementos', [CpuElementoFundamentalController::class, 'agregarFuenteInformacione']);
+    Route::put('/actualizar-elemento/{id}', [CpuElementoFundamentalController::class, 'modificarFuenteInformacion']);
+    Route::delete('/eliminar-fuente-informacion/{id}', [CpuElementoFundamentalController::class, 'eliminarFuenteInformacion']);
 
     // Objetivo Nacional
     Route::post('/agregar-objetivo', [CpuObjetivoNacionalController::class, 'agregarObjetivoNacional']);
@@ -110,7 +134,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     // fuentes de informacion
     Route::post('/agregar-fuente-informacion', [CpuFuenteInformacionController::class, 'agregarFuenteInformacion']);
     Route::put('/modificar-fuente-informacion/{id}', [CpuFuenteInformacionController::class, 'modificarFuenteInformacion']);
-    Route::delete('/eliminar-fuente-informacion/{id}', [CpuFuenteInformacionController::class, 'eliminarFuenteInformacion']);
+    Route::delete('/eliminar-fuente-informacion/{id}', [CpuFuenteInformacionController::class, 'eliminarFuenteSInformacion']);
     Route::get('/consultar-fuente-informacion', [CpuFuenteInformacionController::class, 'consultarFuenteInformacion']);
 
 
@@ -230,7 +254,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
     // Rutas para el controlador CpuEvidenciaController
     Route::post('/evidencia/agregar', [CpuEvidenciaController::class, 'agregarEvidencia']);
-    Route::put('/evidencia/{id}/actualizar', [CpuEvidenciaController::class, 'actualizarEvidencia']);
+    Route::put('/evidencia/actualizar/{id}', [CpuEvidenciaController::class, 'actualizarEvidencia']);
     Route::delete('/evidencia/{id}/eliminar', [CpuEvidenciaController::class, 'eliminarEvidencia']);
     Route::get('/evidencia', [CpuEvidenciaController::class, 'consultarEvidencias']);
     Route::get('obtener-informacion/{ano}', [CpuEvidenciaController::class, 'obtenerInformacionPorAno']);
@@ -241,11 +265,13 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::post('generar-plantilla-becados', [CpuBecadoController::class, 'generarExcel']);
     Route::post('cargar-becados', [CpuBecadoController::class, 'importarExcel']);
     Route::get('qr-code/{identificacion}/{periodo}', [CpuBecadoController::class, 'generarQRCode']);
+    Route::get('/consultar-por-codigo-tarjeta/{codigoTarjeta}', [CpuBecadoController::class, 'consultarPorCodigoTarjeta']);
+
 
 
     Route::post('/registrar-consumo', [CpuConsumoBecadoController::class, 'registrarConsumo']);
     Route::get('registros-por-fecha/{fecha}', [CpuConsumoBecadoController::class, 'registrosPorFecha']);
-    Route::get('detalle-registro/{fecha}', [CpuConsumoBecadoController::class,'detalleRegistro']);
+    Route::get('detalle-registro/{fecha}', [CpuConsumoBecadoController::class, 'detalleRegistro']);
 
     // routes/api.php
 
@@ -281,9 +307,6 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
     //guardar atenciones
     Route::post('/atenciones/guardar', [CpuAtencionesController::class, 'guardarAtencion']);
-
-
-
 });
 
 // Route::put('/cpu-persona-update/{cedula}', [CpuPersonaController::class, 'update']);

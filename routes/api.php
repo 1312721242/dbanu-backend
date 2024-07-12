@@ -266,6 +266,8 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::post('cargar-becados', [CpuBecadoController::class, 'importarExcel']);
     Route::get('qr-code/{identificacion}/{periodo}', [CpuBecadoController::class, 'generarQRCode']);
     Route::get('/consultar-por-codigo-tarjeta/{codigoTarjeta}', [CpuBecadoController::class, 'consultarPorCodigoTarjeta']);
+    Route::get('/cpu_becados', [CpuBecadoController::class, 'index']);
+
 
 
 

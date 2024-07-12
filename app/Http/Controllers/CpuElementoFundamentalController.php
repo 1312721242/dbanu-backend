@@ -110,7 +110,7 @@ public function modificarFuenteInformacion(Request $request, $id)
     }
 }
 
-public function eliminarFuenteInformacion(Request $request, $id)
+public function eliminarFuenteSInformacion(Request $request, $id)
 {
     $descripcion = DB::table('cpu_elemento_fundamental')->where('id', $id)->value('descripcion');
     $usuario = $request->user()->name;
@@ -126,7 +126,7 @@ public function eliminarFuenteInformacion(Request $request, $id)
         'aud_campo' => 'descripcion',
         'aud_dataold' => $descripcion,
         'aud_datanew' => '',
-        'aud_tipo' => 'ELIMINACIÓN',
+        'aud_tipo' => 'ELIMINACIÓN',    
         'aud_fecha' => $fecha,
         'aud_ip' => $ip,
         'aud_tipoauditoria' => 3,

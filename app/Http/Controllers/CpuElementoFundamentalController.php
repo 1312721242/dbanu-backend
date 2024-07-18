@@ -110,7 +110,7 @@ public function modificarFuenteInformacion(Request $request, $id)
     }
 }
 
-public function eliminarFuenteInformacion(Request $request, $id)
+public function eliminarFuenteSInformacion(Request $request, $id)
 {
     $descripcion = DB::table('cpu_elemento_fundamental')->where('id', $id)->value('descripcion');
     $usuario = $request->user()->name;
@@ -139,12 +139,13 @@ public function eliminarFuenteInformacion(Request $request, $id)
     return response()->json(['success' => true, 'message' => 'Objetivo eliminado correctamente']);
 }
 
-public function consultarFuenteInformacionsede($id_sede)
-    {
-        $objetivos = DB::table('cpu_elemento_fundamental')
-                        ->where('id_sede', $id_sede)
-                        ->get();
-        return response()->json($objetivos);
-    }
+public function consultarFuenteInformacionsede($id_sede, $id_estandar)
+{
+    $objetivos = DB::table('cpu_elemento_fundamental')
+                    ->where('id_sede', $id_sede)
+                    ->where('id_estandar', $id_estandar)
+                    ->get();
+    return response()->json($objetivos);
+}
 
 }

@@ -67,7 +67,7 @@ class CpuBecadoController extends Controller
         return response()->json(['message' => 'No se encontró un registro válido para el código de tarjeta'], 404);
     }
 
-    
+
 
     public function importarExcel(Request $request)
     {

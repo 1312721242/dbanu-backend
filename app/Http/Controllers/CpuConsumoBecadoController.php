@@ -38,11 +38,11 @@ class CpuConsumoBecadoController extends Controller
 
         return response()->json(['message' => 'Consumo registrado correctamente', 'code' => 200], 200);
     }
-    //buscar consolidado por fechas
-    public function registrosPorFecha($fecha)
+    
+    public function registrosPorFechas($fechaInicio, $fechaFin)
     {
-        $registros = CpuConsumoBecado::whereDate('created_at', $fecha)->get();
-
+        $registros = CpuConsumoBecado::whereBetween('created_at', [$fechaInicio, $fechaFin])->get();
+    
         $total_por_tipo = $registros->groupBy('tipo_alimento')
                                     ->map(function ($items) {
                                         return [
@@ -50,23 +50,25 @@ class CpuConsumoBecadoController extends Controller
                                             'valor_vendido' => $items->sum('monto_facturado'),
                                         ];
                                     });
-
+    
         $total_global = [
             'total_registros' => $registros->count(),
             'total_monto' => $registros->sum('monto_facturado'),
         ];
-
+    
         return response()->json([
-            'fecha' => $fecha,
+            'fecha_inicio' => $fechaInicio,
+            'fecha_fin' => $fechaFin,
             'total_por_tipo' => $total_por_tipo,
             'total_global' => $total_global,
         ]);
     }
-    //buscar solo por fechas
-    public function detalleRegistro($fecha)
+    
+    // Buscar solo por fechas
+    public function detalleRegistros($fechaInicio, $fechaFin)
     {
-        $registros = CpuConsumoBecado::whereDate('created_at', $fecha)->get();
-
+        $registros = CpuConsumoBecado::whereBetween('created_at', [$fechaInicio, $fechaFin])->get();
+    
         $detalles = $registros->map(function ($registro) {
             return [
                 'periodo' => $registro->periodo,
@@ -75,12 +77,14 @@ class CpuConsumoBecadoController extends Controller
                 'monto_facturado' => $registro->monto_facturado,
             ];
         });
-
+    
         return response()->json([
-            'fecha' => $fecha,
+            'fecha_inicio' => $fechaInicio,
+            'fecha_fin' => $fechaFin,
             'detalles' => $detalles,
         ]);
     }
+    
 
 
 }

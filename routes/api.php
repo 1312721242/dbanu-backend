@@ -39,6 +39,7 @@ use App\Http\Controllers\CpuEstandarController;
 use App\Http\Controllers\CpuElementoFundamentalController;
 use App\Http\Controllers\CpuTipoComidaController;
 use App\Http\Controllers\CpuDerivacionController;
+use App\Http\Controllers\CpuValorConsumoDiarioBecaController;
 
 // Autenticación
 Route::get('credencial-pdf/{identificacion}/{periodo}', [CpuBecadoController::class, 'generarCredencialPDF']);
@@ -322,6 +323,10 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::post('/atenciones/guardar', [CpuAtencionesController::class, 'guardarAtencion']); 
     //agregar derivación
     Route::post('/derivaciones/guardar', [CpuDerivacionController::class, 'store']); 
+
+    //datos del valor de consumo por dia para becas
+    Route::get('cpu-valor-consumo-diario-beca', [CpuValorConsumoDiarioBecaController::class, 'consultar']);
+    Route::post('cpu-valor-consumo-diario-beca', [CpuValorConsumoDiarioBecaController::class, 'editar']);
 });
 
 // Route::put('/cpu-persona-update/{cedula}', [CpuPersonaController::class, 'update']);

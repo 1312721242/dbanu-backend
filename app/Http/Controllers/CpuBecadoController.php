@@ -42,20 +42,30 @@ class CpuBecadoController extends Controller
 
     public function consultarPorCodigoTarjeta($codigoTarjeta)
     {
-        $currentDate = Carbon::now();
-
+        $currentDate = Carbon::now()->toDateString(); // Obtener solo la parte de la fecha (YYYY-MM-DD)
+    
         $becado = CpuBecado::where('codigo_tarjeta', $codigoTarjeta)
             ->where('fecha_inicio_valido', '<=', $currentDate)
             ->where('fecha_fin_valido', '>=', $currentDate)
             ->select('id', 'identificacion', 'periodo', 'nombres', 'apellidos', 'sexo', 'email', 'telefono', 'beca', 'tipo_beca_otorgada', 'monto_otorgado', 'monto_consumido', 'codigo_tarjeta', 'fecha_inicio_valido', 'fecha_fin_valido', 'carrera')
             ->first();
-
+    
         if ($becado) {
-            return response()->json($becado);
+            // Obtener el valor consumido en la fecha actual
+            $valorConsumidoHoy = CpuConsumoBecado::where('becado_id', $becado->id)
+                ->whereDate('created_at', $currentDate)
+                ->sum('monto_facturado');
+    
+            return response()->json([
+                'becado' => $becado,
+                'valor_consumido_hoy' => $valorConsumidoHoy,
+                'valor_consumido_total' => $becado->monto_consumido
+            ]);
         }
-
+    
         return response()->json(['message' => 'No se encontró un registro válido para el código de tarjeta'], 404);
     }
+    
 
     public function importarExcel(Request $request)
     {

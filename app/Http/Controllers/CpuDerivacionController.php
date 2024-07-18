@@ -33,10 +33,12 @@ class CpuDerivacionController extends Controller
             'id_doctor_al_que_derivan' => 'required|integer|exists:users,id',
             'id_paciente' => 'required|integer|exists:cpu_personas,id',
             'motivo_derivacion' => 'required|string',
+            'detalle_derivacion' => 'required|string',
             'id_area' => 'required|integer',
             'fecha_para_atencion' => 'required|date',
             'hora_para_atencion' => 'required|date_format:H:i:s',
             'id_estado_derivacion' => 'integer|exists:cpu_estados,id',
+            'id_turno_asignado' => 'required|integer|exists:cpu_turnos,id_turnos',
         ]);
 
         $data['id_funcionario_que_derivo'] = Auth::id();
@@ -60,10 +62,12 @@ class CpuDerivacionController extends Controller
             'id_doctor_al_que_derivan' => 'integer|exists:users,id',
             'id_paciente' => 'integer|exists:cpu_personas,id',
             'motivo_derivacion' => 'string',
+            'detalle_derivacion' => 'required|string',
             'id_area' => 'integer',
             'fecha_para_atencion' => 'date',
             'hora_para_atencion' => 'date_format:H:i:s',
             'id_estado_derivacion' => 'integer|exists:cpu_estados,id',
+            'id_turno_asignado' => 'integer|exists:cpu_turnos,id_turnos',
         ]);
 
         $derivacion->update($data);

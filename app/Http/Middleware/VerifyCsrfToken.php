@@ -46,5 +46,6 @@ class VerifyCsrfToken extends Middleware
         'api/cpu_comidas/{id}',
         'api/cpu_comidas/{id}',
         'api/cpu_comidas/{id}',
+        'api/derivaciones/guardar'
     ];
 }

@@ -15,6 +15,7 @@ class CpuAtencionesController extends Controller
             'id_persona' => 'required|integer',
             'via_atencion' => 'required|string',
             'motivo_atencion' => 'required|string',
+            'detalle_atencion' => 'required|string',
             'fecha_hora_atencion' => 'required|date_format:Y-m-d H:i:s',
             'anio_atencion' => 'required|integer',
         ]);
@@ -28,6 +29,7 @@ class CpuAtencionesController extends Controller
         $atencion->id_persona = $request->input('id_persona');
         $atencion->via_atencion = $request->input('via_atencion');
         $atencion->motivo_atencion = $request->input('motivo_atencion');
+        $atencion->detalle_atencion = $request->input('detalle_atencion');
         $atencion->fecha_hora_atencion = $request->input('fecha_hora_atencion');
         $atencion->anio_atencion = $request->input('anio_atencion');
         $atencion->save();

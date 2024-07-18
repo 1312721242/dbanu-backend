@@ -275,18 +275,12 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('/cpu_becados', [CpuBecadoController::class, 'index']);
     Route::put('/cpu_becado/actualizarCodigoTarjeta/{id}', [CpuBecadoController::class, 'actualizarCodigoTarjeta']);
 
-
-
-
-
     Route::post('/registrar-consumo', [CpuConsumoBecadoController::class, 'registrarConsumo']);
     Route::get('registros-por-fechas/{fechaInicio}/{fechaFin}', [CpuConsumoBecadoController::class, 'registrosPorFechas']);
     Route::get('detalle-registros/{fechaInicio}/{fechaFin}', [CpuConsumoBecadoController::class, 'detalleRegistros']);
 
 
     // routes/api.php
-
-
     Route::post('/agregarTurnos', [TurnosController::class, 'agregarTurnos']);
     Route::post('/turnos', [TurnosController::class, 'listarTurnos']); // Cambiar a POST
     Route::post('/turnos/eliminar', [TurnosController::class, 'eliminarTurno']);

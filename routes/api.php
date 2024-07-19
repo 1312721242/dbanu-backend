@@ -38,6 +38,7 @@ use App\Http\Controllers\CpuComidaController;
 use App\Http\Controllers\CpuEstandarController;
 use App\Http\Controllers\CpuElementoFundamentalController;
 use App\Http\Controllers\CpuTipoComidaController;
+use App\Http\Controllers\CpuAtencionPsicologiaController;
 
 // Autenticación
 Route::get('credencial-pdf/{identificacion}/{periodo}', [CpuBecadoController::class, 'generarCredencialPDF']);
@@ -315,6 +316,10 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
     //guardar atenciones
     Route::post('/atenciones/guardar', [CpuAtencionesController::class, 'guardarAtencion']);
+   
+    //atenciones psicologia
+    Route::post('/atenciones-psicologia', [CpuAtencionPsicologiaController::class, 'store']);
+
 });
 
 // Route::put('/cpu-persona-update/{cedula}', [CpuPersonaController::class, 'update']);

@@ -18,5 +18,6 @@ class CpuAtencion extends Model
         'motivo_atencion',
         'fecha_hora_atencion',
         'anio_atencion',
+        'detalle_atencion',
     ];
 }

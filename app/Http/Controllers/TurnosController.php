@@ -98,9 +98,9 @@ class TurnosController extends Controller
 
     public function listarTurnosPorFuncionario(Request $request)
     {
-        $idFuncionario = $request->input('funcionario');
-        $fecha = $request->input('fecha');
-        $area = $request->input('area');
+        $idFuncionario = $request->query('funcionario');
+        $fecha = $request->query('fecha');
+        $area = $request->query('area');
         $horaActual = Carbon::now()->format('H:i:s');
 
         // Log para depuración
@@ -133,6 +133,7 @@ class TurnosController extends Controller
 
         return response()->json($turnos);
     }
+
 
     public function eliminarTurno(Request $request)
     {

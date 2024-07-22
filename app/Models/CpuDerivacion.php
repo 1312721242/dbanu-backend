@@ -18,11 +18,13 @@ class CpuDerivacion extends Model
         'id_paciente',
         'fecha_derivacion',
         'motivo_derivacion',
+        'detalle_derivacion',
         'id_area',
         'id_estado_derivacion',
         'fecha_para_atencion',
         'hora_para_atencion',
         'id_funcionario_que_derivo',
+        'id_turno_asignado',
     ];
 
     // Relación con la tabla cpu_atenciones
@@ -53,5 +55,11 @@ class CpuDerivacion extends Model
     public function paciente()
     {
         return $this->belongsTo(CpuPersona::class, 'id_paciente');
+    }
+
+    // Relación con la tabla cpu_turnos
+    public function turnoAsignado()
+    {
+        return $this->belongsTo(CpuTurno::class, 'id_turno_asignado');
     }
 }

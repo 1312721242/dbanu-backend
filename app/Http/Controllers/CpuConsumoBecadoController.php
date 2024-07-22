@@ -38,10 +38,20 @@ class CpuConsumoBecadoController extends Controller
 
         return response()->json(['message' => 'Consumo registrado correctamente', 'code' => 200], 200);
     }
-    //buscar consolidado por fechas
-    public function registrosPorFecha($fecha)
+    
+    public function registrosPorFechas($fechaInicio, $fechaFin)
     {
-        $registros = CpuConsumoBecado::whereDate('created_at', $fecha)->get();
+        // Convertir las fechas a objetos Carbon para facilitar la comparación y manipulación
+        $fechaInicio = Carbon::parse($fechaInicio);
+        $fechaFin = Carbon::parse($fechaFin);
+
+        // Si las fechas son iguales, buscar solo en esa fecha
+        if ($fechaInicio->isSameDay($fechaFin)) {
+            $registros = CpuConsumoBecado::whereDate('created_at', $fechaInicio)->get();
+        } else {
+            // Si las fechas no son iguales, buscar en el rango de fechas
+            $registros = CpuConsumoBecado::whereBetween('created_at', [$fechaInicio, $fechaFin])->get();
+        }
 
         $total_por_tipo = $registros->groupBy('tipo_alimento')
                                     ->map(function ($items) {
@@ -57,16 +67,19 @@ class CpuConsumoBecadoController extends Controller
         ];
 
         return response()->json([
-            'fecha' => $fecha,
+            'fecha_inicio' => $fechaInicio->toDateString(),
+            'fecha_fin' => $fechaFin->toDateString(),
             'total_por_tipo' => $total_por_tipo,
             'total_global' => $total_global,
         ]);
     }
-    //buscar solo por fechas
-    public function detalleRegistro($fecha)
-    {
-        $registros = CpuConsumoBecado::whereDate('created_at', $fecha)->get();
 
+    
+    // Buscar solo por fechas
+    public function detalleRegistros($fechaInicio, $fechaFin)
+    {
+        $registros = CpuConsumoBecado::whereBetween('created_at', [$fechaInicio, $fechaFin])->get();
+    
         $detalles = $registros->map(function ($registro) {
             return [
                 'periodo' => $registro->periodo,
@@ -75,12 +88,14 @@ class CpuConsumoBecadoController extends Controller
                 'monto_facturado' => $registro->monto_facturado,
             ];
         });
-
+    
         return response()->json([
-            'fecha' => $fecha,
+            'fecha_inicio' => $fechaInicio,
+            'fecha_fin' => $fechaFin,
             'detalles' => $detalles,
         ]);
     }
+    
 
 
 }

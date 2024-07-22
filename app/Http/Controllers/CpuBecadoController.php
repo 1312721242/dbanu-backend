@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\CpuBecado;
+use App\Models\CpuConsumoBecado;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -42,20 +43,31 @@ class CpuBecadoController extends Controller
 
     public function consultarPorCodigoTarjeta($codigoTarjeta)
     {
-        $currentDate = Carbon::now();
+        $currentDate = Carbon::now()->toDateString(); // Obtener solo la parte de la fecha (YYYY-MM-DD)
 
         $becado = CpuBecado::where('codigo_tarjeta', $codigoTarjeta)
             ->where('fecha_inicio_valido', '<=', $currentDate)
             ->where('fecha_fin_valido', '>=', $currentDate)
-            ->select('id', 'identificacion', 'periodo', 'nombres', 'apellidos', 'sexo', 'email', 'telefono', 'beca', 'tipo_beca_otorgada', 'monto_otorgado', 'monto_consumido', 'fecha_inicio_valido', 'fecha_fin_valido', 'carrera')
+            ->select('id', 'identificacion', 'periodo', 'nombres', 'apellidos', 'sexo', 'email', 'telefono', 'beca', 'tipo_beca_otorgada', 'monto_otorgado', 'monto_consumido', 'codigo_tarjeta', 'fecha_inicio_valido', 'fecha_fin_valido', 'carrera')
             ->first();
 
         if ($becado) {
-            return response()->json($becado);
+            // Obtener el valor consumido en la fecha actual
+            $valorConsumidoHoy = CpuConsumoBecado::where('id_becado', $becado->id)
+                ->whereDate('created_at', $currentDate)
+                ->sum('monto_facturado');
+
+            return response()->json([
+                'becado' => $becado,
+                'valor_consumido_hoy' => $valorConsumidoHoy,
+                'valor_consumido_total' => $becado->monto_consumido
+            ]);
         }
 
         return response()->json(['message' => 'No se encontró un registro válido para el código de tarjeta'], 404);
     }
+
+
 
     public function importarExcel(Request $request)
     {

@@ -3,6 +3,7 @@
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\CpuAspirantesEvaluacionesController;
 use App\Http\Controllers\MenuController;
 use App\Http\Controllers\RoleController;
 use App\Http\Controllers\CpuSedeController;
@@ -126,7 +127,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::post('/elementos', [CpuElementoFundamentalController::class, 'agregarFuenteInformacione']);
     Route::put('/actualizar-elemento/{id}', [CpuElementoFundamentalController::class, 'modificarFuenteInformacion']);
     Route::delete('/eliminar-fuente-informacion/{id}', [CpuElementoFundamentalController::class, 'eliminarFuenteSInformacion']);
-   
+
     //Elementos Fundamentales
     Route::post('/crearatencionpsicologia', [CpuElementoFundamentalController::class, 'agregarFuenteInformacione']);
 
@@ -314,13 +315,17 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
 
     //guardar atenciones
-    Route::post('/atenciones/guardar', [CpuAtencionesController::class, 'guardarAtencion']); 
+    Route::post('/atenciones/guardar', [CpuAtencionesController::class, 'guardarAtencion']);
     //agregar derivación
-    Route::post('/derivaciones/guardar', [CpuDerivacionController::class, 'store']); 
+    Route::post('/derivaciones/guardar', [CpuDerivacionController::class, 'store']);
 
     //datos del valor de consumo por dia para becas
     Route::get('cpu-valor-consumo-diario-beca', [CpuValorConsumoDiarioBecaController::class, 'consultar']);
     Route::post('cpu-valor-consumo-diario-beca', [CpuValorConsumoDiarioBecaController::class, 'editar']);
+
+    //evaluación de competencias
+    Route::get('/evaluaciones', [CpuAspirantesEvaluacionesController::class, 'getEvaluaciones']);
+
 });
 
 // Route::put('/cpu-persona-update/{cedula}', [CpuPersonaController::class, 'update']);

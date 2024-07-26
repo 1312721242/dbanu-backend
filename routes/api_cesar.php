@@ -274,21 +274,18 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('/cpu_becados', [CpuBecadoController::class, 'index']);
     Route::put('/cpu_becado/actualizarCodigoTarjeta/{id}', [CpuBecadoController::class, 'actualizarCodigoTarjeta']);
 
-
-
-
-
     Route::post('/registrar-consumo', [CpuConsumoBecadoController::class, 'registrarConsumo']);
-    Route::get('registros-por-fecha/{fecha}', [CpuConsumoBecadoController::class, 'registrosPorFecha']);
-    Route::get('detalle-registro/{fecha}', [CpuConsumoBecadoController::class, 'detalleRegistro']);
+    Route::get('registros-por-fechas/{fechaInicio}/{fechaFin}', [CpuConsumoBecadoController::class, 'registrosPorFechas']);
+    Route::get('detalle-registros/{fechaInicio}/{fechaFin}', [CpuConsumoBecadoController::class, 'detalleRegistros']);
+
 
     // routes/api.php
-
-
     Route::post('/agregarTurnos', [TurnosController::class, 'agregarTurnos']);
     Route::post('/turnos', [TurnosController::class, 'listarTurnos']); // Cambiar a POST
     Route::post('/turnos/eliminar', [TurnosController::class, 'eliminarTurno']);
-    Route::post('/turnos/funcionario', [TurnosController::class, 'listarTurnosPorFuncionario']);
+    // Listar turnos por funcionario
+    Route::get('/turnos/funcionario', [TurnosController::class, 'listarTurnosPorFuncionario']);
+
     Route::post('/turnos/actualizar', [TurnosController::class, 'reservarTurno']);
 
 
@@ -311,12 +308,14 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
     Route::get('/tipos-sangre', [CpuTipoSangreController::class, 'index']);
 
-    // buscar funcionario por rol
-    Route::post('/users/buscarfuncionariorol', [UsuarioController::class, 'buscarfuncionariorol']);
+    // Buscar funcionario por rol
+    Route::get('/users/buscarfuncionariorol', [UsuarioController::class, 'buscarfuncionariorol']);
+
 
     //guardar atenciones
     Route::post('/atenciones/guardar', [CpuAtencionesController::class, 'guardarAtencion']);
-   
+
+
     //atenciones psicologia
     Route::post('/atenciones-psicologia', [CpuAtencionPsicologiaController::class, 'store']);
 

@@ -3,6 +3,7 @@
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\CpuAspirantesEvaluacionesController;
 use App\Http\Controllers\MenuController;
 use App\Http\Controllers\RoleController;
 use App\Http\Controllers\CpuSedeController;
@@ -38,7 +39,6 @@ use App\Http\Controllers\CpuComidaController;
 use App\Http\Controllers\CpuEstandarController;
 use App\Http\Controllers\CpuElementoFundamentalController;
 use App\Http\Controllers\CpuTipoComidaController;
-use App\Http\Controllers\CpuAtencionPsicologiaController;
 
 // Autenticación
 Route::get('credencial-pdf/{identificacion}/{periodo}', [CpuBecadoController::class, 'generarCredencialPDF']);
@@ -125,7 +125,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::post('/elementos', [CpuElementoFundamentalController::class, 'agregarFuenteInformacione']);
     Route::put('/actualizar-elemento/{id}', [CpuElementoFundamentalController::class, 'modificarFuenteInformacion']);
     Route::delete('/eliminar-fuente-informacion/{id}', [CpuElementoFundamentalController::class, 'eliminarFuenteSInformacion']);
-   
+
     //Elementos Fundamentales
     Route::post('/crearatencionpsicologia', [CpuElementoFundamentalController::class, 'agregarFuenteInformacione']);
 
@@ -314,11 +314,6 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
     //guardar atenciones
     Route::post('/atenciones/guardar', [CpuAtencionesController::class, 'guardarAtencion']);
-
-
-    //atenciones psicologia
-    Route::post('/atenciones-psicologia', [CpuAtencionPsicologiaController::class, 'store']);
-
 });
 
 // Route::put('/cpu-persona-update/{cedula}', [CpuPersonaController::class, 'update']);

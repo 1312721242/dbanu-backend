@@ -39,8 +39,6 @@ use App\Http\Controllers\CpuComidaController;
 use App\Http\Controllers\CpuEstandarController;
 use App\Http\Controllers\CpuElementoFundamentalController;
 use App\Http\Controllers\CpuTipoComidaController;
-use App\Http\Controllers\CpuDerivacionController;
-use App\Http\Controllers\CpuValorConsumoDiarioBecaController;
 
 // Autenticación
 Route::get('credencial-pdf/{identificacion}/{periodo}', [CpuBecadoController::class, 'generarCredencialPDF']);
@@ -325,8 +323,6 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
     //evaluación de competencias
     Route::get('/evaluaciones', [CpuAspirantesEvaluacionesController::class, 'getEvaluaciones']);
-    Route::get('/evaluaciones-cedula', [CpuAspirantesEvaluacionesController::class, 'getEvaluacionesCedula']);
-    Route::post('/actualizar-asistencia', [CpuAspirantesEvaluacionesController::class, 'updateAsistencia']);
 
 });
 

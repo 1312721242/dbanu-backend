@@ -5,7 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-class AtencionPsicologia extends Model
+class CpuAtencionPsicologia extends Model
 {
     use HasFactory;
 
@@ -14,7 +14,10 @@ class AtencionPsicologia extends Model
 
     protected $fillable = [
         'id_cpu_atencion', // Asegúrate de que este campo está listo para recibir el ID
-        'motivo',
+        'tipo_usuario',
+        'tipo_atencion',
+        'medio_atencion',
+        'motivo_consulta',
         'evolucion',
         'diagnostico',
         'referido',

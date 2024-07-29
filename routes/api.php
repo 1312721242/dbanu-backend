@@ -36,9 +36,11 @@ use App\Http\Controllers\CpuTipoSangreController;
 use App\Http\Controllers\CpuIndicadorController;
 use App\Http\Controllers\CpuAtencionesController;
 use App\Http\Controllers\CpuComidaController;
+use App\Http\Controllers\CpuDerivacionController;
 use App\Http\Controllers\CpuEstandarController;
 use App\Http\Controllers\CpuElementoFundamentalController;
 use App\Http\Controllers\CpuTipoComidaController;
+use App\Http\Controllers\CpuValorConsumoDiarioBecaController;
 
 // Autenticación
 Route::get('credencial-pdf/{identificacion}/{periodo}', [CpuBecadoController::class, 'generarCredencialPDF']);
@@ -314,7 +316,6 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
     //guardar atenciones
     Route::post('/atenciones/guardar', [CpuAtencionesController::class, 'guardarAtencion']);
-<<<<<<< HEAD
     //agregar derivación
     Route::post('/derivaciones/guardar', [CpuDerivacionController::class, 'store']);
 
@@ -327,8 +328,6 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('/evaluaciones-cedula', [CpuAspirantesEvaluacionesController::class, 'getEvaluacionesCedula']);
     Route::post('/actualizar-asistencia', [CpuAspirantesEvaluacionesController::class, 'updateAsistencia']);
 
-=======
->>>>>>> f18a3c451160691dab2e54a84ff3d55745025974
 });
 
 // Route::put('/cpu-persona-update/{cedula}', [CpuPersonaController::class, 'update']);

@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\CpuAspirantesEvaluaciones;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class CpuAspirantesEvaluacionesController extends Controller
 {
@@ -94,6 +95,58 @@ class CpuAspirantesEvaluacionesController extends Controller
         $evaluacion->save();
 
         return response()->json(['message' => 'Asistencia actualizada correctamente']);
+    }
+
+    public function getReporteEvaluaciones(Request $request)
+    {
+        $request->validate([
+            'fecha_inicio' => 'required|date_format:Y-m-d',
+            'fecha_fin' => 'required|date_format:Y-m-d',
+        ]);
+
+        $fechaInicio = $request->input('fecha_inicio');
+        $fechaFin = $request->input('fecha_fin');
+
+        $periodo = $request->input('periodo');
+        $identifica = $request->input('identifica');
+
+        // Consulta para obtener las evaluaciones segmentadas y contadas por rango de fecha
+        $query = CpuAspirantesEvaluaciones::select(
+            'sede',
+            // 'carrera',
+            // 'sexo',
+            // 'genero',
+            // 'zona',
+            // 'bloque',
+            // 'sala',
+            // 'horario',
+            DB::raw('SUM(CASE WHEN asistencia = 1 THEN 1 ELSE 0 END) AS asistentes'),
+            DB::raw('SUM(CASE WHEN asistencia = 0 THEN 1 ELSE 0 END) AS ausentes')
+        )
+        ->whereBetween('fecha_formateada', [$fechaInicio, $fechaFin]);
+
+        // Aplicar filtros opcionales si están presentes
+        if ($periodo) {
+            $query->where('periodo', $periodo);
+        }
+
+        if ($identifica) {
+            $query->where('identifica', $identifica);
+        }
+
+        $evaluaciones = $query->groupBy(
+            'sede',
+            // 'carrera',
+            // 'sexo',
+            // 'genero',
+            // 'zona',
+            // 'bloque',
+            // 'sala',
+            // 'horario'
+        )
+        ->get();
+
+        return response()->json($evaluaciones);
     }
 
 }

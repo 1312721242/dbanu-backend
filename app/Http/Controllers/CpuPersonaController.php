@@ -9,6 +9,7 @@ use App\Models\CpuDatosMedicos;
 use App\Models\CpuDatosEstudiantes;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 
 class CpuPersonaController extends Controller
 {
@@ -247,4 +248,35 @@ class CpuPersonaController extends Controller
 
         return response()->json($persona->load(['datosEmpleados', 'datosMedicos', 'datosEstudiantes']));
     }
+
+    // actualizar datos personales
+    public function updateDatosPersonales(Request $request, $cedula)
+    {
+        $persona = CpuPersona::where('cedula', $cedula)->first();
+        if (!$persona) {
+            return response()->json(['message' => 'Persona no encontrada'], 404);
+        }
+
+        $data = $request->only([
+            'nombres', 'nacionalidad', 'provincia', 'ciudad', 'parroquia', 'direccion', 'sexo', 'fechanaci', 'celular', 'tipoetnia', 'discapacidad'
+        ]);
+
+        if ($request->hasFile('imagen')) {
+            $file = $request->file('imagen');
+            $path = $file->store('public/images');
+            $data['imagen'] = Storage::url($path);
+        }
+
+        $persona->update($data);
+
+        if ($persona->datosEmpleados) {
+            $persona->datosEmpleados()->update($request->only([
+                'emailinstitucional', 'puesto', 'regimen1', 'modalidad', 'unidad', 'carrera', 'idsubproceso', 'escala1', 'estado', 'fechaingre'
+            ]));
+        }
+
+        return response()->json($persona->load('datosEmpleados'));
+    }
+
+
 }

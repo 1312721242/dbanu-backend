@@ -5,6 +5,9 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\CpuAtencion;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\DB; // Asegúrate de importar esta clase
+use Carbon\Carbon;
+use Illuminate\Support\Facades\Log;
 
 class CpuAtencionesController extends Controller
 {
@@ -35,5 +38,52 @@ class CpuAtencionesController extends Controller
         $atencion->save();
 
         return response()->json(['success' => true]);
+    }
+//consula de las consultas 
+public function obtenerAtencionesPorPaciente($id_persona, $id_funcionario)
+{
+    // Realiza la consulta filtrando por id_persona y id_funcionario y selecciona todas las columnas necesarias
+    $atenciones = DB::table('cpu_atenciones as at')
+        ->select(
+            'at.id',
+            'at.id_funcionario',
+            'at.id_persona',
+            'at.via_atencion',
+            'at.motivo_atencion',
+            'at.fecha_hora_atencion',
+            'at.anio_atencion',
+            'at.created_at',
+            'at.updated_at',
+            'at.detalle_atencion'
+        )
+        ->when($id_persona, function ($query, $id_persona) {
+            return $query->where('at.id_persona', $id_persona);
+        })
+        ->when($id_funcionario, function ($query, $id_funcionario) {
+            return $query->where('at.id_funcionario', $id_funcionario);
+        })
+        ->get();
+
+    // Formatear la fecha después de obtener los datos
+    $atenciones->transform(function ($atencion) {
+        $atencion->fecha_hora_atencion = Carbon::parse($atencion->fecha_hora_atencion)->format('Y-m-d');
+        return $atencion;
+    });
+
+    // Log information
+    Log::info('Atenciones obtenidas:', ['atenciones' => $atenciones]);
+
+    // Retorna la respuesta en formato JSON
+    return response()->json($atenciones);
+}
+
+    public function eliminarAtencion($atencionId)
+    {
+        try {
+            DB::table('cpu_atenciones')->where('id', $atencionId)->delete();
+            return response()->json(['message' => 'Atención eliminada correctamente']);
+        } catch (\Exception $e) {
+            return response()->json(['error' => 'Error al eliminar la atención'], 500);
+        }
     }
 }

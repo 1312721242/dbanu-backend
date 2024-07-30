@@ -328,8 +328,9 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('/evaluaciones', [CpuAspirantesEvaluacionesController::class, 'getEvaluaciones']);
     Route::get('/evaluaciones-cedula', [CpuAspirantesEvaluacionesController::class, 'getEvaluacionesCedula']);
     Route::post('/actualizar-asistencia', [CpuAspirantesEvaluacionesController::class, 'updateAsistencia']);
-    Route::get('/reporte-evaluaciones', [CpuAspirantesEvaluacionesController::class, 'getReporteEvaluaciones']);
-
+    
+    //actualizar datos personales
+    Route::put('/persona/{cedula}', [CpuPersonaController::class, 'update']);
 });
 
 // Route::put('/cpu-persona-update/{cedula}', [CpuPersonaController::class, 'update']);

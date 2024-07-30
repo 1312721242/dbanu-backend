@@ -318,6 +318,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::post('/atenciones/guardar', [CpuAtencionesController::class, 'guardarAtencion']);
     //agregar derivación
     Route::post('/derivaciones/guardar', [CpuDerivacionController::class, 'store']);
+    Route::get('/derivaciones/filtrar', [CpuDerivacionController::class, 'getDerivacionesByDoctorAndDate']);
 
     //datos del valor de consumo por dia para becas
     Route::get('cpu-valor-consumo-diario-beca', [CpuValorConsumoDiarioBecaController::class, 'consultar']);

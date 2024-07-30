@@ -87,4 +87,41 @@ class CpuDerivacionController extends Controller
 
         return response()->json(['success' => true]);
     }
+
+    // Método para obtener derivaciones por doctor y rango de fechas
+    public function getDerivacionesByDoctorAndDate(Request $request)
+    {
+        // Validar los parámetros de entrada
+        $request->validate([
+            'doctor_id' => 'required|integer|exists:users,id',
+            'fecha_inicio' => 'required|date',
+            'fecha_fin' => 'required|date',
+        ]);
+
+        // Obtener los parámetros de la solicitud
+        $doctorId = $request->input('doctor_id');
+        $fechaInicio = Carbon::parse($request->input('fecha_inicio'))->startOfDay();
+        $fechaFin = Carbon::parse($request->input('fecha_fin'))->endOfDay();
+
+        // Consultar las derivaciones según los criterios
+        $derivaciones = CpuDerivacion::with(['paciente', 'funcionarioQueDerivo'])
+            ->where('id_doctor_al_que_derivan', $doctorId)
+            ->whereBetween('fecha_para_atencion', [$fechaInicio, $fechaFin])
+            ->select(
+                'cpu_personas.id as id_paciente',
+                'cpu_personas.cedula',
+                'cpu_personas.nombres',
+                'cpu_derivaciones.id as id_derivacion',
+                'cpu_derivaciones.fecha_para_atencion',
+                'cpu_derivaciones.motivo_derivacion',
+                'users.name as funcionario_que_deriva',
+                'cpu_derivaciones.hora_para_atencion'
+            )
+            ->join('cpu_personas', 'cpu_personas.id', '=', 'cpu_derivaciones.id_paciente')
+            ->join('users', 'users.id', '=', 'cpu_derivaciones.id_funcionario_que_derivo')
+            ->get();
+
+        // Devolver las derivaciones como respuesta JSON
+        return response()->json($derivaciones);
+    }
 }

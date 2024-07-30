@@ -314,6 +314,8 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
     //guardar atenciones
     Route::post('/atenciones/guardar', [CpuAtencionesController::class, 'guardarAtencion']);
+    Route::get('/atenciones/{id_persona}/{id_funcionario}', [CpuAtencionesController::class, 'obtenerAtencionesPorPaciente']);
+    Route::delete('/atencionesEliminar/{atencionId}', [CpuAtencionesController::class, 'eliminarAtencion']);
 });
 
 // Route::put('/cpu-persona-update/{cedula}', [CpuPersonaController::class, 'update']);

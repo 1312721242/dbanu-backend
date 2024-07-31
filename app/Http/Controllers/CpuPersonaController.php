@@ -10,6 +10,7 @@ use App\Models\CpuDatosEstudiantes;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Log;
 
 class CpuPersonaController extends Controller
 {
@@ -69,23 +70,23 @@ class CpuPersonaController extends Controller
         return response()->json(['message' => 'Persona no encontrada'], 404);
     }
 
-    public function update(Request $request, $cedula)
-    {
-        $persona = CpuPersona::where('cedula', $cedula)->first();
-        if (!$persona) {
-            return response()->json(['message' => 'Persona no encontrada'], 404);
-        }
+    // public function update(Request $request, $cedula)
+    // {
+    //     $persona = CpuPersona::where('cedula', $cedula)->first();
+    //     if (!$persona) {
+    //         return response()->json(['message' => 'Persona no encontrada'], 404);
+    //     }
 
-        $persona->update($request->only([
-            'nombres', 'nacionalidad', 'provincia', 'ciudad', 'parroquia', 'direccion', 'sexo', 'fechanaci', 'celular', 'tipoetnia', 'discapacidad'
-        ]));
+    //     $persona->update($request->only([
+    //         'nombres', 'nacionalidad', 'provincia', 'ciudad', 'parroquia', 'direccion', 'sexo', 'fechanaci', 'celular', 'tipoetnia', 'discapacidad'
+    //     ]));
 
-        $persona->datosEmpleados()->update($request->only([
-            'emailinstitucional', 'puesto', 'regimen1', 'modalidad', 'unidad', 'carrera', 'idsubproceso', 'escala1', 'estado', 'fechaingre'
-        ]));
+    //     $persona->datosEmpleados()->update($request->only([
+    //         'emailinstitucional', 'puesto', 'regimen1', 'modalidad', 'unidad', 'carrera', 'idsubproceso', 'escala1', 'estado', 'fechaingre'
+    //     ]));
 
-        return response()->json($persona->load('datosEmpleados'));
-    }
+    //     return response()->json($persona->load('datosEmpleados'));
+    // }
     //aqui para atenciones de bienestar
     public function showBienestar($cedula)
     {
@@ -252,31 +253,54 @@ class CpuPersonaController extends Controller
     // actualizar datos personales
     public function updateDatosPersonales(Request $request, $cedula)
     {
+        // dd($request->all());
         $persona = CpuPersona::where('cedula', $cedula)->first();
         if (!$persona) {
             return response()->json(['message' => 'Persona no encontrada'], 404);
         }
 
-        $data = $request->only([
-            'nombres', 'nacionalidad', 'provincia', 'ciudad', 'parroquia', 'direccion', 'sexo', 'fechanaci', 'celular', 'tipoetnia', 'discapacidad'
+        // Validación de los datos de la persona
+        $validatedData = $request->validate([
+            'nombres' => 'required|string|max:255',
+            'nacionalidad' => 'required|string|max:255',
+            'provincia' => 'required|string|max:255',
+            'ciudad' => 'required|string|max:255',
+            'parroquia' => 'required|string|max:255',
+            'direccion' => 'required|string|max:255',
+            'sexo' => 'required|string|max:10',
+            'fechanaci' => 'required|date',
+            'celular' => 'required|string|max:15',
+            'tipoetnia' => 'required|string|max:255',
+            'discapacidad' => 'required|string|max:3',
+            'tipoDiscapacidad' => 'required_if:discapacidad,si|string|max:255',
+            'porcentaje' => 'required_if:discapacidad,si|numeric|min:0|max:100',
+            // 'imagen' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048'
         ]);
 
+        Log::info('Datos validados: ', $validatedData);
+
+        // Manejo del archivo de imagen si se proporciona
         if ($request->hasFile('imagen')) {
             $file = $request->file('imagen');
-            $path = $file->store('public/images');
-            $data['imagen'] = Storage::url($path);
+            $filename = $cedula . '.' . $file->getClientOriginalExtension();
+            $path = $file->storeAs('public/images', $filename);
+            $validatedData['imagen'] = Storage::url($path);
+            Log::info('Imagen subida: ' . $path);
         }
 
-        $persona->update($data);
-
-        if ($persona->datosEmpleados) {
-            $persona->datosEmpleados()->update($request->only([
-                'emailinstitucional', 'puesto', 'regimen1', 'modalidad', 'unidad', 'carrera', 'idsubproceso', 'escala1', 'estado', 'fechaingre'
-            ]));
+        // Actualización de la persona con los datos validados
+        try {
+            $persona->update($validatedData);
+            Log::info('Datos actualizados para la persona: ' . $cedula);
+        } catch (\Exception $e) {
+            Log::error('Error al actualizar la persona: ' . $e->getMessage());
+            return response()->json(['message' => 'Error al actualizar los datos'], 500);
         }
 
-        return response()->json($persona->load('datosEmpleados'));
+        // Preparar los datos actualizados para la respuesta
+        $updatedData = $persona->only(array_keys($validatedData));
+
+        return response()->json($updatedData);
     }
-
 
 }

@@ -293,7 +293,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
     //rutas para registros medico ocupaconal
     Route::get('/cpu-persona/{cedula}', [CpuPersonaController::class, 'show']);
-    Route::put('/cpu-persona-update/{cedula}', [CpuPersonaController::class, 'update']);
+    // Route::put('/cpu-persona-update/{cedula}', [CpuPersonaController::class, 'update']);
     //registros bienestar
     Route::get('/cpu-persona-bienestar/{cedula}', [CpuPersonaController::class, 'showBienestar']);
     Route::put('/cpu-persona-update-bienestar/{cedula}', [CpuPersonaController::class, 'updateBienestar']);
@@ -332,7 +332,8 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::post('/actualizar-asistencia', [CpuAspirantesEvaluacionesController::class, 'updateAsistencia']);
 
     //actualizar datos personales
-    Route::put('/persona/{cedula}', [CpuPersonaController::class, 'update']);
+    Route::put('/persona/{cedula}', [CpuPersonaController::class, 'updateDatosPersonales']);
 });
 
 // Route::put('/cpu-persona-update/{cedula}', [CpuPersonaController::class, 'update']);
+ 

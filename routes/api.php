@@ -317,9 +317,11 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
     //guardar atenciones
     Route::post('/atenciones/guardar', [CpuAtencionesController::class, 'guardarAtencion']);
+
     //agregar derivación
     Route::post('/derivaciones/guardar', [CpuDerivacionController::class, 'store']);
     Route::get('/derivaciones/filtrar', [CpuDerivacionController::class, 'getDerivacionesByDoctorAndDate']);
+    Route::get('/derivaciones/all', [CpuDerivacionController::class, 'getDerivacionesAll']);
 
     //datos del valor de consumo por dia para becas
     Route::get('cpu-valor-consumo-diario-beca', [CpuValorConsumoDiarioBecaController::class, 'consultar']);
@@ -329,7 +331,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('/evaluaciones', [CpuAspirantesEvaluacionesController::class, 'getEvaluaciones']);
     Route::get('/evaluaciones-cedula', [CpuAspirantesEvaluacionesController::class, 'getEvaluacionesCedula']);
     Route::post('/actualizar-asistencia', [CpuAspirantesEvaluacionesController::class, 'updateAsistencia']);
-    
+
     //actualizar datos personales
     Route::put('/persona/{cedula}', [CpuPersonaController::class, 'updateDatosPersonales']);
     Route::put('/cpu_personas/{cedula}', [CpuPersonaController::class, 'update']);

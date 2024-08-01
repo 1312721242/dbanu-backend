@@ -41,6 +41,7 @@ use App\Http\Controllers\CpuEstandarController;
 use App\Http\Controllers\CpuElementoFundamentalController;
 use App\Http\Controllers\CpuTipoComidaController;
 use App\Http\Controllers\CpuValorConsumoDiarioBecaController;
+use App\Http\Controllers\CpuDatosSocialesController;
 
 // Autenticación
 Route::get('credencial-pdf/{identificacion}/{periodo}', [CpuBecadoController::class, 'generarCredencialPDF']);
@@ -333,6 +334,10 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
     //actualizar datos personales
     // Route::put('/persona/{cedula}', [CpuPersonaController::class, 'updateDatosPersonales']);
+    Route::put('/cpu_personas/{cedula}', [CpuPersonaController::class, 'update']);
+
+    //api para guardar datos sociales en registro
+    Route::post('/guardarDatosSociales', [CpuDatosSocialesController::class, 'store']);
     Route::post('/persona/{cedula}', [CpuPersonaController::class, 'updateDatosPersonales']);
 });
 

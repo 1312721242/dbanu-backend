@@ -303,4 +303,49 @@ class CpuPersonaController extends Controller
         return response()->json($updatedData);
     }
 
+    public function update(Request $request, $cedula)
+    {
+        // Validar los datos entrantes
+        $request->validate([
+            'nombres' => 'required|string',
+            'nacionalidad' => 'required|string',
+            'provincia' => 'required|string',
+            'ciudad' => 'required|string',
+            'parroquia' => 'required|string',
+            'direccion' => 'required|string',
+            'sexo' => 'required|string|size:1',
+            'fechanaci' => 'required|date',
+            'celular' => 'required|string',
+            'tipoetnia' => 'required|string',
+            'discapacidad' => 'nullable|string',
+            'tipo_discapacidad' => 'nullable|integer',
+            'porcentaje_discapacidad' => 'nullable|numeric',
+            // 'imagen' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
+        ]);
+
+        // Buscar la persona por cédula
+        $cpuPersona = CpuPersona::where('cedula', $cedula)->firstOrFail();
+
+        // Manejar la carga de la imagen
+        // if ($request->hasFile('imagen')) {
+        //     // Eliminar la imagen anterior si existe
+        //     if ($cpuPersona->imagen) {
+        //         Storage::delete($cpuPersona->imagen);
+        //     }
+
+        //     // Almacenar la nueva imagen
+        //     $path = $request->file('imagen')->store('imagenes', 'public');
+        //     $cpuPersona->imagen = $path;
+        // }
+
+        // Actualizar los datos
+        $cpuPersona->update($request->except('imagen'));
+
+        // Guardar los cambios
+        $cpuPersona->save();
+
+        // Retornar una respuesta
+        return response()->json(['message' => 'Datos actualizados correctamente', 'persona' => $cpuPersona], 200);
+    }
+
 }

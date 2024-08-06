@@ -42,6 +42,8 @@ use App\Http\Controllers\CpuElementoFundamentalController;
 use App\Http\Controllers\CpuTipoComidaController;
 use App\Http\Controllers\CpuValorConsumoDiarioBecaController;
 use App\Http\Controllers\CpuDatosSocialesController;
+use App\Http\Controllers\CpuTipoUsuarioController;
+
 
 // Autenticación
 Route::get('credencial-pdf/{identificacion}/{periodo}', [CpuBecadoController::class, 'generarCredencialPDF']);
@@ -339,6 +341,13 @@ Route::middleware(['auth:sanctum'])->group(function () {
     //api para guardar datos sociales en registro
     Route::post('/guardarDatosSociales', [CpuDatosSocialesController::class, 'store']);
     Route::post('/persona/{cedula}', [CpuPersonaController::class, 'updateDatosPersonales']);
+
+    //apis para tipos de usuarios
+    Route::post('/cpu-tipos-usuario', [CpuTipoUsuarioController::class, 'store']);
+    Route::get('/cpu-tipos-usuario', [CpuTipoUsuarioController::class, 'index']);
+    Route::get('/cpu-tipos-usuario/{id}', [CpuTipoUsuarioController::class, 'show']);
+    Route::put('/cpu-tipos-usuario/{id}', [CpuTipoUsuarioController::class, 'update']);
+    Route::delete('/cpu-tipos-usuario/{id}', [CpuTipoUsuarioController::class, 'destroy']);
 });
 
 // Route::put('/cpu-persona-update/{cedula}', [CpuPersonaController::class, 'update']);

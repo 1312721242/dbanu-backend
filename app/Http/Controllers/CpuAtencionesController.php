@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Models\CpuAtencion;
+use App\Models\CpuAtencionTriaje;
+use App\Models\CpuDerivacion;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\DB; // Asegúrate de importar esta clase
 use Carbon\Carbon;
@@ -85,6 +87,66 @@ public function obtenerAtencionesPorPaciente($id_persona, $id_funcionario)
             return response()->json(['message' => 'Atención eliminada correctamente']);
         } catch (\Exception $e) {
             return response()->json(['error' => 'Error al eliminar la atención'], 500);
+        }
+    }
+
+    public function guardarAtencionConTriaje(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'id_funcionario' => 'required|integer',
+            'id_paciente' => 'required|integer',
+            'id_derivacion' => 'required|integer|exists:cpu_derivaciones,id',
+            'id_estado_derivacion' => 'required|integer|exists:cpu_derivaciones,id_estado_derivacion',
+            'talla' => 'required|integer',
+            'peso' => 'required|numeric',
+            'temperatura' => 'required|numeric',
+            'presion_sistolica' => 'required|integer',
+            'presion_diastolica' => 'required|integer',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['error' => $validator->errors()], 400);
+        }
+
+        // Iniciar una transacción
+        DB::beginTransaction();
+
+        try {
+            // Actualizar la derivación
+            $derivacion = CpuDerivacion::findOrFail($request->input('id_derivacion'));
+            $derivacion->id_estado_derivacion = 18;
+            $derivacion->save();
+
+            // Guardar la atención
+            $atencion = new CpuAtencion();
+            $atencion->id_funcionario = $request->input('id_funcionario');
+            $atencion->id_persona = $request->input('id_paciente');
+            $atencion->via_atencion = 'Presencial';
+            $atencion->motivo_atencion = 'Triaje';
+            $atencion->detalle_atencion = 'Signos Vitales';
+            $atencion->fecha_hora_atencion = Carbon::now();
+            $atencion->anio_atencion = Carbon::now()->year;
+            $atencion->save();
+
+            // Guardar el triaje
+            $triaje = new CpuAtencionTriaje();
+            $triaje->id_derivacion = $request->input('id_derivacion');
+            $triaje->talla = $request->input('talla');
+            $triaje->peso = $request->input('peso');
+            $triaje->temperatura = $request->input('temperatura');
+            $triaje->presion_sistolica = $request->input('presion_sistolica');
+            $triaje->presion_diastolica = $request->input('presion_diastolica');
+            $triaje->save();
+
+            // Confirmar la transacción
+            DB::commit();
+
+            return response()->json(['success' => true, 'atencion_id' => $atencion->id, 'triaje_id' => $triaje->id]);
+        } catch (\Exception $e) {
+            // Deshacer la transacción en caso de error
+            DB::rollBack();
+            Log::error('Error al guardar la atención y el triaje:', ['exception' => $e->getMessage()]);
+            return response()->json(['error' => 'Error al guardar la atención y el triaje'], 500);
         }
     }
 }

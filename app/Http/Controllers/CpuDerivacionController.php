@@ -127,6 +127,10 @@ class CpuDerivacionController extends Controller
             $query->where('id_doctor_al_que_derivan', $doctorId);
         }
 
+        // Ordenar los resultados por fecha y hora ascendentemente
+        $query->orderBy('fecha_para_atencion', 'asc')
+            ->orderBy('hora_para_atencion', 'asc');
+
         // Ejecutar la consulta
         $derivaciones = $query->get();
 

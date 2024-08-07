@@ -41,6 +41,8 @@ use App\Http\Controllers\CpuEstandarController;
 use App\Http\Controllers\CpuElementoFundamentalController;
 use App\Http\Controllers\CpuTipoComidaController;
 use App\Http\Controllers\CpuValorConsumoDiarioBecaController;
+use App\Http\Controllers\CpuAtencionPsicologiaController;
+use App\Http\Controllers\CpuCasosPsicologiaController;
 
 // Autenticación
 Route::get('credencial-pdf/{identificacion}/{periodo}', [CpuBecadoController::class, 'generarCredencialPDF']);
@@ -129,7 +131,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::delete('/eliminar-fuente-informacion/{id}', [CpuElementoFundamentalController::class, 'eliminarFuenteSInformacion']);
 
     //Elementos Fundamentales
-    Route::post('/crearatencionpsicologia', [CpuElementoFundamentalController::class, 'agregarFuenteInformacione']);
+    // Route::post('/crearatencionpsicologia', [CpuElementoFundamentalController::class, 'agregarFuenteInformacione']);
 
 
     // Objetivo Nacional
@@ -316,6 +318,8 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
     //guardar atenciones
     Route::post('/atenciones/guardar', [CpuAtencionesController::class, 'guardarAtencion']);
+    Route::get('/atenciones/{id_persona}/{id_funcionario}', [CpuAtencionesController::class, 'obtenerAtencionesPorPaciente']);
+    Route::delete('/atencionesEliminar/{atencionId}', [CpuAtencionesController::class, 'eliminarAtencion']);
     //agregar derivación
     Route::post('/derivaciones/guardar', [CpuDerivacionController::class, 'store']);
 
@@ -328,6 +332,11 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('/evaluaciones-cedula', [CpuAspirantesEvaluacionesController::class, 'getEvaluacionesCedula']);
     Route::post('/actualizar-asistencia', [CpuAspirantesEvaluacionesController::class, 'updateAsistencia']);
 
+
+    //MODULO DE PSICOLOGIA
+    Route::post('/atenciones-psicologia', [CpuAtencionPsicologiaController::class, 'store']);
+    Route::get('/casos/{tipo_atencion}/{usr_tipo}/{id_persona}', [CpuCasosPsicologiaController::class, 'getCasos']);
+    Route::get('/ultima-consulta/{usr_tipo}/{id_persona}/{id_caso}', [CpuAtencionesController::class, 'obtenerUltimaConsulta']);
 });
 
 // Route::put('/cpu-persona-update/{cedula}', [CpuPersonaController::class, 'update']);

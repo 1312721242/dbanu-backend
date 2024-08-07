@@ -19,5 +19,6 @@ class CpuAtencion extends Model
         'fecha_hora_atencion',
         'anio_atencion',
         'detalle_atencion',
+        'id_caso',
     ];
 }

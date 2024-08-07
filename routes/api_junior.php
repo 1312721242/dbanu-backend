@@ -43,6 +43,8 @@ use App\Http\Controllers\CpuTipoComidaController;
 use App\Http\Controllers\CpuValorConsumoDiarioBecaController;
 use App\Http\Controllers\CpuDatosSocialesController;
 use App\Http\Controllers\CpuTipoUsuarioController;
+use App\Http\Controllers\CpuInsumoController;
+use App\Http\Controllers\ICDController;
 
 
 // Autenticación
@@ -324,6 +326,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::post('/derivaciones/guardar', [CpuDerivacionController::class, 'store']);
     Route::get('/derivaciones/filtrar', [CpuDerivacionController::class, 'getDerivacionesByDoctorAndDate']);
     Route::get('/derivaciones/all', [CpuDerivacionController::class, 'getDerivacionesAll']);
+    Route::post('/derivaciones/update', [CpuDerivacionController::class, 'updateDerivacion']);
 
     //datos del valor de consumo por dia para becas
     Route::get('cpu-valor-consumo-diario-beca', [CpuValorConsumoDiarioBecaController::class, 'consultar']);
@@ -348,6 +351,17 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('/cpu-tipos-usuario/{id}', [CpuTipoUsuarioController::class, 'show']);
     Route::put('/cpu-tipos-usuario/{id}', [CpuTipoUsuarioController::class, 'update']);
     Route::delete('/cpu-tipos-usuario/{id}', [CpuTipoUsuarioController::class, 'destroy']);
+
+    //INSUMOS
+
+    Route::get('/cpu-insumos', [CpuInsumoController::class, 'getInsumos']);
+
+
+    //apis para busqueda de cie11
+    Route::post('/get-token', [ICDController::class, 'getToken']);
+    Route::get('/search', [ICDController::class, 'searchICD']);
+
+
 });
 
 // Route::put('/cpu-persona-update/{cedula}', [CpuPersonaController::class, 'update']);

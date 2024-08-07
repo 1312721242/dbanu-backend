@@ -46,6 +46,8 @@ use App\Http\Controllers\CpuDatosSocialesController;
 use App\Http\Controllers\CpuTipoUsuarioController;
 use App\Http\Controllers\CpuInsumoController;
 use App\Http\Controllers\ICDController;
+use App\Http\Controllers\CpuInsumoOcupadoController;
+
 
 
 // Autenticación
@@ -366,6 +368,13 @@ Route::middleware(['auth:sanctum'])->group(function () {
     //apis para busqueda de cie11
     Route::post('/get-token', [ICDController::class, 'getToken']);
     Route::get('/search', [ICDController::class, 'searchICD']);
+
+    //funciones para administrar el consumo de insumos medicos
+    Route::post('/insumos_ocupados', [CpuInsumoOcupadoController::class, 'store']);
+    Route::get('/insumos_ocupados/fechas', [CpuInsumoOcupadoController::class, 'getByDateRange']);
+    Route::get('/insumos_ocupados/funcionario/{id_funcionario}', [CpuInsumoOcupadoController::class, 'getByFuncionario']);
+    Route::get('/insumos_ocupados/paciente/{id_paciente}', [CpuInsumoOcupadoController::class, 'getByPaciente']);
+
 
 
 });

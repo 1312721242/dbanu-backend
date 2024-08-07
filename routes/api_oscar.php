@@ -35,6 +35,7 @@ use App\Http\Controllers\CpuTipoDiscapacidadController;
 use App\Http\Controllers\CpuTipoSangreController;
 use App\Http\Controllers\CpuIndicadorController;
 use App\Http\Controllers\CpuAtencionesController;
+use App\Http\Controllers\CpuAtencionTriajeController;
 use App\Http\Controllers\CpuComidaController;
 use App\Http\Controllers\CpuDerivacionController;
 use App\Http\Controllers\CpuEstandarController;
@@ -42,6 +43,8 @@ use App\Http\Controllers\CpuElementoFundamentalController;
 use App\Http\Controllers\CpuTipoComidaController;
 use App\Http\Controllers\CpuValorConsumoDiarioBecaController;
 use App\Http\Controllers\CpuDatosSocialesController;
+use App\Http\Controllers\CpuTipoUsuarioController;
+
 
 // Autenticación
 Route::get('credencial-pdf/{identificacion}/{periodo}', [CpuBecadoController::class, 'generarCredencialPDF']);
@@ -317,6 +320,11 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
     //guardar atenciones
     Route::post('/atenciones/guardar', [CpuAtencionesController::class, 'guardarAtencion']);
+    Route::post('/atenciones/triaje', [CpuAtencionesController::class, 'guardarAtencionConTriaje']);
+
+    //atenciones Triaje
+    Route::get('/triaje/talla-peso', [CpuAtencionTriajeController::class, 'obtenerTallaPesoPaciente']);
+    Route::get('/triaje/datos', [CpuAtencionTriajeController::class, 'obtenerDatosTriajePorDerivacion']);
 
     //agregar derivación
     Route::post('/derivaciones/guardar', [CpuDerivacionController::class, 'store']);
@@ -339,6 +347,13 @@ Route::middleware(['auth:sanctum'])->group(function () {
     //api para guardar datos sociales en registro
     Route::post('/guardarDatosSociales', [CpuDatosSocialesController::class, 'store']);
     Route::post('/persona/{cedula}', [CpuPersonaController::class, 'updateDatosPersonales']);
+
+    //apis para tipos de usuarios
+    Route::post('/cpu-tipos-usuario', [CpuTipoUsuarioController::class, 'store']);
+    Route::get('/cpu-tipos-usuario', [CpuTipoUsuarioController::class, 'index']);
+    Route::get('/cpu-tipos-usuario/{id}', [CpuTipoUsuarioController::class, 'show']);
+    Route::put('/cpu-tipos-usuario/{id}', [CpuTipoUsuarioController::class, 'update']);
+    Route::delete('/cpu-tipos-usuario/{id}', [CpuTipoUsuarioController::class, 'destroy']);
 });
 
 // Route::put('/cpu-persona-update/{cedula}', [CpuPersonaController::class, 'update']);

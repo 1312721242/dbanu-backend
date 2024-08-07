@@ -124,8 +124,9 @@ class CpuDerivacionController extends Controller
         // Agregar las condiciones según el doctor_id
         if ($doctorId == 9) {
             $query->where('id_estado_derivacion', 7);
-        } elseif ($doctorId != 1) {
+        } elseif ($doctorId != 1 ) {
             $query->where('id_doctor_al_que_derivan', $doctorId);
+            $query->whereNot('id_estado_derivacion', 2);
         }
 
         // Ordenar los resultados por fecha y hora ascendentemente
@@ -173,4 +174,26 @@ class CpuDerivacionController extends Controller
         // Devolver las derivaciones como respuesta JSON
         return response()->json($derivaciones);
     }
+
+    //actualizar estado derivacion
+    public function updateDerivacion(Request $request)
+    {
+        $data = $request->validate([
+            'id' => 'required|integer|exists:cpu_derivaciones,id',
+            'id_estado_derivacion' => 'required|integer|exists:cpu_estados,id',
+        ]);
+
+        $derivacion = CpuDerivacion::find($data['id']);
+
+        if (!$derivacion) {
+            return response()->json(['error' => 'Derivación no encontrada'], 404);
+        }
+
+        $derivacion->id_estado_derivacion = $data['id_estado_derivacion'];
+        $derivacion->save();
+
+        return response()->json(['success' => true, 'derivacion' => $derivacion]);
+    }
+
+
 }

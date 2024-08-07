@@ -19,5 +19,13 @@ class CpuAtencion extends Model
         'fecha_hora_atencion',
         'anio_atencion',
         'detalle_atencion',
+        'id_caso',
+        'id_tipo_usuario',
+        'evolucion_enfermedad',
+        'diagnostico',
+        'prescripcion',
+        'recomendacion',
+        'created_at',
+        'updated_at'
     ];
 }

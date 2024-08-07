@@ -6,7 +6,6 @@ use Illuminate\Http\Request;
 use App\Models\CpuDerivacion;
 use Illuminate\Support\Facades\Auth;
 use Carbon\Carbon;
-use Illuminate\Support\Facades\Log;
 
 class CpuDerivacionController extends Controller
 {
@@ -95,12 +94,14 @@ class CpuDerivacionController extends Controller
         // Validar los parámetros de entrada
         $request->validate([
             'doctor_id' => 'required|integer|exists:users,id',
+            'user_id' => 'required|integer|exists:users,id',
             'fecha_inicio' => 'required|date',
             'fecha_fin' => 'required|date',
         ]);
 
         // Obtener los parámetros de la solicitud
         $doctorId = $request->input('doctor_id');
+        $userId = $request->input('user_id');
         $fechaInicio = Carbon::parse($request->input('fecha_inicio'))->startOfDay();
         $fechaFin = Carbon::parse($request->input('fecha_fin'))->endOfDay();
 
@@ -122,12 +123,16 @@ class CpuDerivacionController extends Controller
             ->join('users', 'users.id', '=', 'cpu_derivaciones.id_funcionario_que_derivo');
 
         // Agregar las condiciones según el doctor_id
-        if ($doctorId == 9) {
-            $query->where('id_estado_derivacion', 7);
-        } elseif ($doctorId != 1 ) {
-            $query->where('id_doctor_al_que_derivan', $doctorId);
-            $query->whereNot('id_estado_derivacion', 2);
-        }
+        // if ($doctorId == 9) {
+        //     $query->where('id_estado_derivacion', 7);
+        // } elseif ($doctorId != 1) {
+        //     $query->where('id_doctor_al_que_derivan', $doctorId);
+        // }
+
+        // // Agregar la condición para user_id si doctor_id no es 1 o 9
+        // if ($doctorId != 1 && $doctorId != 9) {
+        //     $query->where('id_funcionario_que_derivo', $userId);
+        // }
 
         // Ordenar los resultados por fecha y hora ascendentemente
         $query->orderBy('fecha_para_atencion', 'asc')
@@ -174,26 +179,4 @@ class CpuDerivacionController extends Controller
         // Devolver las derivaciones como respuesta JSON
         return response()->json($derivaciones);
     }
-
-    //actualizar estado derivacion
-    public function updateDerivacion(Request $request)
-    {
-        $data = $request->validate([
-            'id' => 'required|integer|exists:cpu_derivaciones,id',
-            'id_estado_derivacion' => 'required|integer|exists:cpu_estados,id',
-        ]);
-
-        $derivacion = CpuDerivacion::find($data['id']);
-
-        if (!$derivacion) {
-            return response()->json(['error' => 'Derivación no encontrada'], 404);
-        }
-
-        $derivacion->id_estado_derivacion = $data['id_estado_derivacion'];
-        $derivacion->save();
-
-        return response()->json(['success' => true, 'derivacion' => $derivacion]);
-    }
-
-
 }

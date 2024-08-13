@@ -16,7 +16,7 @@ class RoleController extends Controller
     public function agregarRoleUsuario(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'role' => 'required|string|max:255', 
+            'role' => 'required|string|max:255',
         ]);
 
         if ($validator->fails()) {
@@ -126,5 +126,14 @@ class RoleController extends Controller
 
         return response()->json($roles);
     }
-}
 
+    public function consultarAreas()
+    {
+        $roles = DB::table('cpu_userrole')
+            ->whereIn('id_userrole', [7, 8, 9, 11, 13, 14])
+            ->orderBy('role', 'asc')
+            ->get();
+
+        return response()->json($roles);
+    }
+}

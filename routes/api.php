@@ -82,6 +82,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::put('/modificar-role-usuario/{id}', [RoleController::class, 'modificarRoleUsuario']);
     Route::delete('/eliminar-role-usuario/{id}', [RoleController::class, 'eliminarRoleUsuario']);
     Route::get('/consultar-roles', [RoleController::class, 'consultarRoles']);
+    Route::get('/consultar-roles-areas', [RoleController::class, 'consultarAreas']);
 
    //menus
    Route::post('/agregar-menu', [MenuController::class, 'agregarMenu']);
@@ -333,6 +334,8 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('/derivaciones/filtrar', [CpuDerivacionController::class, 'getDerivacionesByDoctorAndDate']);
     Route::get('/derivaciones/all', [CpuDerivacionController::class, 'getDerivacionesAll']);
     Route::post('/derivaciones/update', [CpuDerivacionController::class, 'updateDerivacion']);
+    Route::post('/reagendar', [CpuDerivacionController::class, 'Reagendar']);
+    Route::put('/derivaciones/no-asistio/{id}', [CpuDerivacionController::class, 'noAsistioCita']);
 
     //datos del valor de consumo por dia para becas
     Route::get('cpu-valor-consumo-diario-beca', [CpuValorConsumoDiarioBecaController::class, 'consultar']);

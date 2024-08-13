@@ -47,7 +47,8 @@ use App\Http\Controllers\CpuTipoUsuarioController;
 use App\Http\Controllers\CpuInsumoController;
 use App\Http\Controllers\ICDController;
 use App\Http\Controllers\CpuInsumoOcupadoController;
-
+use App\Http\Controllers\CpuAtencionPsicologiaController;
+use App\Http\Controllers\CpuCasosPsicologiaController;
 
 
 // Autenticación
@@ -84,6 +85,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::put('/modificar-role-usuario/{id}', [RoleController::class, 'modificarRoleUsuario']);
     Route::delete('/eliminar-role-usuario/{id}', [RoleController::class, 'eliminarRoleUsuario']);
     Route::get('/consultar-roles', [RoleController::class, 'consultarRoles']);
+    Route::get('/consultar-roles-areas', [RoleController::class, 'consultarAreas']);
 
    //menus
    Route::post('/agregar-menu', [MenuController::class, 'agregarMenu']);
@@ -137,7 +139,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::delete('/eliminar-fuente-informacion/{id}', [CpuElementoFundamentalController::class, 'eliminarFuenteSInformacion']);
 
     //Elementos Fundamentales
-    Route::post('/crearatencionpsicologia', [CpuElementoFundamentalController::class, 'agregarFuenteInformacione']);
+    // Route::post('/crearatencionpsicologia', [CpuElementoFundamentalController::class, 'agregarFuenteInformacione']);
 
 
     // Objetivo Nacional
@@ -325,6 +327,8 @@ Route::middleware(['auth:sanctum'])->group(function () {
     //guardar atenciones
     Route::post('/atenciones/guardar', [CpuAtencionesController::class, 'guardarAtencion']);
     Route::post('/atenciones/triaje', [CpuAtencionesController::class, 'guardarAtencionConTriaje']);
+    Route::get('/atenciones/{id_persona}/{id_funcionario}', [CpuAtencionesController::class, 'obtenerAtencionesPorPaciente']);
+    Route::delete('/atencionesEliminar/{atencionId}', [CpuAtencionesController::class, 'eliminarAtencion']);
 
     //atenciones Triaje
     Route::get('/triaje/talla-peso', [CpuAtencionTriajeController::class, 'obtenerTallaPesoPaciente']);
@@ -335,6 +339,8 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('/derivaciones/filtrar', [CpuDerivacionController::class, 'getDerivacionesByDoctorAndDate']);
     Route::get('/derivaciones/all', [CpuDerivacionController::class, 'getDerivacionesAll']);
     Route::post('/derivaciones/update', [CpuDerivacionController::class, 'updateDerivacion']);
+    Route::post('/reagendar', [CpuDerivacionController::class, 'Reagendar']);
+    Route::put('/derivaciones/no-asistio/{id}', [CpuDerivacionController::class, 'noAsistioCita']);
 
     //datos del valor de consumo por dia para becas
     Route::get('cpu-valor-consumo-diario-beca', [CpuValorConsumoDiarioBecaController::class, 'consultar']);
@@ -375,8 +381,10 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('/insumos_ocupados/funcionario/{id_funcionario}', [CpuInsumoOcupadoController::class, 'getByFuncionario']);
     Route::get('/insumos_ocupados/paciente/{id_paciente}', [CpuInsumoOcupadoController::class, 'getByPaciente']);
 
-
-
+    //MODULO DE PSICOLOGIA
+    Route::post('/atenciones-psicologia', [CpuAtencionPsicologiaController::class, 'store']);
+    Route::get('/casos/{tipo_atencion}/{usr_tipo}/{id_persona}', [CpuCasosPsicologiaController::class, 'getCasos']);
+    Route::get('/ultima-consulta/{usr_tipo}/{id_persona}/{id_caso}', [CpuAtencionesController::class, 'obtenerUltimaConsulta']);
 });
 
 // Route::put('/cpu-persona-update/{cedula}', [CpuPersonaController::class, 'update']);

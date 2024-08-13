@@ -52,7 +52,7 @@ class CpuAtencionesController extends Controller
     }
 
 
-//consula de las consultas
+// Consulta de las atenciones
 public function obtenerAtencionesPorPaciente($id_persona, $id_funcionario)
 {
     // Realiza la consulta filtrando por id_persona y id_funcionario y selecciona todas las columnas necesarias
@@ -75,11 +75,13 @@ public function obtenerAtencionesPorPaciente($id_persona, $id_funcionario)
         ->when($id_funcionario, function ($query, $id_funcionario) {
             return $query->where('at.id_funcionario', $id_funcionario);
         })
+        // Ordena por fecha de creación de forma descendente
+        ->orderBy('at.created_at', 'desc')
         ->get();
 
     // Formatear la fecha después de obtener los datos
     $atenciones->transform(function ($atencion) {
-        $atencion->fecha_hora_atencion = Carbon::parse($atencion->fecha_hora_atencion)->format('Y-m-d');
+        $atencion->fecha_hora_atencion = Carbon::parse($atencion->fecha_hora_atencion)->translatedFormat('l, d F Y');
         return $atencion;
     });
 
@@ -90,15 +92,41 @@ public function obtenerAtencionesPorPaciente($id_persona, $id_funcionario)
     return response()->json($atenciones);
 }
 
-    public function eliminarAtencion($atencionId)
-    {
-        try {
-            DB::table('cpu_atenciones')->where('id', $atencionId)->delete();
-            return response()->json(['message' => 'Atención eliminada correctamente']);
-        } catch (\Exception $e) {
-            return response()->json(['error' => 'Error al eliminar la atención'], 500);
-        }
+public function eliminarAtencion($atencionId)
+{
+    try {
+        DB::table('cpu_atenciones')->where('id', $atencionId)->delete();
+        return response()->json(['message' => 'Atención eliminada correctamente']);
+    } catch (\Exception $e) {
+        return response()->json(['error' => 'Error al eliminar la atención'], 500);
     }
+}
+
+public function obtenerUltimaConsulta($usr_tipo, $id_persona, $id_caso)
+{
+    try {
+        // Busca la última atención del paciente con el id_persona e id_caso especificados
+        $ultimaConsulta = CpuAtencion::where('id_persona', $id_persona)
+            ->where('id_funcionario', $usr_tipo)
+            ->where('id_caso', $id_caso)
+            ->orderBy('fecha_hora_atencion', 'desc')
+            ->first();
+
+        // Si se encuentra una consulta
+        if ($ultimaConsulta) {
+            // Formatear la fecha para mostrar el día de la semana y el nombre completo del mes en español
+            $ultimaConsulta->fecha_hora_atencion = Carbon::parse($ultimaConsulta->fecha_hora_atencion)->translatedFormat('l, d F Y');
+        } else {
+            return response()->json(['mensaje' => 'No se encontraron consultas para el paciente con el caso especificado'], 404);
+        }
+
+        // Devuelve la última consulta encontrada
+        return response()->json($ultimaConsulta, 200);
+    } catch (\Exception $e) {
+        // Maneja cualquier error que ocurra durante la ejecución
+        return response()->json(['error' => 'Error al obtener la última consulta: ' . $e->getMessage()], 500);
+    }
+}
 
     public function guardarAtencionConTriaje(Request $request)
     {
@@ -159,4 +187,6 @@ public function obtenerAtencionesPorPaciente($id_persona, $id_funcionario)
             return response()->json(['error' => 'Error al guardar la atención y el triaje'], 500);
         }
     }
+
+    
 }

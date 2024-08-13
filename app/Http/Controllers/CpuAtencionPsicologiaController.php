@@ -12,7 +12,7 @@ class CpuAtencionPsicologiaController extends Controller
     public function store(Request $request)
     {
         $request->validate([
-            'usr_tipo' => 'required|integer',
+            'funcionarios' => 'required|integer',
             'id_persona' => 'required|integer',
             'tipo_usuario'=> 'required|string',
             'medio_atencion' => 'required|string',
@@ -54,7 +54,7 @@ class CpuAtencionPsicologiaController extends Controller
 
             // Guardar el nuevo caso en cpu_atenciones con el nuevo id_caso
             $cpuAtencion = CpuAtencion::create([
-                'id_funcionario' => $request->usr_tipo,
+                'id_funcionario' => $request->funcionarios,
                 'id_persona' => $request->id_persona,
                 'via_atencion' => $request->medio_atencion,
                 'motivo_atencion' => $request->motivo,
@@ -67,10 +67,10 @@ class CpuAtencionPsicologiaController extends Controller
         } else {
             // Si es subsecuente o fin de tratamiento, usa el caso existente
             $cpuAtencion = CpuAtencion::create([
-                'id_funcionario' => $request->usr_tipo,
+                'id_funcionario' => $request->funcionarios,
                 'id_persona' => $request->id_persona,
                 'via_atencion' => $request->medio_atencion,
-                'motivo_atencion' => $request->evolucion,
+                'motivo_atencion' => $request->motivo,
                 'detalle_atencion' => $request->evolucion,
                 'fecha_hora_atencion' => now(),
                 'anio_atencion' => $request->anio_atencion,

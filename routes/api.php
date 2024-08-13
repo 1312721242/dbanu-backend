@@ -47,7 +47,8 @@ use App\Http\Controllers\CpuTipoUsuarioController;
 use App\Http\Controllers\CpuInsumoController;
 use App\Http\Controllers\ICDController;
 use App\Http\Controllers\CpuInsumoOcupadoController;
-
+use App\Http\Controllers\CpuAtencionPsicologiaController;
+use App\Http\Controllers\CpuCasosPsicologiaController;
 
 
 // Autenticación
@@ -377,8 +378,10 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('/insumos_ocupados/funcionario/{id_funcionario}', [CpuInsumoOcupadoController::class, 'getByFuncionario']);
     Route::get('/insumos_ocupados/paciente/{id_paciente}', [CpuInsumoOcupadoController::class, 'getByPaciente']);
 
-
-
+    //MODULO DE PSICOLOGIA
+    Route::post('/atenciones-psicologia', [CpuAtencionPsicologiaController::class, 'store']);
+    Route::get('/casos/{tipo_atencion}/{usr_tipo}/{id_persona}', [CpuCasosPsicologiaController::class, 'getCasos']);
+    Route::get('/ultima-consulta/{usr_tipo}/{id_persona}/{id_caso}', [CpuAtencionesController::class, 'obtenerUltimaConsulta']);
 });
 
 // Route::put('/cpu-persona-update/{cedula}', [CpuPersonaController::class, 'update']);

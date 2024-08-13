@@ -21,7 +21,6 @@ class CpuAtencionPsicologia extends Model
         'evolucion',
         'diagnostico',
         'referido',
-        'naturaleza',
         'acciones_afirmativas',
         'consumo_sustancias',
         'frecuencia_consumo',
@@ -36,6 +35,10 @@ class CpuAtencionPsicologia extends Model
         'juicio',
         'afectividad',
         'voluntad',
+        'evolucion_caso',
+        'abordaje_caso',
+        'prescripcion',
+        'descripcionfinal',
     ];
 
     protected $casts = [
@@ -53,5 +56,9 @@ class CpuAtencionPsicologia extends Model
         'juicio' => 'array',
         'afectividad' => 'array',
         'voluntad' => 'array',
+        'evolucion_caso' => 'array',
+        'abordaje_caso' => 'array',
+        'prescripcion' => 'array',
+        'descripcionfinal' => 'array',
     ];
 }

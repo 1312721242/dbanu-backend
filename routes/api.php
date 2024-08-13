@@ -46,6 +46,9 @@ use App\Http\Controllers\CpuDatosSocialesController;
 use App\Http\Controllers\CpuTipoUsuarioController;
 use App\Http\Controllers\CpuInsumoController;
 use App\Http\Controllers\ICDController;
+use App\Http\Controllers\CpuInsumoOcupadoController;
+use App\Http\Controllers\CpuAtencionPsicologiaController;
+use App\Http\Controllers\CpuCasosPsicologiaController;
 
 
 // Autenticación
@@ -136,7 +139,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::delete('/eliminar-fuente-informacion/{id}', [CpuElementoFundamentalController::class, 'eliminarFuenteSInformacion']);
 
     //Elementos Fundamentales
-    Route::post('/crearatencionpsicologia', [CpuElementoFundamentalController::class, 'agregarFuenteInformacione']);
+    // Route::post('/crearatencionpsicologia', [CpuElementoFundamentalController::class, 'agregarFuenteInformacione']);
 
 
     // Objetivo Nacional
@@ -324,6 +327,8 @@ Route::middleware(['auth:sanctum'])->group(function () {
     //guardar atenciones
     Route::post('/atenciones/guardar', [CpuAtencionesController::class, 'guardarAtencion']);
     Route::post('/atenciones/triaje', [CpuAtencionesController::class, 'guardarAtencionConTriaje']);
+    Route::get('/atenciones/{id_persona}/{id_funcionario}', [CpuAtencionesController::class, 'obtenerAtencionesPorPaciente']);
+    Route::delete('/atencionesEliminar/{atencionId}', [CpuAtencionesController::class, 'eliminarAtencion']);
 
     //atenciones Triaje
     Route::get('/triaje/talla-peso', [CpuAtencionTriajeController::class, 'obtenerTallaPesoPaciente']);
@@ -370,7 +375,16 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::post('/get-token', [ICDController::class, 'getToken']);
     Route::get('/search', [ICDController::class, 'searchICD']);
 
+    //funciones para administrar el consumo de insumos medicos
+    Route::post('/insumos_ocupados', [CpuInsumoOcupadoController::class, 'store']);
+    Route::get('/insumos_ocupados/fechas', [CpuInsumoOcupadoController::class, 'getByDateRange']);
+    Route::get('/insumos_ocupados/funcionario/{id_funcionario}', [CpuInsumoOcupadoController::class, 'getByFuncionario']);
+    Route::get('/insumos_ocupados/paciente/{id_paciente}', [CpuInsumoOcupadoController::class, 'getByPaciente']);
 
+    //MODULO DE PSICOLOGIA
+    Route::post('/atenciones-psicologia', [CpuAtencionPsicologiaController::class, 'store']);
+    Route::get('/casos/{tipo_atencion}/{usr_tipo}/{id_persona}', [CpuCasosPsicologiaController::class, 'getCasos']);
+    Route::get('/ultima-consulta/{usr_tipo}/{id_persona}/{id_caso}', [CpuAtencionesController::class, 'obtenerUltimaConsulta']);
 });
 
 // Route::put('/cpu-persona-update/{cedula}', [CpuPersonaController::class, 'update']);

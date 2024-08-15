@@ -106,29 +106,29 @@ class UsuarioController extends Controller
                 'current_password' => 'required|string|min:6',
                 'new_password' => 'required|string|min:6',
             ]);
-        
+
             if ($validator->fails()) {
                 return response()->json(['error' => $validator->errors()], 400);
             }
-        
+
             $usuario = Auth::user();
-        
+
             if (!$usuario) {
                 return response()->json(['error' => 'Usuario no encontrado'], 404);
             }
-        
+
             // Validar la contraseña actual
             if (!Hash::check($request->input('current_password'), $usuario->password)) {
                 return response()->json(['error' => 'La contraseña actual es incorrecta'], 400);
             }
-        
+
             // Cambiar la contraseña
             $usuario->update(['password' => Hash::make($request->input('new_password'))]);
-        
+
             return response()->json(['success' => true, 'message' => 'Contraseña cambiada correctamente']);
         }
-        
-        
+
+
 
 
 
@@ -173,22 +173,22 @@ class UsuarioController extends Controller
 
                 return response()->json($users);
             }
-        
+
             public function buscarfuncionariorol(Request $request)
             {
                 $validator = Validator::make($request->all(), [
                     'usr_tipo' => 'required|integer|exists:users,usr_tipo',
                 ]);
-            
+
                 if ($validator->fails()) {
                     return response()->json(['error' => $validator->errors()], 400);
                 }
-            
+
                 $usr_tipo = $request->input('usr_tipo');
                 $users = User::where('usr_tipo', $usr_tipo)
                                 ->where('usr_estado', 8)
                                 ->get();
-            
+
                 return response()->json($users);
             }
 
@@ -215,6 +215,6 @@ class UsuarioController extends Controller
                 return response()->json(['error' => 'Error interno del servidor'], 500);
             }
         }
-            
-            
+
+
 }

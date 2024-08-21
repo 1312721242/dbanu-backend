@@ -146,6 +146,7 @@ class CpuPersonaController extends Controller
                     'tipo_discapacidad' => $data['tipo_discapacidad'] ?? null,
                     'porcentaje_discapacidad' => $data['porcentaje_discapacidad'] ?? null,
                     'imagen' => $data['imagen'] ?? null,
+                    'email'=> $data['email'] ?? '',
                 ]);
 
                 CpuDatosEmpleado::create([

@@ -36,7 +36,7 @@ class CpuDerivacionController extends Controller
             'id_doctor_al_que_derivan' => 'required|integer|exists:users,id',
             'id_paciente' => 'required|integer|exists:cpu_personas,id',
             'motivo_derivacion' => 'required|string',
-            'detalle_derivacion' => 'required|string',
+            // 'detalle_derivacion' => 'required|string',
             'id_area' => 'required|integer',
             'fecha_para_atencion' => 'required|date',
             'hora_para_atencion' => 'required|date_format:H:i:s',
@@ -65,7 +65,7 @@ class CpuDerivacionController extends Controller
             'id_doctor_al_que_derivan' => 'integer|exists:users,id',
             'id_paciente' => 'integer|exists:cpu_personas,id',
             'motivo_derivacion' => 'string',
-            'detalle_derivacion' => 'required|string',
+            // 'detalle_derivacion' => 'required|string',
             'id_area' => 'integer',
             'fecha_para_atencion' => 'date',
             'hora_para_atencion' => 'date_format:H:i:s',
@@ -120,11 +120,21 @@ class CpuDerivacionController extends Controller
                 'cpu_derivaciones.fecha_para_atencion',
                 'cpu_derivaciones.motivo_derivacion',
                 'users.name as funcionario_que_deriva',
+                'users.name as funcionario_al_que_deriva',
+                'cpu_userrole.role as area_atencion',
                 'cpu_derivaciones.hora_para_atencion',
-                'cpu_derivaciones.id_estado_derivacion'
+                'cpu_derivaciones.id_estado_derivacion',
+                'users.email as funcionario_email',
+                'users.usr_sede as id_sede',
+                DB::raw('COALESCE(cpu_datos_estudiantes.email_institucional, cpu_datos_empleados.emailinstitucional) as email_paciente')
             )
             ->join('cpu_personas', 'cpu_personas.id', '=', 'cpu_derivaciones.id_paciente')
-            ->join('users', 'users.id', '=', 'cpu_derivaciones.id_funcionario_que_derivo');
+            ->join('users', 'users.id', '=', 'cpu_derivaciones.id_funcionario_que_derivo')
+            ->leftJoin('users as deriva_usuario', 'deriva_usuario.id', '=', 'cpu_derivaciones.id_doctor_al_que_derivan')
+            ->leftJoin('cpu_userrole', 'cpu_derivaciones.id_area', '=', 'cpu_userrole.id_userrole')
+            ->leftJoin('cpu_datos_estudiantes', 'cpu_personas.id', '=', 'cpu_datos_estudiantes.id_persona')
+            ->leftJoin('cpu_datos_empleados', 'cpu_personas.id', '=', 'cpu_datos_empleados.id_persona')
+            ->leftJoin('users as deriva_sede', 'users.usr_sede', '=', 'cpu_derivaciones.id_funcionario_que_derivo');
 
         // Agregar las condiciones según el doctor_id
         if ($doctorId == 9) {
@@ -132,7 +142,10 @@ class CpuDerivacionController extends Controller
         } elseif ($doctorId != 1) {
             $query->where('id_doctor_al_que_derivan', $doctorId);
             $query->whereNot('id_estado_derivacion', 2);
+        }elseif ('users.usr_sede' > 2) {
+            $query->where('id_estado_derivacion', 7);
         }
+
 
         // Ordenar los resultados por fecha y hora ascendentemente
         $query->orderBy('fecha_para_atencion', 'asc')
@@ -218,6 +231,14 @@ class CpuDerivacionController extends Controller
             'id_estado_derivacion' => 'required|integer',
             'id' => 'required|integer',
             'id_turnos' => 'required|integer',
+            'email_paciente' => 'required|string',
+            'funcionario_email' => 'required|string',
+            'nombres_paciente' => 'required|string',
+            'nombres_funcionario' => 'required|string',
+            'area_atencion' => 'required|string',
+
+
+
         ]);
 
         DB::beginTransaction();
@@ -229,7 +250,7 @@ class CpuDerivacionController extends Controller
                 'ate_id' => $validatedData['ate_id'],
                 'id_doctor_al_que_derivan' => $validatedData['id_doctor_al_que_derivan'],
                 'id_paciente' => $validatedData['id_paciente'],
-                'fecha_derivacion' =>$validatedData['fecha_derivacion'],
+                'fecha_derivacion' => $validatedData['fecha_derivacion'],
                 'motivo_derivacion' => $validatedData['motivo_derivacion'],
                 'detalle_derivacion' => $validatedData['detalle_derivacion'],
                 'id_area' => $validatedData['id_area'],
@@ -252,21 +273,38 @@ class CpuDerivacionController extends Controller
             CpuTurno::where('id_turnos', $validatedData['id_turno_asignado'])
                 ->update(['estado' => 7]);
 
-            DB::commit();
-
             // Llamar a la función enviarCorreo con los datos necesarios después de que la transacción se haya realizado correctamente
-            $this->enviarCorreo($validatedData);
+            $this->enviarCorreoPaciente($validatedData, 'reagendamiento');
+            $this->enviarCorreoFuncionario($validatedData, 'reagendamiento');
+
+            // Si todo va bien, confirmar la transacción
+            DB::commit();
 
             return response()->json(['message' => 'Registro creado y actualizado correctamente.'], 201);
         } catch (\Exception $e) {
+
+            // Si algo falla, revertir todas las operaciones
             DB::rollBack();
             return response()->json(['error' => 'Error en la operación: ' . $e->getMessage()], 500);
         }
     }
 
     // Función para actualizar el estado de derivación a 5 (No asistió a la cita)
-    public function noAsistioCita($id)
+    public function noAsistioCita(Request $request, $id)
     {
+        // Validar los datos de entrada
+        $validatedData = $request->validate([
+            'email_paciente' => 'required|string',
+            'area_atencion' => 'required|string',
+            'fecha_para_atencion' => 'required|date',
+            'hora_para_atencion' => 'required|string',
+            'nombres_funcionario' => 'required|string',
+            'nombres_paciente' => 'required|string',
+            'funcionario_email' => 'required|string',
+        ]);
+
+        DB::beginTransaction();
+
         try {
             // Verificar si el ID existe en la tabla cpu_derivaciones
             $derivacion = CpuDerivacion::find($id);
@@ -278,30 +316,48 @@ class CpuDerivacionController extends Controller
             // Actualizar el campo id_estado_derivacion a 5
             $derivacion->update(['id_estado_derivacion' => 5]);
 
-            return response()->json(['message' => 'Estado de derivación actualizado a 5 correctamente.'], 200);
+            // Enviar correos al paciente y al funcionario utilizando los datos validados
+            $this->enviarCorreoPaciente($validatedData, 'no_show');
+            $this->enviarCorreoFuncionario($validatedData, 'no_show');
+
+            DB::commit();
+
+            return response()->json(['message' => 'Estado de derivación actualizado a 5 correctamente y correos enviados.'], 200);
         } catch (\Exception $e) {
+            DB::rollBack();
             return response()->json(['error' => 'Error al actualizar el estado de derivación: ' . $e->getMessage()], 500);
         }
     }
 
-    public function enviarCorreoPaciente(Request $validatedData)
+
+
+
+
+    public function enviarCorreoPaciente(array $validatedData, $tipo)
     {
-        // Obtener los datos necesarios, ajusta esto según tus necesidades
-        // $emaile = $request->input("email");
-        $emaile = "p1311836587@dn.uleam.edu.ec";
-        $nombresd = $validatedData->input("nombres");
-        $apellidosd = $validatedData->input("apellidos");
-        $monto_otorgadod = $validatedData->input('monto_otorgado');
-        $restanted = $validatedData->input('restante');
-        $tipo_alimentod = $validatedData->input('tipo_alimento');
-        $monto_facturadod = $validatedData->input('monto_facturado');
+        // Obtener los datos necesarios desde el array validado
+        // $email_paciente = $validatedData['email_paciente'];
+        $email_paciente = 'p1311836587@dn.uleam.edu.ec';
+        $area_atencion = $validatedData['area_atencion'];
+        $fecha_para_atencion = $validatedData['fecha_para_atencion'];
+        $hora_para_atencion = $validatedData['hora_para_atencion'];
+        $nombres_funcionario = $validatedData['nombres_funcionario'];
+
+        // Ajustar el asunto y el cuerpo del correo según el tipo
+        if ($tipo === 'no_show') {
+            $asunto = "Cita no asistida en el área de $area_atencion";
+            $cuerpo = "<p>Estimado(a) ciudadano(a); La Dirección de Bienestar, Admisión y Nivelación Universitaria, informa que no asistió a su cita programada para el área de $area_atencion el día $fecha_para_atencion a las $hora_para_atencion. Si desea reagendar su cita, por favor acerquese al área de salud de la dirección. Saludos cordiales.</p>";
+        } else {
+            $asunto = "Reagendamiento de cita programada para el área de $area_atencion";
+            $cuerpo = "<p>Estimado(a) ciudadano(a); La Dirección de Bienestar, Admisión y Nivelación Universitaria, registra el reagendamiento de una cita programada para el área de $area_atencion para la fecha $fecha_para_atencion a las $hora_para_atencion con el funcionario $nombres_funcionario, por favor presentarse 10 minutos antes, saludos cordiales.</p>";
+        }
 
         $persona = [
-            "destinatarios" => $emaile,
+            "destinatarios" => $email_paciente,
             "cc" => "",
             "cco" => "",
-            "asunto" => "Consumo de alimentos por ayuda económica - Tasty Uleam",
-            "cuerpo" => "<p>Estimado(a) estudiante; La EPE Uleam, registra el consumo de $tipo_alimentod por un valor de $$monto_facturadod dólares; del total de $$monto_otorgadod dólaes, aún tiene disponible $$restanted dolares, saludos cordiales.</p>"
+            "asunto" => $asunto,
+            "cuerpo" => $cuerpo
         ];
 
         // Codificar los datos
@@ -323,6 +379,8 @@ class CpuDerivacionController extends Controller
                 'Personalizado: ¡Hola mundo!',
             ),
             CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_SSL_VERIFYPEER => false, // Deshabilitar verificación SSL (solo para pruebas)
+            CURLOPT_SSL_VERIFYHOST => false, // Deshabilitar verificación del host SSL (solo para pruebas)
         ));
 
         // Realizar la solicitud cURL
@@ -334,7 +392,75 @@ class CpuDerivacionController extends Controller
         if ($codigoRespuesta === 200) {
             $respuestaDecodificada = json_decode($resultado);
             // Realiza acciones adicionales si es necesario
-            $array[0] = 1;
+        } else {
+            // Manejar errores
+            return response()->json(['error' => "Error consultando. Código de respuesta: $codigoRespuesta"], $codigoRespuesta);
+        }
+
+        // Devolver una respuesta
+        return response()->json(['message' => 'Solicitud enviada correctamente'], 200);
+    }
+
+
+    public function enviarCorreoFuncionario(array $validatedData, $tipo)
+    {
+        // Obtener los datos necesarios desde el array validado
+        // $funcionario_email = $validatedData['funcionario_email'];
+        $funcionario_email = 'p1311836587@dn.uleam.edu.ec';
+        $area_atencion = $validatedData['area_atencion'];
+        $fecha_para_atencion = $validatedData['fecha_para_atencion'];
+        $hora_para_atencion = $validatedData['hora_para_atencion'];
+        $nombres_paciente = $validatedData['nombres_paciente'];
+
+        // Ajustar el asunto y el cuerpo del correo según el tipo
+        if ($tipo === 'no_show') {
+            $asunto = "Paciente no asistió a la cita en el área de $area_atencion";
+            $cuerpo = "<p>Estimado(a) funcionario(a); La Dirección de Bienestar, Admisión y Nivelación Universitaria, informa que el ciudadano(a) $nombres_paciente no asistió a su cita programada para el área de $area_atencion el día $fecha_para_atencion a las $hora_para_atencion. Saludos cordiales.</p>";
+        } else {
+            $asunto = "Reagendamiento de cita programada para el área de $area_atencion";
+            $cuerpo = "<p>Estimado(a) funcionario(a); La Dirección de Bienestar, Admisión y Nivelación Universitaria, registra el reagendamiento de una cita para el área de $area_atencion para la fecha $fecha_para_atencion a las $hora_para_atencion con el ciudadano(a) $nombres_paciente, saludos cordiales.</p>";
+        }
+
+        $persona = [
+            "destinatarios" => $funcionario_email,
+            "cc" => "",
+            "cco" => "",
+            "asunto" => $asunto,
+            "cuerpo" => $cuerpo
+        ];
+
+        // Codificar los datos
+        $datosCodificados = json_encode($persona);
+
+        // URL de destino
+        $url = "https://prod-44.westus.logic.azure.com:443/workflows/4046dc46113a4d8bb5da374ef1ee3e32/triggers/manual/paths/invoke?api-version=2016-06-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=lA40KwffEyLqEjVA4uyHaWAHblO77vk2jXYEkjUG08s";
+
+        // Inicializar cURL
+        $ch = curl_init($url);
+
+        // Configurar opciones de cURL
+        curl_setopt_array($ch, array(
+            CURLOPT_CUSTOMREQUEST => "POST",
+            CURLOPT_POSTFIELDS => $datosCodificados,
+            CURLOPT_HTTPHEADER => array(
+                'Content-Type: application/json',
+                'Content-Length: ' . strlen($datosCodificados),
+                'Personalizado: ¡Hola mundo!',
+            ),
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_SSL_VERIFYPEER => false, // Deshabilitar verificación SSL (solo para pruebas)
+            CURLOPT_SSL_VERIFYHOST => false, // Deshabilitar verificación del host SSL (solo para pruebas)
+        ));
+
+        // Realizar la solicitud cURL
+        $resultado = curl_exec($ch);
+        $codigoRespuesta = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+
+        // Procesar la respuesta
+        if ($codigoRespuesta === 200) {
+            $respuestaDecodificada = json_decode($resultado);
+            // Realiza acciones adicionales si es necesario
         } else {
             // Manejar errores
             return response()->json(['error' => "Error consultando. Código de respuesta: $codigoRespuesta"], $codigoRespuesta);

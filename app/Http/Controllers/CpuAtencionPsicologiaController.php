@@ -6,8 +6,10 @@ use Illuminate\Http\Request;
 use App\Models\CpuAtencionPsicologia;
 use App\Models\CpuAtencion;
 use App\Models\CpuCasosPsicologia;
-use App\Models\CpuDerivacion; // Asegúrate de importar este modelo
+use App\Models\CpuDerivacion;
+use App\Models\CpuTurno;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB; // Importa DB para transacciones
 use Carbon\Carbon;
 
 class CpuAtencionPsicologiaController extends Controller
@@ -18,7 +20,7 @@ class CpuAtencionPsicologiaController extends Controller
         $request->validate([
             'funcionarios' => 'required|integer',
             'id_persona' => 'required|integer',
-            'tipo_usuario'=> 'required|string',
+            'tipo_usuario'=> 'required|integer',
             'medio_atencion' => 'required|string',
             'tipo_atencion' => 'required|string',
             'motivo' => 'nullable|string',
@@ -47,98 +49,118 @@ class CpuAtencionPsicologiaController extends Controller
             'descripcionfinal' => 'nullable|string',
         ]);
 
-        // Crear o asociar el caso y la atención psicológica
-        if ($request->activarcaso && in_array($request->tipo_atencion, ['INICIO'])) {
-            $nuevoCaso = CpuCasosPsicologia::create([
-                'nombre_caso' => $request->caso,
-                'id_estado' => 8, // Estado inicial del caso
-            ]);
+        // Inicia la transacción
+        DB::beginTransaction();
 
-            $cpuAtencion = CpuAtencion::create([
-                'id_funcionario' => $request->funcionarios,
-                'id_persona' => $request->id_persona,
-                'via_atencion' => $request->medio_atencion,
-                'motivo_atencion' => $request->motivo,
-                'detalle_atencion' => $request->evolucion,
-                'fecha_hora_atencion' => now(),
-                'anio_atencion' => $request->anio_atencion,
-                'id_caso' => $nuevoCaso->id,
-            ]);
-        } else {
-            $cpuAtencion = CpuAtencion::create([
-                'id_funcionario' => $request->funcionarios,
-                'id_persona' => $request->id_persona,
-                'via_atencion' => $request->medio_atencion,
-                'motivo_atencion' => $request->motivo,
-                'detalle_atencion' => $request->evolucion,
-                'fecha_hora_atencion' => now(),
-                'anio_atencion' => $request->anio_atencion,
-                'id_caso' => $request->id_caso,
-            ]);
+        try {
+            // Crear o asociar el caso y la atención psicológica
+            if ($request->activarcaso && in_array($request->tipo_atencion, ['INICIO'])) {
+                $nuevoCaso = CpuCasosPsicologia::create([
+                    'nombre_caso' => $request->caso,
+                    'id_estado' => 8, // Estado inicial del caso
+                ]);
 
-            if ($request->input('altacaso') && $request->input('tipo_atencion') === 'SUBSECUENTE') {
-                CpuCasosPsicologia::where('id', $request->id_caso)->update(['id_estado' => 9]);
+                $cpuAtencion = CpuAtencion::create([
+                    'id_funcionario' => $request->funcionarios,
+                    'id_persona' => $request->id_persona,
+                    'via_atencion' => $request->medio_atencion,
+                    'motivo_atencion' => $request->motivo,
+                    'detalle_atencion' => $request->evolucion,
+                    'fecha_hora_atencion' => now(),
+                    'anio_atencion' => $request->anio_atencion,
+                    'id_caso' => $nuevoCaso->id,
+                    'id_tipo_usuario' => $request->tipo_usuario
+                ]);
+            } else {
+                $cpuAtencion = CpuAtencion::create([
+                    'id_funcionario' => $request->funcionarios,
+                    'id_persona' => $request->id_persona,
+                    'via_atencion' => $request->medio_atencion,
+                    'motivo_atencion' => $request->motivo,
+                    'detalle_atencion' => $request->evolucion,
+                    'fecha_hora_atencion' => now(),
+                    'anio_atencion' => $request->anio_atencion,
+                    'id_caso' => $request->id_caso,
+                    'id_tipo_usuario' => $request->tipo_usuario
+                ]);
+
+                if ($request->input('altacaso') && $request->input('tipo_atencion') === 'SUBSECUENTE') {
+                    CpuCasosPsicologia::where('id', $request->id_caso)->update(['id_estado' => 9]);
+                }
+                if ($request->tipo_atencion == 'REAPERTURA') {
+                    CpuCasosPsicologia::where('id', $request->id_caso)->update(['id_estado' => 8]);
+                }
             }
-            if ($request->tipo_atencion == 'REAPERTURA') {
-                CpuCasosPsicologia::where('id', $request->id_caso)->update(['id_estado' => 8]);
-            }
-        }
 
-        // Crear la atención de psicología con el ID obtenido
-        $atencionPsicologia = CpuAtencionPsicologia::create([
-            'id_cpu_atencion' => $cpuAtencion->id,
-            'tipo_usuario' => $request->tipo_usuario,
-            'tipo_atencion' => $request->tipo_atencion,
-            'medio_atencion' => $request->medio_atencion,
-            'motivo_consulta' => $request->motivo,
-            'evolucion' => $request->evolucion,
-            'diagnostico' => $request->diagnostico,
-            'referido' => $request->referido,
-            'acciones_afirmativas' => $request->acciones_afirmativas,
-            'consumo_sustancias' => $request->consumo_sustancias,
-            'frecuencia_consumo' => $request->frecuencia_consumo,
-            'detalles_complementarios' => $request->detalles_complementarios,
-            'aspecto_actitud_presentacion' => $request->aspecto_actitud_presentacion,
-            'aspecto_clinico' => $request->aspecto_clinico,
-            'sensopercepcion' => $request->sensopercepcion,
-            'memoria' => $request->memoria,
-            'ideacion' => $request->ideacion,
-            'pensamiento' => $request->pensamiento,
-            'lenguaje' => $request->lenguaje,
-            'juicio' => $request->juicio,
-            'afectividad' => $request->afectividad,
-            'evolucion_caso' => $request->evolucion,
-            'abordaje_caso' => $request->abordaje,
-            'prescripcion' => $request->observacion,
-            'descripcionfinal' => $request->descripcionfinal,
-        ]);
-
-        // Guardar datos de derivación si el switch de derivación está activo
-        if ($request->input('derivacionFlag')) {
-            $derivacionData = $request->validate([
-                // Ya no necesitamos 'ate_id' en el request, usamos el generado
-                'id_doctor_al_que_derivan' => 'required|integer|exists:users,id',
-                'id_paciente' => 'required|integer|exists:cpu_personas,id',
-                'motivo_derivacion' => 'required|string',
-                'detalle_derivacion' => 'required|string',
-                'id_area' => 'required|integer',
-                'fecha_para_atencion' => 'required|date',
-                'hora_para_atencion' => 'required|date_format:H:i:s',
-                'id_estado_derivacion' => 'integer|exists:cpu_estados,id',
-                'id_turno_asignado' => 'required|integer|exists:cpu_turnos,id_turnos',
+            // Crear la atención de psicología con el ID obtenido
+            $atencionPsicologia = CpuAtencionPsicologia::create([
+                'id_cpu_atencion' => $cpuAtencion->id,
+                'tipo_usuario' => $request->tipo_usuario,
+                'tipo_atencion' => $request->tipo_atencion,
+                'medio_atencion' => $request->medio_atencion,
+                'motivo_consulta' => $request->motivo,
+                'evolucion' => $request->evolucion,
+                'diagnostico' => $request->diagnostico,
+                'referido' => $request->referido,
+                'acciones_afirmativas' => $request->acciones_afirmativas,
+                'consumo_sustancias' => $request->consumo_sustancias,
+                'frecuencia_consumo' => $request->frecuencia_consumo,
+                'detalles_complementarios' => $request->detalles_complementarios,
+                'aspecto_actitud_presentacion' => $request->aspecto_actitud_presentacion,
+                'aspecto_clinico' => $request->aspecto_clinico,
+                'sensopercepcion' => $request->sensopercepcion,
+                'memoria' => $request->memoria,
+                'ideacion' => $request->ideacion,
+                'pensamiento' => $request->pensamiento,
+                'lenguaje' => $request->lenguaje,
+                'juicio' => $request->juicio,
+                'afectividad' => $request->afectividad,
+                'evolucion_caso' => $request->evolucion,
+                'abordaje_caso' => $request->abordaje,
+                'prescripcion' => $request->observacion,
+                'descripcionfinal' => $request->descripcionfinal,
             ]);
 
-            // Usamos el id generado para ate_id
-            $derivacionData['ate_id'] = $cpuAtencion->id;
-            $derivacionData['id_funcionario_que_derivo'] = Auth::id();
-            $derivacionData['fecha_derivacion'] = Carbon::now();
+            // Guardar datos de derivación si el switch de derivación está activo
+            if ($request->input('derivacionFlag')) {
+                $derivacionData = $request->validate([
+                    // Ya no necesitamos 'ate_id' en el request, usamos el generado
+                    'id_doctor_al_que_derivan' => 'required|integer|exists:users,id',
+                    'id_paciente' => 'required|integer|exists:cpu_personas,id',
+                    'motivo_derivacion' => 'required|string',
+                    'detalle_derivacion' => 'required|string',
+                    'id_area' => 'required|integer',
+                    'fecha_para_atencion' => 'required|date',
+                    'hora_para_atencion' => 'required|date_format:H:i:s',
+                    'id_estado_derivacion' => 'integer|exists:cpu_estados,id',
+                    'id_turno_asignado' => 'required|integer|exists:cpu_turnos,id_turnos',
+                ]);
 
-            $derivacion = CpuDerivacion::create($derivacionData);
+                // Usamos el id generado para ate_id
+                $derivacionData['ate_id'] = $cpuAtencion->id;
+                $derivacionData['id_funcionario_que_derivo'] = Auth::id();
+                $derivacionData['fecha_derivacion'] = Carbon::now();
+                $derivacion = CpuDerivacion::create($derivacionData);
 
-            return response()->json($derivacion, 201);
+                // Actualizar el estado del turno si la derivación es exitosa
+                CpuTurno::where('id_turnos', $derivacionData['id_turno_asignado'])
+                    ->update(['estado' => 7]);
+            }
+
+            // Confirmar la transacción
+            DB::commit();
+
+            return response()->json($atencionPsicologia, 201);
+
+        } catch (\Exception $e) {
+            // Revertir la transacción en caso de error
+            DB::rollBack();
+
+            return response()->json([
+                'error' => 'Ocurrió un error durante el proceso de guardado',
+                'details' => $e->getMessage(),
+            ], 500);
         }
-
-        return response()->json($atencionPsicologia, 201);
     }
 
     public function index()

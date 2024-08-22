@@ -363,6 +363,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::post('/cpu-tipos-usuario', [CpuTipoUsuarioController::class, 'store']);
     Route::get('/cpu-tipos-usuario', [CpuTipoUsuarioController::class, 'index']);
     Route::get('/cpu-tipos-usuario/{id}', [CpuTipoUsuarioController::class, 'show']);
+    Route::get('/cpu-tipos-usuarioN/{tipo_usu}', [CpuTipoUsuarioController::class, 'filtrotipousuario']);
     Route::put('/cpu-tipos-usuario/{id}', [CpuTipoUsuarioController::class, 'update']);
     Route::delete('/cpu-tipos-usuario/{id}', [CpuTipoUsuarioController::class, 'destroy']);
 

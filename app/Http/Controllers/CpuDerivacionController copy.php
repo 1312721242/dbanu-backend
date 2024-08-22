@@ -112,6 +112,7 @@ class CpuDerivacionController extends Controller
                 'cpu_personas.id as id_paciente',
                 'cpu_personas.cedula',
                 'cpu_personas.nombres',
+                'cpu_personas.id_clasificacion_tipo_usuario',
                 'cpu_derivaciones.id as id_derivacion',
                 'cpu_derivaciones.fecha_para_atencion',
                 'cpu_derivaciones.motivo_derivacion',

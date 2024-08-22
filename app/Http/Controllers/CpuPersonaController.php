@@ -48,6 +48,7 @@ class CpuPersonaController extends Controller
                 'celular' => $data['celular'],
                 'tipoetnia' => $data['tipoetnia'],
                 'discapacidad' => $data['discapacidad'],
+                'id_clasificacion_tipo_usuario'=> 2,
             ]);
 
             CpuDatosEmpleado::create([
@@ -71,23 +72,6 @@ class CpuPersonaController extends Controller
         return response()->json(['message' => 'Persona no encontrada'], 404);
     }
 
-    // public function update(Request $request, $cedula)
-    // {
-    //     $persona = CpuPersona::where('cedula', $cedula)->first();
-    //     if (!$persona) {
-    //         return response()->json(['message' => 'Persona no encontrada'], 404);
-    //     }
-
-    //     $persona->update($request->only([
-    //         'nombres', 'nacionalidad', 'provincia', 'ciudad', 'parroquia', 'direccion', 'sexo', 'fechanaci', 'celular', 'tipoetnia', 'discapacidad'
-    //     ]));
-
-    //     $persona->datosEmpleados()->update($request->only([
-    //         'emailinstitucional', 'puesto', 'regimen1', 'modalidad', 'unidad', 'carrera', 'idsubproceso', 'escala1', 'estado', 'fechaingre'
-    //     ]));
-
-    //     return response()->json($persona->load('datosEmpleados'));
-    // }
     //aqui para atenciones de bienestar
     public function showBienestar($cedula)
     {
@@ -147,6 +131,7 @@ class CpuPersonaController extends Controller
                     'porcentaje_discapacidad' => $data['porcentaje_discapacidad'] ?? null,
                     'imagen' => $data['imagen'] ?? null,
                     'email'=> $data['email'] ?? '',
+                    'id_clasificacion_tipo_usuario'=> 2,
                 ]);
 
                 CpuDatosEmpleado::create([
@@ -228,6 +213,7 @@ class CpuPersonaController extends Controller
                 'tipo_discapacidad' => $data['tipo_discapacidad'] ?? null,
                 'porcentaje_discapacidad' => $data['porcentaje_discapacidad'] ?? null,
                 'imagen' => $data['imagen'] ?? null,
+                'id_clasificacion_tipo_usuario'=> 1,
             ]);
 
             CpuDatosEstudiantes::create([

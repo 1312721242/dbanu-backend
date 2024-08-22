@@ -45,4 +45,13 @@ class CpuTipoUsuarioController extends Controller
 
         return response()->noContent();
     }
+
+    public function filtrotipousuario($tipo_usu)
+    {
+        // Realiza la consulta en la base de datos
+        $tiposUsuario = CpuTipoUsuario::where('clasificacion', $tipo_usu)->get();
+
+        // Retorna los resultados
+        return response()->json($tiposUsuario);
+    }
 }

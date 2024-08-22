@@ -45,4 +45,16 @@ class CpuTipoUsuarioController extends Controller
 
         return response()->noContent();
     }
+
+    public function filtrotipousuario($tipo_usu)
+    {
+        // Determina la clasificación en función del tipo de usuario recibido
+        $clasificacion = $tipo_usu === 'COMUNIDAD UNIVERSITARIA' ? 2 : 1;
+
+        // Realiza la consulta en la base de datos
+        $tiposUsuario = CpuTipoUsuario::where('clasificacion', $clasificacion)->get();
+
+        // Retorna los resultados
+        return response()->json($tiposUsuario);
+    }
 }

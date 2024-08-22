@@ -167,12 +167,22 @@ class UsuarioController extends Controller
 
         public function search(Request $request)
             {
+                // Obtener el término de búsqueda desde la solicitud
                 $searchTerm = $request->input('bus');
 
-                $users = User::where('name', 'ILIKE', "%$searchTerm%")->get(['name']);
+                // Realizar la consulta en la tabla de usuarios buscando por nombre
+                // y seleccionando todos los campos necesarios
+                $users = User::where('name', 'ILIKE', "%$searchTerm%")
+                    ->get([
+                        'id', 'name','email', 'usr_tipo', 'usr_estado',
+                        'usr_sede', 'usr_facultad', 'usr_carrera',
+                        'usr_profesion', 'api_token'
+                    ]);
 
+                // Devolver los resultados como respuesta JSON
                 return response()->json($users);
             }
+
 
             public function buscarfuncionariorol(Request $request)
             {

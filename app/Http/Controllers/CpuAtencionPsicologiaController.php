@@ -1,12 +1,13 @@
 <?php
 
 namespace App\Http\Controllers;
-
+use Illuminate\Support\Facades\Validator;
 use Illuminate\Http\Request;
 use App\Models\CpuAtencionPsicologia;
 use App\Models\CpuAtencion;
-use App\Models\CpuCasosPsicologia;
+use App\Models\CpuCasosMedicos;
 use App\Models\CpuDerivacion;
+use App\Models\CpuAtencionTriaje;
 use App\Models\CpuTurno;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB; // Importa DB para transacciones
@@ -55,7 +56,7 @@ class CpuAtencionPsicologiaController extends Controller
         try {
             // Crear o asociar el caso y la atención psicológica
             if ($request->activarcaso && in_array($request->tipo_atencion, ['INICIO'])) {
-                $nuevoCaso = CpuCasosPsicologia::create([
+                $nuevoCaso = CpuCasosMedicos::create([
                     'nombre_caso' => $request->caso,
                     'id_estado' => 8, // Estado inicial del caso
                 ]);
@@ -69,7 +70,8 @@ class CpuAtencionPsicologiaController extends Controller
                     'fecha_hora_atencion' => now(),
                     'anio_atencion' => $request->anio_atencion,
                     'id_caso' => $nuevoCaso->id,
-                    'id_tipo_usuario' => $request->tipo_usuario
+                    'id_tipo_usuario' => $request->tipo_usuario,
+                    'tipo_atencion' => $request->tipo_atencion,
                 ]);
             } else {
                 $cpuAtencion = CpuAtencion::create([
@@ -81,14 +83,15 @@ class CpuAtencionPsicologiaController extends Controller
                     'fecha_hora_atencion' => now(),
                     'anio_atencion' => $request->anio_atencion,
                     'id_caso' => $request->id_caso,
-                    'id_tipo_usuario' => $request->tipo_usuario
+                    'id_tipo_usuario' => $request->tipo_usuario,
+                    'tipo_atencion' => $request->tipo_atencion,
                 ]);
 
                 if ($request->input('altacaso') && $request->input('tipo_atencion') === 'SUBSECUENTE') {
-                    CpuCasosPsicologia::where('id', $request->id_caso)->update(['id_estado' => 9]);
+                    CpuCasosMedicos::where('id', $request->id_caso)->update(['id_estado' => 9]);
                 }
                 if ($request->tipo_atencion == 'REAPERTURA') {
-                    CpuCasosPsicologia::where('id', $request->id_caso)->update(['id_estado' => 8]);
+                    CpuCasosMedicos::where('id', $request->id_caso)->update(['id_estado' => 8]);
                 }
             }
 
@@ -162,10 +165,64 @@ class CpuAtencionPsicologiaController extends Controller
             ], 500);
         }
     }
+    public function guardarAtencionConTriaje(Request $request)
+    {
+        // Log::info('Datos recibidos para triaje:', $request->all());
+        $validator = Validator::make($request->all(), [
+            'id_funcionario' => 'required|integer',
+            'id_paciente' => 'required|integer',
+            'id_derivacion' => 'required|integer',
+            'id_estado_derivacion' => 'required|integer',
+            'talla' => 'nullable|integer',
+            'peso' => 'nullable|numeric',
+            'temperatura' => 'nullable|numeric',
+            'presion_sistolica' => 'nullable|integer',
+            'presion_diastolica' => 'nullable|integer',
+        ]);        
 
+        if ($validator->fails()) {
+            return response()->json(['error' => $validator->errors()], 400);
+        }
+
+        // Iniciar una transacción
+        DB::beginTransaction();
+
+        try {
+
+            // Guardar el triaje
+            $triaje = new CpuAtencionTriaje();
+            $triaje->id_derivacion = $request->input('id_derivacion');
+            $triaje->talla = $request->input('talla');
+            $triaje->peso = $request->input('peso');
+            $triaje->temperatura = $request->input('temperatura');
+            $triaje->presion_sistolica = $request->input('presion_sistolica');
+            $triaje->presion_diastolica = $request->input('presion_diastolica');
+            $triaje->save();
+
+            // Confirmar la transacción
+            DB::commit();
+
+            return response()->json(['success' => true, 'triaje_id' => $triaje->id]);
+        } catch (\Exception $e) {
+            // Deshacer la transacción en caso de error
+            DB::rollBack();
+            Log::error('Error al guardar la atención y el triaje:', ['exception' => $e->getMessage()]);
+            return response()->json(['error' => 'Error al guardar la atención y el triaje'], 500);
+        }
+    }
+
+    // Nueva función para actualizar el estado de derivacion
+    public function actulizarderivacionsico(Request $request)
+    {
+        $id_derivacion = $request->input('id_derivacion');
+        CpuDerivacion::where('id', $id_derivacion)->update(['id_estado_derivacion' => 2]);
+    
+        return response()->json(['message' => 'Derivación actualizada correctamente']);
+    }
+        
     public function index()
     {
-        $casos = CpuCasosPsicologia::all();
+        $casos = CpuCasosMedicos::all();
         return response()->json($casos);
     }
 }

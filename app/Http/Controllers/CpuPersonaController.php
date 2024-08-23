@@ -72,7 +72,7 @@ class CpuPersonaController extends Controller
         return response()->json(['message' => 'Persona no encontrada'], 404);
     }
 
-    //aqui para atenciones de bienestar
+   // Aquí para atenciones de bienestar
     public function showBienestar($cedula)
     {
         if (strlen($cedula) < 10) {
@@ -83,7 +83,7 @@ class CpuPersonaController extends Controller
             foreach ($personas as $persona) {
                 $persona->tipoDiscapacidad = $persona->tipo_discapacidad;
                 $persona->porcentajeDiscapacidad = $persona->porcentaje_discapacidad;
-                $persona->imagen = url('Perfiles/'.$persona->imagen);
+                $persona->imagen = url('Perfiles/' . $persona->imagen);
             }
 
             return response()->json($personas);
@@ -94,11 +94,16 @@ class CpuPersonaController extends Controller
             ->first();
 
         if ($persona) {
+            // Generar el código de persona
+            $codigoPersona = $this->generarCodigoPersona($persona->cedula, $persona->nombres);
+            $persona->codigo_persona = $codigoPersona;
+            $persona->save();
+
             $persona->load('datosMedicos'); // Load datosMedicos if available
             $persona->tipoDiscapacidad = $persona->tipo_discapacidad;
             $persona->porcentajeDiscapacidad = $persona->porcentaje_discapacidad;
             $persona->imagen = $persona->imagen;
-            // $persona->imagen = url('images/' . $persona->imagen);
+
             return response()->json($persona);
         }
 
@@ -114,6 +119,9 @@ class CpuPersonaController extends Controller
                 empty($data['celular']) && empty($data['tipoetnia']);
 
             if (!$isEmptyData) {
+                // Generar el código de persona
+                $codigoPersona = $this->generarCodigoPersona($data['cedula'], $data['nombres']);
+
                 $persona = CpuPersona::create([
                     'cedula' => $data['cedula'] ?? '',
                     'nombres' => $data['nombres'] ?? 'SIN INFORMACIÓN',
@@ -129,9 +137,10 @@ class CpuPersonaController extends Controller
                     'discapacidad' => $data['discapacidad'] ?? 'SIN INFORMACIÓN',
                     'tipo_discapacidad' => $data['tipo_discapacidad'] ?? null,
                     'porcentaje_discapacidad' => $data['porcentaje_discapacidad'] ?? null,
+                    'codigo_persona' => $codigoPersona,
                     'imagen' => $data['imagen'] ?? null,
-                    'email'=> $data['email'] ?? '',
-                    'id_clasificacion_tipo_usuario'=> 2,
+                    'email' => $data['email'] ?? '',
+                    'id_clasificacion_tipo_usuario' => 2,
                 ]);
 
                 CpuDatosEmpleado::create([
@@ -197,6 +206,9 @@ class CpuPersonaController extends Controller
                 $etnia = $etniaData ? $etniaData->etnia : $etnia;
             }
 
+            // Generar el código de persona
+            $codigoPersona = $this->generarCodigoPersona($data['cedula'], $data['nombres']);
+
             $persona = CpuPersona::create([
                 'cedula' => $cedula,
                 'nombres' => $data['nombres'] ?? 'SIN INFORMACIÓN',
@@ -212,8 +224,9 @@ class CpuPersonaController extends Controller
                 'discapacidad' => $discapacidad,
                 'tipo_discapacidad' => $data['tipo_discapacidad'] ?? null,
                 'porcentaje_discapacidad' => $data['porcentaje_discapacidad'] ?? null,
+                'codigo_persona' => $codigoPersona,
                 'imagen' => $data['imagen'] ?? null,
-                'id_clasificacion_tipo_usuario'=> 1,
+                'id_clasificacion_tipo_usuario' => 1,
             ]);
 
             CpuDatosEstudiantes::create([
@@ -238,6 +251,36 @@ class CpuPersonaController extends Controller
 
         return response()->json(['message' => 'Persona no encontrada'], 404);
     }
+
+    private function generarCodigoPersona($cedula, $nombres)
+    {
+        $cedulaParte = substr($cedula, 0, 4); // Tomar los primeros 4 dígitos de la cédula
+        $nombrePartes = explode(' ', $nombres);
+        $primerasIniciales = '';
+        $ultimasIniciales = '';
+
+        // Tomar las primeras dos iniciales
+        if (count($nombrePartes) > 0) {
+            $primerasIniciales .= strtoupper($nombrePartes[0][0]);
+            if (isset($nombrePartes[1])) {
+                $primerasIniciales .= strtoupper($nombrePartes[1][0]);
+            }
+        }
+
+        // Tomar las últimas iniciales
+        if (count($nombrePartes) > 2) {
+            for ($i = 2; $i < count($nombrePartes); $i++) {
+                $ultimasIniciales .= strtoupper($nombrePartes[$i][0]);
+            }
+        }
+
+        // Concatenar las primeras iniciales, la parte de la cédula y las últimas iniciales
+        $codigoPersona = $primerasIniciales . $cedulaParte . $ultimasIniciales;
+
+        return $codigoPersona;
+    }
+
+
 
     public function updateBienestar(Request $request, $cedula)
     {

@@ -5,7 +5,7 @@ use Illuminate\Support\Facades\Validator;
 use Illuminate\Http\Request;
 use App\Models\CpuAtencionPsicologia;
 use App\Models\CpuAtencion;
-use App\Models\CpuCasosPsicologia;
+use App\Models\CpuCasosMedicos;
 use App\Models\CpuDerivacion;
 use App\Models\CpuAtencionTriaje;
 use App\Models\CpuTurno;
@@ -56,7 +56,7 @@ class CpuAtencionPsicologiaController extends Controller
         try {
             // Crear o asociar el caso y la atención psicológica
             if ($request->activarcaso && in_array($request->tipo_atencion, ['INICIO'])) {
-                $nuevoCaso = CpuCasosPsicologia::create([
+                $nuevoCaso = CpuCasosMedicos::create([
                     'nombre_caso' => $request->caso,
                     'id_estado' => 8, // Estado inicial del caso
                 ]);
@@ -88,10 +88,10 @@ class CpuAtencionPsicologiaController extends Controller
                 ]);
 
                 if ($request->input('altacaso') && $request->input('tipo_atencion') === 'SUBSECUENTE') {
-                    CpuCasosPsicologia::where('id', $request->id_caso)->update(['id_estado' => 9]);
+                    CpuCasosMedicos::where('id', $request->id_caso)->update(['id_estado' => 9]);
                 }
                 if ($request->tipo_atencion == 'REAPERTURA') {
-                    CpuCasosPsicologia::where('id', $request->id_caso)->update(['id_estado' => 8]);
+                    CpuCasosMedicos::where('id', $request->id_caso)->update(['id_estado' => 8]);
                 }
             }
 
@@ -222,7 +222,7 @@ class CpuAtencionPsicologiaController extends Controller
         
     public function index()
     {
-        $casos = CpuCasosPsicologia::all();
+        $casos = CpuCasosMedicos::all();
         return response()->json($casos);
     }
 }

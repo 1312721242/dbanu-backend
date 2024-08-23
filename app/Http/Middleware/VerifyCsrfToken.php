@@ -49,5 +49,8 @@ class VerifyCsrfToken extends Middleware
         'api/eliminar-fuente-informacion/{id}',
         'api/atenciones-psicologia',
         'api/persona/{cedula}',
+        'api/atenciones/triaje',
+        'api/atenciones/triajesico',
+        'api/atenciones/updatederivacionsico',
     ];
 }

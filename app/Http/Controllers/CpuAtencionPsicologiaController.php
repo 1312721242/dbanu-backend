@@ -73,6 +73,10 @@ class CpuAtencionPsicologiaController extends Controller
                     'id_caso' => $nuevoCaso->id,
                     'id_tipo_usuario' => $request->tipo_usuario,
                     'tipo_atencion' => $request->tipo_atencion,
+                    'evolucion_enfermedad' => $request->evolucion_caso,
+                    'diagnostico' => $request->diagnostico,
+                    'prescripcion' => $request->observacion,
+                    
                 ]);
             } else {
                 $cpuAtencion = CpuAtencion::create([
@@ -86,6 +90,9 @@ class CpuAtencionPsicologiaController extends Controller
                     'id_caso' => $request->id_caso,
                     'id_tipo_usuario' => $request->tipo_usuario,
                     'tipo_atencion' => $request->tipo_atencion,
+                    'evolucion_enfermedad' => $request->evolucion_caso,
+                    'diagnostico' => $request->diagnostico,
+                    'prescripcion' => $request->observacion,
                 ]);
     
                 if ($request->input('altacaso') && $request->input('tipo_atencion') === 'SUBSECUENTE') {

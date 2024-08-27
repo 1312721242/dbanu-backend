@@ -20,6 +20,7 @@ class User extends Authenticatable
         'usr_profesion',
         'usr_facultad',
         'api_token',
+        'usr_estado',
     ];
 
     protected $hidden = [
@@ -44,11 +45,11 @@ class User extends Authenticatable
         return $this->belongsTo(CpuSede::class, 'usr_sede', 'id');
     }
 
-    //relacion profesion 
+    //relacion profesion
     public function profesion()
     {
         return $this->belongsTo(CpuProfesion::class, 'usr_profesion', 'id');
     }
-    
+
 }
 

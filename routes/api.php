@@ -331,6 +331,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::post('/atenciones/triaje', [CpuAtencionesController::class, 'guardarAtencionConTriaje']);
     Route::get('/atenciones/{id_persona}/{id_funcionario}', [CpuAtencionesController::class, 'obtenerAtencionesPorPaciente']);
     Route::delete('/atencionesEliminar/{atencionId}', [CpuAtencionesController::class, 'eliminarAtencion']);
+    Route::post('/atencion/nutricion', [CpuAtencionesController::class, 'guardarAtencionNutricion']);
 
     //atenciones Triaje
     Route::get('/triaje/talla-peso', [CpuAtencionTriajeController::class, 'obtenerTallaPesoPaciente']);
@@ -388,6 +389,8 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::post('/atenciones-psicologia', [CpuAtencionPsicologiaController::class, 'store']);
     Route::get('/casos/{tipo_atencion}/{usr_tipo}/{id_persona}', [CpuCasosPsicologiaController::class, 'getCasos']);
     Route::get('/ultima-consulta/{usr_tipo}/{id_persona}/{id_caso}', [CpuAtencionesController::class, 'obtenerUltimaConsulta']);
+    Route::post('/atenciones/triajesico', [CpuAtencionPsicologiaController::class, 'guardarAtencionConTriaje']);
+    Route::post('/atenciones/updatederivacionsico', [CpuAtencionPsicologiaController::class, 'actulizarderivacionsico']);
 });
 
 // Route::put('/cpu-persona-update/{cedula}', [CpuPersonaController::class, 'update']);

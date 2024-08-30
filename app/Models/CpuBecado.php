@@ -45,5 +45,9 @@ class CpuBecado extends Model
         'carrera_codigo_senescyt',
         'curso_semestre',
         'numero_matricula',
+        'codigo_tarjeta',
+        'fecha_inicio_valido',
+        'fecha_fin_valido',
+        'id_estado',
     ];
 }

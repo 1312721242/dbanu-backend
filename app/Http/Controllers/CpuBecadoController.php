@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\CpuBecado;
+use App\Models\CpuClientesTasty;
 use App\Models\CpuConsumoBecado;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -19,6 +20,7 @@ use Dompdf\Options;
 use SimpleSoftwareIO\QrCode\Facades\QrCode;
 use Endroid\QrCode\QrCode as EndroidQrCode;
 use Carbon\Carbon; // Asegúrate de importar Carbon
+use Illuminate\Support\Facades\Log;
 
 class CpuBecadoController extends Controller
 {
@@ -41,14 +43,42 @@ class CpuBecadoController extends Controller
         return response()->json(['message' => 'No se encontró el o la estudiante'], 404);
     }
 
+    // public function consultarPorCodigoTarjeta($codigoTarjeta)
+    // {
+    //     $currentDate = Carbon::now()->toDateString(); // Obtener solo la parte de la fecha (YYYY-MM-DD)
+
+    //     $becado = CpuBecado::where('codigo_tarjeta', $codigoTarjeta)
+    //         ->where('fecha_inicio_valido', '<=', $currentDate)
+    //         ->where('fecha_fin_valido', '>=', $currentDate)
+    //         ->select('id', 'identificacion', 'periodo', 'nombres', 'apellidos', 'sexo', 'email', 'telefono', 'beca', 'tipo_beca_otorgada', 'monto_otorgado', 'monto_consumido', 'codigo_tarjeta', 'fecha_inicio_valido', 'fecha_fin_valido', 'carrera')
+    //         ->first();
+
+    //     if ($becado) {
+    //         // Obtener el valor consumido en la fecha actual
+    //         $valorConsumidoHoy = CpuConsumoBecado::where('id_becado', $becado->id)
+    //             ->whereDate('created_at', $currentDate)
+    //             ->sum('monto_facturado');
+
+    //         return response()->json([
+    //             'becado' => $becado,
+    //             'valor_consumido_hoy' => $valorConsumidoHoy,
+    //             'valor_consumido_total' => $becado->monto_consumido
+    //         ]);
+    //     }
+
+    //     return response()->json(['message' => 'No se encontró un registro válido para el código de tarjeta'], 404);
+    // }
+
     public function consultarPorCodigoTarjeta($codigoTarjeta)
     {
         $currentDate = Carbon::now()->toDateString(); // Obtener solo la parte de la fecha (YYYY-MM-DD)
 
+        // Buscar en CpuBecado
         $becado = CpuBecado::where('codigo_tarjeta', $codigoTarjeta)
             ->where('fecha_inicio_valido', '<=', $currentDate)
             ->where('fecha_fin_valido', '>=', $currentDate)
-            ->select('id', 'identificacion', 'periodo', 'nombres', 'apellidos', 'sexo', 'email', 'telefono', 'beca', 'tipo_beca_otorgada', 'monto_otorgado', 'monto_consumido', 'codigo_tarjeta', 'fecha_inicio_valido', 'fecha_fin_valido', 'carrera')
+            ->where('id_estado', 8)
+            ->select('id', 'identificacion', 'periodo', 'nombres', 'apellidos', 'sexo', 'email', 'telefono', 'beca', 'tipo_beca_otorgada', 'monto_otorgado', 'monto_consumido', 'codigo_tarjeta', 'fecha_inicio_valido', 'fecha_fin_valido', 'carrera', 'id_estado')
             ->first();
 
         if ($becado) {
@@ -57,6 +87,8 @@ class CpuBecadoController extends Controller
                 ->whereDate('created_at', $currentDate)
                 ->sum('monto_facturado');
 
+            // Log::info('Registro encontrado en CpuBecado');
+
             return response()->json([
                 'becado' => $becado,
                 'valor_consumido_hoy' => $valorConsumidoHoy,
@@ -64,8 +96,31 @@ class CpuBecadoController extends Controller
             ]);
         }
 
+        // Si no se encuentra en CpuBecado, buscar en CpuClientesTasty (cpu_funcionario_comunidad)
+        // Log::info('Buscando en CpuClientesTasty (cpu_funcionario_comunidad)');
+
+        $funcionario = CpuClientesTasty::where('codigo_tarjeta', $codigoTarjeta)
+            ->where('fecha_inicio_valido', '<=', $currentDate)
+            ->where('fecha_fin_valido', '>=', $currentDate)
+            ->where('id_estado', 8)
+            ->select('id', 'identificacion', 'nombres', 'apellidos', 'email', 'telefono', 'unidad_facultad_direccion', 'cargo_puesto', 'codigo_tarjeta', 'fecha_inicio_valido', 'fecha_fin_valido')
+            ->first();
+
+        if ($funcionario) {
+            // Log::info('Registro encontrado en CpuClientesTasty (cpu_funcionario_comunidad)');
+
+            return response()->json([
+                'funcionario' => $funcionario
+            ]);
+        }
+
+        // Log::info('No se encontró un registro válido para el código de tarjeta');
+
         return response()->json(['message' => 'No se encontró un registro válido para el código de tarjeta'], 404);
     }
+
+
+
 
 
 
@@ -274,40 +329,69 @@ class CpuBecadoController extends Controller
 
     public function index(Request $request)
     {
-        $query = CpuBecado::query();
+        $queryBecados = CpuBecado::query();
+        $queryClientesTasty = CpuClientesTasty::query();
 
+        // Aplicar filtros si existen
         if ($request->has('identificacion') && $request->input('identificacion') != '') {
-            $query->where('identificacion', 'like', '%' . $request->input('identificacion') . '%');
+            $queryBecados->where('identificacion', 'like', '%' . $request->input('identificacion') . '%');
+            $queryClientesTasty->where('identificacion', 'like', '%' . $request->input('identificacion') . '%');
         }
 
         if ($request->has('nombres') && $request->input('nombres') != '') {
-            $query->where('nombres', 'like', '%' . $request->input('nombres') . '%');
+            $queryBecados->where('nombres', 'like', '%' . $request->input('nombres') . '%');
+            $queryClientesTasty->where('nombres', 'like', '%' . $request->input('nombres') . '%');
         }
 
         if ($request->has('apellidos') && $request->input('apellidos') != '') {
-            $query->where('apellidos', 'like', '%' . $request->input('apellidos') . '%');
+            $queryBecados->where('apellidos', 'like', '%' . $request->input('apellidos') . '%');
+            $queryClientesTasty->where('apellidos', 'like', '%' . $request->input('apellidos') . '%');
         }
 
-        $results = $query->get();
+        // Recuperar todos los campos de cada modelo
+        $becados = $queryBecados->get();
+        $clientesTasty = $queryClientesTasty->get();
 
-        return response()->json($results);
+        // Combinar las dos colecciones
+        $combinedResults = $becados->concat($clientesTasty);
+
+        return response()->json($combinedResults);
     }
 
-    public function actualizarCodigoTarjeta(Request $request, $id)
+    public function actualizarCodigoTarjeta(Request $request, $identificacion)
     {
         $request->validate([
-            'codigo_tarjeta' => 'required|string|max:255|unique:cpu_becados,codigo_tarjeta,' . $id,
+            'codigo_tarjeta' => [
+                'required',
+                'string',
+                'max:255',
+                Rule::unique('cpu_becados', 'codigo_tarjeta')->where(function ($query) use ($identificacion) {
+                    return $query->where('identificacion', $identificacion);
+                }),
+                Rule::unique('cpu_funcionario_comunidad', 'codigo_tarjeta')->where(function ($query) use ($identificacion) {
+                    return $query->where('identificacion', $identificacion);
+                }),
+            ],
         ]);
 
-        $becado = CpuBecado::find($id);
+        // Intentar encontrar el becado por identificación primero
+        $becado = CpuBecado::where('identificacion', $identificacion)->first();
 
-        if (!$becado) {
-            return response()->json(['message' => 'No se encontró el registro del estudiante'], 404);
+        if ($becado) {
+            $becado->codigo_tarjeta = $request->input('codigo_tarjeta');
+            $becado->save();
+            return response()->json(['message' => 'Código de tarjeta actualizado correctamente en CpuBecado', 'becado' => $becado], 200);
         }
 
-        $becado->codigo_tarjeta = $request->input('codigo_tarjeta');
-        $becado->save();
+        // Si no se encuentra en CpuBecado, buscar en CpuClientesTasty
+        $clienteTasty = CpuClientesTasty::where('identificacion', $identificacion)->first();
+        if ($clienteTasty) {
+            $clienteTasty->codigo_tarjeta = $request->input('codigo_tarjeta');
+            $clienteTasty->save();
+            return response()->json(['message' => 'Código de tarjeta actualizado correctamente en CpuFuncionarioComunidad', 'cliente' => $clienteTasty], 200);
+        }
 
-        return response()->json(['message' => 'Código de tarjeta actualizado correctamente', 'becado' => $becado], 200);
+        // Si no se encuentra en ninguna tabla
+        return response()->json(['message' => 'No se encontró el registro con esa identificación'], 404);
     }
 }

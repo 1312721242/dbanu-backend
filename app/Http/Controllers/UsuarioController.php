@@ -203,10 +203,10 @@ class UsuarioController extends Controller
                 }
 
                 $usr_tipo = $request->input('usr_tipo');
-                $users = User::where('usr_tipo', $usr_tipo)
-                                ->where('usr_estado', 8)
-                                ->get();
-
+                $users = User::with(['tipoUsuario', 'profesion']) // Añadimos la relación 'tipoUsuario' para incluir los datos del rol
+                            ->where('usr_tipo', $usr_tipo)
+                            ->where('usr_estado', 8)
+                            ->get();
                 return response()->json($users);
             }
 

@@ -35,14 +35,21 @@ use App\Http\Controllers\CpuTipoDiscapacidadController;
 use App\Http\Controllers\CpuTipoSangreController;
 use App\Http\Controllers\CpuIndicadorController;
 use App\Http\Controllers\CpuAtencionesController;
+use App\Http\Controllers\CpuAtencionTriajeController;
 use App\Http\Controllers\CpuComidaController;
 use App\Http\Controllers\CpuDerivacionController;
 use App\Http\Controllers\CpuEstandarController;
 use App\Http\Controllers\CpuElementoFundamentalController;
 use App\Http\Controllers\CpuTipoComidaController;
 use App\Http\Controllers\CpuValorConsumoDiarioBecaController;
+use App\Http\Controllers\CpuDatosSocialesController;
+use App\Http\Controllers\CpuTipoUsuarioController;
+use App\Http\Controllers\CpuInsumoController;
+use App\Http\Controllers\ICDController;
+use App\Http\Controllers\CpuInsumoOcupadoController;
 use App\Http\Controllers\CpuAtencionPsicologiaController;
 use App\Http\Controllers\CpuCasosPsicologiaController;
+
 
 // Autenticación
 Route::get('credencial-pdf/{identificacion}/{periodo}', [CpuBecadoController::class, 'generarCredencialPDF']);
@@ -78,6 +85,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::put('/modificar-role-usuario/{id}', [RoleController::class, 'modificarRoleUsuario']);
     Route::delete('/eliminar-role-usuario/{id}', [RoleController::class, 'eliminarRoleUsuario']);
     Route::get('/consultar-roles', [RoleController::class, 'consultarRoles']);
+    Route::get('/consultar-roles-areas', [RoleController::class, 'consultarAreas']);
 
    //menus
    Route::post('/agregar-menu', [MenuController::class, 'agregarMenu']);
@@ -196,6 +204,8 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::delete('/eliminar-funcion/{id}', [CpuUserfunctionController::class, 'eliminarFuncion']);
     Route::get('/consultar-funciones', [CpuUserfunctionController::class, 'consultarFunciones']);
     Route::post('/agregarFunciones', [CpuUserfunctionController::class, 'agregarFunciones']);
+    Route::delete('/eliminarFuncionesUsuario/{id}', [CpuUserfunctionController::class, 'eliminarFuncionesUsuario']);
+
 
 
     //userrolefunction
@@ -295,7 +305,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
     //rutas para registros medico ocupaconal
     Route::get('/cpu-persona/{cedula}', [CpuPersonaController::class, 'show']);
-    Route::put('/cpu-persona-update/{cedula}', [CpuPersonaController::class, 'update']);
+    // Route::put('/cpu-persona-update/{cedula}', [CpuPersonaController::class, 'update']);
     //registros bienestar
     Route::get('/cpu-persona-bienestar/{cedula}', [CpuPersonaController::class, 'showBienestar']);
     Route::put('/cpu-persona-update-bienestar/{cedula}', [CpuPersonaController::class, 'updateBienestar']);
@@ -318,10 +328,22 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
     //guardar atenciones
     Route::post('/atenciones/guardar', [CpuAtencionesController::class, 'guardarAtencion']);
+    Route::post('/atenciones/triaje', [CpuAtencionesController::class, 'guardarAtencionConTriaje']);
     Route::get('/atenciones/{id_persona}/{id_funcionario}', [CpuAtencionesController::class, 'obtenerAtencionesPorPaciente']);
     Route::delete('/atencionesEliminar/{atencionId}', [CpuAtencionesController::class, 'eliminarAtencion']);
+    Route::post('/atencion/nutricion', [CpuAtencionesController::class, 'guardarAtencionNutricion']);
+
+    //atenciones Triaje
+    Route::get('/triaje/talla-peso', [CpuAtencionTriajeController::class, 'obtenerTallaPesoPaciente']);
+    Route::get('/triaje/datos', [CpuAtencionTriajeController::class, 'obtenerDatosTriajePorDerivacion']);
+
     //agregar derivación
     Route::post('/derivaciones/guardar', [CpuDerivacionController::class, 'store']);
+    Route::get('/derivaciones/filtrar', [CpuDerivacionController::class, 'getDerivacionesByDoctorAndDate']);
+    Route::get('/derivaciones/all', [CpuDerivacionController::class, 'getDerivacionesAll']);
+    Route::post('/derivaciones/update', [CpuDerivacionController::class, 'updateDerivacion']);
+    Route::post('/reagendar', [CpuDerivacionController::class, 'Reagendar']);
+    Route::put('/derivaciones/no-asistio/{id}', [CpuDerivacionController::class, 'noAsistioCita']);
 
     //datos del valor de consumo por dia para becas
     Route::get('cpu-valor-consumo-diario-beca', [CpuValorConsumoDiarioBecaController::class, 'consultar']);
@@ -332,11 +354,43 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('/evaluaciones-cedula', [CpuAspirantesEvaluacionesController::class, 'getEvaluacionesCedula']);
     Route::post('/actualizar-asistencia', [CpuAspirantesEvaluacionesController::class, 'updateAsistencia']);
 
+    //actualizar datos personales
+    // Route::put('/persona/{cedula}', [CpuPersonaController::class, 'updateDatosPersonales']);
+    Route::put('/cpu_personas/{cedula}', [CpuPersonaController::class, 'update']);
+
+    //api para guardar datos sociales en registro
+    Route::post('/guardarDatosSociales', [CpuDatosSocialesController::class, 'store']);
+    Route::post('/persona/{cedula}', [CpuPersonaController::class, 'updateDatosPersonales']);
+
+    //apis para tipos de usuarios
+    Route::post('/cpu-tipos-usuario', [CpuTipoUsuarioController::class, 'store']);
+    Route::get('/cpu-tipos-usuario', [CpuTipoUsuarioController::class, 'index']);
+    Route::get('/cpu-tipos-usuario/{id}', [CpuTipoUsuarioController::class, 'show']);
+    Route::get('/cpu-tipos-usuarioN/{tipo_usu}', [CpuTipoUsuarioController::class, 'filtrotipousuario']);
+    Route::put('/cpu-tipos-usuario/{id}', [CpuTipoUsuarioController::class, 'update']);
+    Route::delete('/cpu-tipos-usuario/{id}', [CpuTipoUsuarioController::class, 'destroy']);
+
+    //INSUMOS
+
+    Route::get('/cpu-insumos', [CpuInsumoController::class, 'getInsumos']);
+
+
+    //apis para busqueda de cie11
+    Route::post('/get-token', [ICDController::class, 'getToken']);
+    Route::get('/search', [ICDController::class, 'searchICD']);
+
+    //funciones para administrar el consumo de insumos medicos
+    Route::post('/insumos_ocupados', [CpuInsumoOcupadoController::class, 'store']);
+    Route::get('/insumos_ocupados/fechas', [CpuInsumoOcupadoController::class, 'getByDateRange']);
+    Route::get('/insumos_ocupados/funcionario/{id_funcionario}', [CpuInsumoOcupadoController::class, 'getByFuncionario']);
+    Route::get('/insumos_ocupados/paciente/{id_paciente}', [CpuInsumoOcupadoController::class, 'getByPaciente']);
 
     //MODULO DE PSICOLOGIA
     Route::post('/atenciones-psicologia', [CpuAtencionPsicologiaController::class, 'store']);
     Route::get('/casos/{tipo_atencion}/{usr_tipo}/{id_persona}', [CpuCasosPsicologiaController::class, 'getCasos']);
     Route::get('/ultima-consulta/{usr_tipo}/{id_persona}/{id_caso}', [CpuAtencionesController::class, 'obtenerUltimaConsulta']);
-});
+    Route::post('/atenciones/triajesico', [CpuAtencionPsicologiaController::class, 'guardarAtencionConTriaje']);
+    Route::post('/atenciones/updatederivacionsico', [CpuAtencionPsicologiaController::class, 'actulizarderivacionsico']);
+    Route::get('/obtener-cie10', [CpuAtencionPsicologiaController::class, 'obtenerCie10']);});
 
 // Route::put('/cpu-persona-update/{cedula}', [CpuPersonaController::class, 'update']);

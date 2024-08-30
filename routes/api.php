@@ -391,6 +391,6 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('/ultima-consulta/{usr_tipo}/{id_persona}/{id_caso}', [CpuAtencionesController::class, 'obtenerUltimaConsulta']);
     Route::post('/atenciones/triajesico', [CpuAtencionPsicologiaController::class, 'guardarAtencionConTriaje']);
     Route::post('/atenciones/updatederivacionsico', [CpuAtencionPsicologiaController::class, 'actulizarderivacionsico']);
-});
+    Route::get('/obtener-cie10', [CpuAtencionPsicologiaController::class, 'obtenerCie10']);});
 
 // Route::put('/cpu-persona-update/{cedula}', [CpuPersonaController::class, 'update']);

@@ -49,7 +49,7 @@ use App\Http\Controllers\ICDController;
 use App\Http\Controllers\CpuInsumoOcupadoController;
 use App\Http\Controllers\CpuAtencionPsicologiaController;
 use App\Http\Controllers\CpuCasosPsicologiaController;
-
+use App\Http\Controllers\CpuClientesTastyController;
 
 // Autenticación
 Route::get('credencial-pdf/{identificacion}/{periodo}', [CpuBecadoController::class, 'generarCredencialPDF']);
@@ -87,19 +87,28 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('/consultar-roles', [RoleController::class, 'consultarRoles']);
     Route::get('/consultar-roles-areas', [RoleController::class, 'consultarAreas']);
 
-   //menus
-   Route::post('/agregar-menu', [MenuController::class, 'agregarMenu']);
-   Route::get('/cpu_tipo_comida', [CpuTipoComidaController::class, 'index']);
-   Route::post('/cpu_tipo_comida', [CpuTipoComidaController::class, 'store']);
-   Route::get('/cpu_tipo_comida/{id}', [CpuTipoComidaController::class, 'show']);
-   Route::put('/cpu_tipo_comida/{id}', [CpuTipoComidaController::class, 'update']);
-   Route::delete('/cpu_tipo_comida/{id}', [CpuTipoComidaController::class, 'destroy']);
-   Route::get('/cpu_comidas', [CpuComidaController::class, 'index']);
-   Route::get('/cpu_comidas-tipo-comida', [CpuComidaController::class, 'indexTipoComida']);
-   Route::post('/cpu_comidas', [CpuComidaController::class, 'store']);
-   Route::get('/cpu_comidas/{id}', [CpuComidaController::class, 'show']);
-   Route::put('/cpu_comidas/{id}', [CpuComidaController::class, 'update']);
-   Route::delete('/cpu_comidas/{id}', [CpuComidaController::class, 'destroy']);
+    //menus
+    Route::post('/agregar-menu', [MenuController::class, 'agregarMenu']);
+    Route::get('/cpu_tipo_comida', [CpuTipoComidaController::class, 'index']);
+    Route::post('/cpu_tipo_comida', [CpuTipoComidaController::class, 'store']);
+    Route::get('/cpu_tipo_comida/{id}', [CpuTipoComidaController::class, 'show']);
+    Route::put('/cpu_tipo_comida/{id}', [CpuTipoComidaController::class, 'update']);
+    Route::delete('/cpu_tipo_comida/{id}', [CpuTipoComidaController::class, 'destroy']);
+    Route::get('/cpu_comidas', [CpuComidaController::class, 'index']);
+    Route::get('/cpu_comidas-tipo-comida', [CpuComidaController::class, 'indexTipoComida']);
+    Route::post('/cpu_comidas', [CpuComidaController::class, 'store']);
+    Route::get('/cpu_comidas/{id}', [CpuComidaController::class, 'show']);
+    Route::put('/cpu_comidas/{id}', [CpuComidaController::class, 'update']);
+    Route::delete('/cpu_comidas/{id}', [CpuComidaController::class, 'destroy']);
+
+    //tasty funcionarios comunidad
+    Route::get('/clientes/tasty/export-template', [CpuClientesTastyController::class, 'exportClientesTastyTemplate']);
+    Route::post('/clientes/tasty/upload', [CpuClientesTastyController::class, 'uploadClientesTasty']);
+    Route::post('/clientes/tasty/disable', [CpuClientesTastyController::class, 'disableClientesTasty']);
+    Route::post('/clientes/tasty/disable/individual', [CpuClientesTastyController::class, 'disableClientesTastyIndividual']);
+    Route::get('/clientes/tasty/cargos', [CpuClientesTastyController::class, 'getCargos']);
+
+
 
     // Sede
     Route::post('/agregar-sede', [CpuSedeController::class, 'agregarSede']);
@@ -286,7 +295,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('qr-code/{identificacion}/{periodo}', [CpuBecadoController::class, 'generarQRCode']);
     Route::get('/consultar-por-codigo-tarjeta/{codigoTarjeta}', [CpuBecadoController::class, 'consultarPorCodigoTarjeta']);
     Route::get('/cpu_becados', [CpuBecadoController::class, 'index']);
-    Route::put('/cpu_becado/actualizarCodigoTarjeta/{id}', [CpuBecadoController::class, 'actualizarCodigoTarjeta']);
+    Route::put('/cpu_becado/actualizarCodigoTarjeta/{identificacion}', [CpuBecadoController::class, 'actualizarCodigoTarjeta']);
 
     Route::post('/registrar-consumo', [CpuConsumoBecadoController::class, 'registrarConsumo']);
     Route::get('registros-por-fechas/{fechaInicio}/{fechaFin}', [CpuConsumoBecadoController::class, 'registrosPorFechas']);

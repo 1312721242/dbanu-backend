@@ -25,6 +25,7 @@ class CpuAtencion extends Model
         'diagnostico',
         'prescripcion',
         'recomendacion',
+        'tipo_atencion',
         'created_at',
         'updated_at'
     ];

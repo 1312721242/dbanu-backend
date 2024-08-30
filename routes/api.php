@@ -213,6 +213,8 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::delete('/eliminar-funcion/{id}', [CpuUserfunctionController::class, 'eliminarFuncion']);
     Route::get('/consultar-funciones', [CpuUserfunctionController::class, 'consultarFunciones']);
     Route::post('/agregarFunciones', [CpuUserfunctionController::class, 'agregarFunciones']);
+    Route::delete('/eliminarFuncionesUsuario/{id}', [CpuUserfunctionController::class, 'eliminarFuncionesUsuario']);
+
 
 
     //userrolefunction

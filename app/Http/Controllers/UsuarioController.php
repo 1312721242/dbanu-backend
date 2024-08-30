@@ -134,6 +134,7 @@ class UsuarioController extends Controller
 
         public function actualizarInformacionPersonal(Request $request, $id)
         {
+            // Validación
             $validator = Validator::make($request->all(), [
                 'name' => 'required|string|max:255',
                 'email' => 'required|email|unique:users,email,'.$id,
@@ -141,29 +142,36 @@ class UsuarioController extends Controller
                 'usr_facultad' => 'nullable|integer',
                 'usr_carrera' => 'nullable|integer',
                 'usr_profesion' => 'nullable|integer',
+                'api_token' => 'nullable|string|max:60',
             ]);
 
             if ($validator->fails()) {
                 return response()->json(['error' => $validator->errors()], 400);
             }
 
+            // Buscar el usuario por ID
             $usuario = User::find($id);
 
             if (!$usuario) {
                 return response()->json(['error' => 'Usuario no encontrado'], 404);
             }
 
-            $usuario->update([
-                'name' => $request->input('name'),
-                'email' => $request->input('email'),
-                'usr_sede' => $request->input('usr_sede'),
-                'usr_facultad' => $request->input('usr_facultad'),
-                'usr_carrera' => $request->input('usr_carrera'),
-                'usr_profesion' => $request->input('usr_profesion'),
-            ]);
+            // Solo actualiza los campos que están presentes en la solicitud
+            $updateData = array_filter($request->only([
+                'name',
+                'email',
+                'usr_sede',
+                'usr_facultad',
+                'usr_carrera',
+                'usr_profesion',
+                'api_token',
+            ]));
+
+            $usuario->update($updateData);
 
             return response()->json(['success' => true, 'message' => 'Información personal actualizada correctamente']);
         }
+
 
         public function search(Request $request)
             {

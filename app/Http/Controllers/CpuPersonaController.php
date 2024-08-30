@@ -207,7 +207,7 @@ class CpuPersonaController extends Controller
             }
 
             // Generar el código de persona
-            $codigoPersona = $this->generarCodigoPersona($data['cedula'], $data['nombres']);
+            $codigoPersona = $this->generarCodigoPersona($cedula, $data['nombres']);
 
             $persona = CpuPersona::create([
                 'cedula' => $cedula,

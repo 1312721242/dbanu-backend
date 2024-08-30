@@ -53,7 +53,7 @@ class CpuUserrolefunctionController extends Controller
             ]);
         }
 
-        $this->crearAuditoria($usuario = $request->user() ? $request->user()->name : 'Usuario no encontrado', 'cpu_userrolefunction', 'id_userrole, nombre, accion, id_menu, id_usermenu', '', 
+        $this->crearAuditoria($usuario = $request->user() ? $request->user()->name : 'Usuario no encontrado', 'cpu_userrolefunction', 'id_userrole, nombre, accion, id_menu, id_usermenu', '',
         "{$data['id_userrole']}, {$data['nombre']}, {$data['accion']}, {$data['id_menu']}, {$data['id_usermenu']}", 'INSERCION');
 
         return response()->json(['success' => true, 'message' => 'Función agregada correctamente']);
@@ -78,7 +78,7 @@ class CpuUserrolefunctionController extends Controller
 
         Userrolefunction::where('id_userrf', $id)->update($data);
 
-        $this->crearAuditoria($usuario = $request->user() ? $request->user()->name : 'Usuario no encontrado', 'cpu_userrolefunction', 'id_userrole, nombre, accion, id_menu, id_usermenu', '', 
+        $this->crearAuditoria($usuario = $request->user() ? $request->user()->name : 'Usuario no encontrado', 'cpu_userrolefunction', 'id_userrole, nombre, accion, id_menu, id_usermenu', '',
         "{$data['id_userrole']}, {$data['nombre']}, {$data['accion']}, {$data['id_menu']}, {$data['id_usermenu']}", 'MODIFICACION');
 
         return response()->json(['success' => true, 'message' => 'Función modificada correctamente']);
@@ -94,7 +94,7 @@ class CpuUserrolefunctionController extends Controller
 
         $funcion->delete();
 
-        $this->crearAuditoria($usuario = $request->user() ? $request->user()->name : 'Usuario no encontrado', 'cpu_userrolefunction', 'id_userrole, nombre, accion, id_menu, id_usermenu', 
+        $this->crearAuditoria($usuario = $request->user() ? $request->user()->name : 'Usuario no encontrado', 'cpu_userrolefunction', 'id_userrole, nombre, accion, id_menu, id_usermenu',
         "{$funcion->id_userrole}, {$funcion->nombre}, {$funcion->accion}, {$funcion->id_menu}, {$funcion->id_usermenu}", '', 'ELIMINACION');
 
         return response()->json(['success' => true, 'message' => 'Función eliminada correctamente']);
@@ -144,22 +144,22 @@ class CpuUserrolefunctionController extends Controller
             return response()->json(['error' => 'Usuario ID is required'], 400);
         }
 
-        // Obtener todas las funciones distintas
+        // Obtener todas las funciones disponibles en el sistema desde la tabla cpu_userrolefunction
         $funciones = DB::table('cpu_userrolefunction')
             ->select('nombre', 'id_usermenu', 'accion', 'id_menu')
             ->distinct()
             ->orderBy('nombre', 'asc')
             ->get();
 
-        // Obtener las funciones asignadas al usuario
-        $funcionesAsignadas = DB::table('cpu_userrolefunction')
+        // Obtener las funciones específicas asignadas al usuario desde la tabla cpu_userfunction
+        $funcionesAsignadas = DB::table('cpu_userfunction')
             ->select('id_usermenu')
-            ->where('id_usuario', $usuarioId)
+            ->where('id_users', $usuarioId)
             ->distinct()
             ->pluck('id_usermenu')
             ->toArray();
 
-        // Marcar las funciones asignadas
+        // Marcar solo las funciones que están asignadas al usuario
         $funciones = $funciones->map(function ($funcion) use ($funcionesAsignadas) {
             $funcion->asignada = in_array($funcion->id_usermenu, $funcionesAsignadas);
             return $funcion;
@@ -167,6 +167,8 @@ class CpuUserrolefunctionController extends Controller
 
         return response()->json($funciones);
     }
+
+
 
 
     private function crearAuditoria($usuario, $tabla, $campo, $dataold, $datanew, $tipo)

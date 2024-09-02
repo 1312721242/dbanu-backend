@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\Hash;
 use App\Models\User;
 use Illuminate\Support\Facades\Auth;
 use App\Models\CpuProfesion;
+use App\Models\CpuSede;
 
 
 class UsuarioController extends Controller
@@ -203,10 +204,23 @@ class UsuarioController extends Controller
                 }
 
                 $usr_tipo = $request->input('usr_tipo');
-                $users = User::with(['tipoUsuario', 'profesion']) // Añadimos la relación 'tipoUsuario' para incluir los datos del rol
+                $users = User::with(['tipoUsuario', 'profesion','sede']) 
                             ->where('usr_tipo', $usr_tipo)
                             ->where('usr_estado', 8)
                             ->get();
+                    // Mapear para incluir nombre y dirección de la sede
+                    // $users = $users->map(function ($user) {
+                    //     return [
+                    //         'id' => $user->id,
+                    //         'name' => $user->name,
+                    //         'email' => $user->email,
+                    //         'usr_tipo' => $user->usr_tipo,
+                    //         'tipo_usuario' => $user->tipoUsuario->name ?? null,
+                    //         'profesion' => $user->profesion->name ?? null,
+                    //         'sede_nombre' => $user->sede->nombre_sede ?? null,  // Nombre de la sede
+                    //         'sede_direccion' => $user->sede->direccion_sede ?? null,  // Dirección de la sede
+                    //     ];
+                    // });
                 return response()->json($users);
             }
 

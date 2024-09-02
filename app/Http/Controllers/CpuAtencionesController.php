@@ -55,45 +55,131 @@ class CpuAtencionesController extends Controller
     }
 
 
-    // Consulta de las atenciones
+    // // Consulta de las atenciones
+    // public function obtenerAtencionesPorPaciente($id_persona, $id_funcionario)
+    // {
+    //     // Realiza la consulta filtrando por id_persona y id_funcionario y selecciona todas las columnas necesarias
+    //     $atenciones = DB::table('cpu_atenciones as at')
+    //         ->select(
+    //             'at.id',
+    //             'at.id_funcionario',
+    //             'at.id_persona',
+    //             'at.via_atencion',
+    //             'at.motivo_atencion',
+    //             'at.fecha_hora_atencion',
+    //             'at.anio_atencion',
+    //             'at.created_at',
+    //             'at.updated_at',
+    //             'at.detalle_atencion'
+    //         )
+    //         ->when($id_persona, function ($query, $id_persona) {
+    //             return $query->where('at.id_persona', $id_persona);
+    //         })
+    //         ->when($id_funcionario, function ($query, $id_funcionario) {
+    //             return $query->where('at.id_funcionario', $id_funcionario);
+    //         })
+    //         // Ordena por fecha de creación de forma descendente
+    //         ->orderBy('at.created_at', 'desc')
+    //         ->get();
+
+    //     // Formatear la fecha después de obtener los datos
+    //     $atenciones->transform(function ($atencion) {
+    //         $atencion->fecha_hora_atencion = Carbon::parse($atencion->fecha_hora_atencion)->translatedFormat('l, d F Y');
+    //         return $atencion;
+    //     });
+
+    //     // Log information
+    //     Log::info('Atenciones obtenidas:', ['atenciones' => $atenciones]);
+
+    //     // Retorna la respuesta en formato JSON
+    //     return response()->json($atenciones);
+    // }
     public function obtenerAtencionesPorPaciente($id_persona, $id_funcionario)
-    {
-        // Realiza la consulta filtrando por id_persona y id_funcionario y selecciona todas las columnas necesarias
-        $atenciones = DB::table('cpu_atenciones as at')
-            ->select(
-                'at.id',
-                'at.id_funcionario',
-                'at.id_persona',
-                'at.via_atencion',
-                'at.motivo_atencion',
-                'at.fecha_hora_atencion',
-                'at.anio_atencion',
-                'at.created_at',
-                'at.updated_at',
-                'at.detalle_atencion'
-            )
-            ->when($id_persona, function ($query, $id_persona) {
-                return $query->where('at.id_persona', $id_persona);
-            })
-            ->when($id_funcionario, function ($query, $id_funcionario) {
-                return $query->where('at.id_funcionario', $id_funcionario);
-            })
-            // Ordena por fecha de creación de forma descendente
-            ->orderBy('at.created_at', 'desc')
-            ->get();
+        {
+            // Realiza la consulta filtrando por id_persona y id_funcionario y selecciona todas las columnas necesarias
+            $atenciones = DB::table('cpu_atenciones as at')
+                ->select(
+                    'at.id',
+                    'at.id_funcionario',
+                    'at.id_persona',
+                    'at.via_atencion',
+                    'at.motivo_atencion',
+                    'at.fecha_hora_atencion',
+                    'at.anio_atencion',
+                    'at.created_at',
+                    'at.updated_at',
+                    'at.detalle_atencion',
+                    'at.id_caso',
+                    'at.id_tipo_usuario',
+                    'at.evolucion_enfermedad',
+                    'at.diagnostico',
+                    'at.prescripcion',
+                    'at.recomendacion',
+                    'at.tipo_atencion'
+                )
+                ->when($id_persona, function ($query, $id_persona) {
+                    return $query->where('at.id_persona', $id_persona);
+                })
+                ->when($id_funcionario, function ($query, $id_funcionario) {
+                    return $query->where('at.id_funcionario', $id_funcionario);
+                })
+                ->orderBy('at.created_at', 'desc')
+                ->get();
 
-        // Formatear la fecha después de obtener los datos
-        $atenciones->transform(function ($atencion) {
-            $atencion->fecha_hora_atencion = Carbon::parse($atencion->fecha_hora_atencion)->translatedFormat('l, d F Y');
-            return $atencion;
-        });
+            $atenciones->transform(function ($atencion) {
+                // Determinar si la atención es parte de un caso
+                if ($atencion->id_caso) {
+                    $atencion->tipo = "Caso";
 
-        // Log information
-        Log::info('Atenciones obtenidas:', ['atenciones' => $atenciones]);
+                    // Obtener el caso y todas las atenciones relacionadas
+                    $caso = DB::table('cpu_casos as c')
+                        ->join('cpu_estados as e', 'c.id_estado', '=', 'e.id')
+                        ->select('c.id', 'c.nombre_caso', 'e.id as id_estado', 'e.estado as estado')
+                        ->where('c.id', $atencion->id_caso)
+                        ->first();
 
-        // Retorna la respuesta en formato JSON
-        return response()->json($atenciones);
-    }
+                    if ($caso) {
+                        $atencion->nombre_principal = $caso->nombre_caso; // Usar el nombre del caso como nombre principal
+                        $atencion->caso = [
+                            'id' => $caso->id,
+                            'nombre_caso' => $caso->nombre_caso,
+                            'estado' => $caso->id_estado == 8 ? 'Abierto' : 'Cerrado',
+                        ];
+
+                        // Obtener todas las atenciones relacionadas con el caso
+                        $atencionesRelacionadas = DB::table('cpu_atenciones as at')
+                            ->where('at.id_caso', $caso->id)
+                            ->orderBy('at.created_at', 'desc')
+                            ->get();
+
+                        // Transformar las fechas en atenciones relacionadas
+                        $atencionesRelacionadas->transform(function ($atRelacionada) {
+                            $atRelacionada->fecha_hora_atencion = Carbon::parse($atRelacionada->fecha_hora_atencion)
+                                ->translatedFormat('l, d F Y');
+                            return $atRelacionada;
+                        });
+
+                        // Añadir las atenciones relacionadas al objeto de respuesta
+                        $atencion->atenciones_relacionadas = $atencionesRelacionadas;
+                    }
+                } else {
+                    $atencion->tipo = "Atención";
+                    $atencion->nombre_principal = $atencion->motivo_atencion; // Usar el motivo de la atención como nombre principal
+                }
+
+                // Formatear la fecha de la atención principal
+                $atencion->fecha_hora_atencion = Carbon::parse($atencion->fecha_hora_atencion)
+                    ->translatedFormat('l, d F Y');
+                return $atencion;
+            });
+
+            // Log de la información
+            Log::info('Atenciones obtenidas:', ['atenciones' => $atenciones]);
+
+            // Retorna la respuesta en formato JSON
+            return response()->json($atenciones);
+        }
+
 
     public function eliminarAtencion($atencionId)
     {

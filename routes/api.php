@@ -339,7 +339,8 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::post('/atenciones/guardar', [CpuAtencionesController::class, 'guardarAtencion']);
     Route::post('/atenciones/triaje', [CpuAtencionesController::class, 'guardarAtencionConTriaje']);
     Route::get('/atenciones/{id_persona}/{id_funcionario}', [CpuAtencionesController::class, 'obtenerAtencionesPorPaciente']);
-    Route::delete('/atencionesEliminar/{atencionId}', [CpuAtencionesController::class, 'eliminarAtencion']);
+    // Cambiar la ruta a PUT en lugar de DELETE
+    Route::put('/atencionesEliminar/{atencionId}/{nuevoEstado}', [CpuAtencionesController::class, 'eliminarAtencion']);
     Route::post('/atencion/nutricion', [CpuAtencionesController::class, 'guardarAtencionNutricion']);
 
     //atenciones Triaje

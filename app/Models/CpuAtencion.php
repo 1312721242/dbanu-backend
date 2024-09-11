@@ -28,6 +28,7 @@ class CpuAtencion extends Model
         'tipo_atencion',
         'created_at',
         'updated_at',
-        'id_cie10'
+        'id_cie10',
+        'id_estado'
     ];
 }

@@ -52,5 +52,7 @@ class VerifyCsrfToken extends Middleware
         'api/atenciones/triaje',
         'api/atenciones/triajesico',
         'api/atenciones/updatederivacionsico',
+        'api/clientes/tasty/upload',
+        'api/atencionesEliminar/{atencionId}/{nuevoEstado}',
     ];
 }

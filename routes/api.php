@@ -177,7 +177,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::put('/dar-de-baja-usuario/{id}', [UsuarioController::class, 'darDeBajaUsuario']);
     Route::put('/actualizar-estado-usuario/{userId}', [UsuarioController::class, 'darDeBajaUsuario']);
     Route::put('/dar-de-alta-usuario/{id}', [UsuarioController::class, 'darDeAltaUsuario']);
-    Route::put('/cambiar-password/{id}', [UsuarioController::class, 'cambiarPassword']);
+    Route::patch('/cambiar-password/{id}', [UsuarioController::class, 'cambiarPassword']);
     Route::put('/actualizar-informacion-personal/{id}', [UsuarioController::class, 'actualizarInformacionPersonal']);
     Route::get('/users/search', [UsuarioController::class, 'search']);
     Route::post('cambiar-password-app', [UsuarioController::class, 'cambiarPasswordApp']);
@@ -340,7 +340,8 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::post('/atenciones/guardar', [CpuAtencionesController::class, 'guardarAtencion']);
     Route::post('/atenciones/triaje', [CpuAtencionesController::class, 'guardarAtencionConTriaje']);
     Route::get('/atenciones/{id_persona}/{id_funcionario}', [CpuAtencionesController::class, 'obtenerAtencionesPorPaciente']);
-    Route::delete('/atencionesEliminar/{atencionId}', [CpuAtencionesController::class, 'eliminarAtencion']);
+    // Cambiar la ruta a PUT en lugar de DELETE
+    Route::put('/atencionesEliminar/{atencionId}/{nuevoEstado}', [CpuAtencionesController::class, 'eliminarAtencion']);
     Route::post('/atencion/nutricion', [CpuAtencionesController::class, 'guardarAtencionNutricion']);
 
     //atenciones Triaje

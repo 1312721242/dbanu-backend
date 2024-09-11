@@ -9,6 +9,7 @@ use App\Models\CpuCasosMedicos;
 use App\Models\CpuDerivacion;
 use App\Models\CpuAtencionTriaje;
 use App\Models\CpuTurno;
+use App\Models\CpuCie10;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB; // Importa DB para transacciones
 use Carbon\Carbon;
@@ -73,10 +74,11 @@ class CpuAtencionPsicologiaController extends Controller
                     'id_caso' => $nuevoCaso->id,
                     'id_tipo_usuario' => $request->tipo_usuario,
                     'tipo_atencion' => $request->tipo_atencion,
-                    'evolucion_enfermedad' => $request->evolucion_caso,
+                    'evolucion_enfermedad' => $request->evolucion,
                     'diagnostico' => $request->diagnostico,
                     'prescripcion' => $request->observacion,
-                    
+                    'id_cie10' => $request->id_cie10,
+                    'id_estado' =>1,
                 ]);
             } else {
                 $cpuAtencion = CpuAtencion::create([
@@ -90,9 +92,11 @@ class CpuAtencionPsicologiaController extends Controller
                     'id_caso' => $request->id_caso,
                     'id_tipo_usuario' => $request->tipo_usuario,
                     'tipo_atencion' => $request->tipo_atencion,
-                    'evolucion_enfermedad' => $request->evolucion_caso,
+                    'evolucion_enfermedad' => $request->evolucion,
                     'diagnostico' => $request->diagnostico,
                     'prescripcion' => $request->observacion,
+                    'id_cie10' => $request->id_cie10,
+                    'id_estado' =>1,
                 ]);
     
                 if ($request->input('altacaso') && $request->input('tipo_atencion') === 'SUBSECUENTE') {
@@ -195,5 +199,16 @@ class CpuAtencionPsicologiaController extends Controller
     {
         $casos = CpuCasosMedicos::all();
         return response()->json($casos);
+    }
+    public function obtenerCie10(Request $request)
+    {
+        $query = $request->input('query');
+    
+        $cie10 = DB::table('cpu_cie10')
+            ->where('cie10', 'ILIKE', "%{$query}%")
+            ->orWhere('descripcioncie', 'ILIKE', "%{$query}%")
+            ->get();
+    
+        return response()->json($cie10);
     }
 }

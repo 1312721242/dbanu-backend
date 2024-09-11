@@ -22,7 +22,6 @@ class LegalizacionMatriculaSecretariaController extends Controller
         $sheet = $spreadsheet->getActiveSheet();
 
         $headers = [
-            // 'id_periodo (integer)',
             'id_registro_nacional (text)',
             'id_postulacion (integer)',
             'ciudad_campus (text)',
@@ -57,13 +56,16 @@ class LegalizacionMatriculaSecretariaController extends Controller
             $column++;
         }
 
+        // Eliminar cualquier fila adicional que pueda estar causando problemas
+        $sheet->getRowDimension(2)->setVisible(false);  // Asegúrate de que no hay más filas visibles
+
         $writer = new Xlsx($spreadsheet);
         $filename = 'legalizacion_matricula_template.xlsx';
         $writer->save($filename);
 
-        // Devolver la respuesta de descarga y eliminar el archivo después de enviarlo
         return response()->download($filename)->deleteFileAfterSend(true);
     }
+
 
 
     public function upload(Request $request, $id_periodo)
@@ -89,6 +91,10 @@ class LegalizacionMatriculaSecretariaController extends Controller
             if ($firstRow) {
                 $firstRow = false;
                 continue; // Saltar la primera fila
+            }
+
+            if (count(array_filter($row, function($value) { return !is_null($value) && $value !== ''; })) === 0) {
+                continue; // Si todos los valores en la fila están vacíos, salta la fila
             }
 
             $data = [
@@ -342,7 +348,10 @@ class LegalizacionMatriculaSecretariaController extends Controller
                 'aud_tabla' => 'cpu_legalizacion_matricula',
                 'aud_campo' => 'email,cedula,apellidos,nombres',
                 'aud_dataold' => '',
-                'aud_datanew' => $email, $cedula, $apellidos, $nombres,
+                'aud_datanew' => $email,
+                $cedula,
+                $apellidos,
+                $nombres,
                 'aud_tipo' => 'MODIFICACIÓN',
                 'aud_fecha' => $fecha,
                 'aud_ip' => $ip,

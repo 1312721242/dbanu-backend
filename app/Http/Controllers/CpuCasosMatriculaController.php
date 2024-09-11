@@ -81,169 +81,219 @@ class CpuCasosMatriculaController extends Controller
     }
 
     public function revisionDocumentos(Request $request, $idCaso)
-{
-    // Configurar la zona horaria a Ecuador
-    date_default_timezone_set('America/Guayaquil');
-    $fechaHoraActual = date('Y-m-d H:i:s');
-    // Obtener el caso de matrícula
-    $casoMatricula = CpuCasosMatricula::find($idCaso);
+    {
+        // // Configurar la zona horaria a Ecuador
+        // date_default_timezone_set('America/Guayaquil');
+        // $fechaHoraActual = date('Y-m-d H:i:s');
+        // // Obtener el caso de matrícula
+        // $casoMatricula = CpuCasosMatricula::find($idCaso);
 
-    if (!$casoMatricula) {
-        return response()->json(['error' => 'Caso de matrícula no encontrado'], 404);
-    }
+        // if (!$casoMatricula) {
+        //     return response()->json(['error' => 'Caso de matrícula no encontrado'], 404);
+        // }
 
-    // Revisar si se han enviado documentos y guardarlos en la tabla cpu_notificacion_matricula
-    $documentos = $request->all();
-    $mensaje = isset($documentos['observacion']) ? $documentos['observacion'] : 'Documentos revisados sin observaciones';
-    $notificacion = new CpuNotificacionMatricula();
-    $notificacion->mensaje = $mensaje;
-    $notificacion->id_legalizacion = $casoMatricula->legalizacionMatricula->id;
-    $notificacion->save();
+        // // Revisar si se han enviado documentos y guardarlos en la tabla cpu_notificacion_matricula
+        // $documentos = $request->all();
+        // $mensaje = isset($documentos['observacion']) ? $documentos['observacion'] : 'Documentos revisados sin observaciones';
+        // $notificacion = new CpuNotificacionMatricula();
+        // $notificacion->mensaje = $mensaje;
+        // $notificacion->id_legalizacion = $casoMatricula->legalizacionMatricula->id;
+        // $notificacion->save();
 
-    // Obtener el ID de la notificación creada
-    $idNotificacion = $notificacion->id;
+        // // Obtener el ID de la notificación creada
+        // $idNotificacion = $notificacion->id;
 
-    // Actualizar el campo id_notificacion en la tabla cpu_legalizacion_matricula
-    $legalizacionMatricula = CpuLegalizacionMatricula::find($casoMatricula->id_legalizacion_matricula);
-    if ($legalizacionMatricula) {
-        $legalizacionMatricula->id_notificacion = $idNotificacion;
-        $legalizacionMatricula->save();
-    } else {
-        return response()->json(['error' => 'Legalización de matrícula no encontrada'], 404);
-    }
+        // // Actualizar el campo id_notificacion en la tabla cpu_legalizacion_matricula
+        // $legalizacionMatricula = CpuLegalizacionMatricula::find($casoMatricula->id_legalizacion_matricula);
+        // if ($legalizacionMatricula) {
+        //     $legalizacionMatricula->id_notificacion = $idNotificacion;
+        //     $legalizacionMatricula->save();
+        // } else {
+        //     return response()->json(['error' => 'Legalización de matrícula no encontrada'], 404);
+        // }
 
-    // Verificar si todos los estados son igual a 10
-    if (isset($documentos['estado_cedula']) && $documentos['estado_cedula'] == 10 &&
-        isset($documentos['estado_titulo']) && $documentos['estado_titulo'] == 10 &&
-        isset($documentos['estado_cupo']) && $documentos['estado_cupo'] == 10) {
-        $notificacion->titulo = 'Proceso de legalización de matrícula satisfactorio';
-        $notificacion->mensaje = 'Proceso de legalización de matrícula satisfactorio, esté pendiente a su correo electrónico para próximas indicaciones sobre el proceso de Nivelación. ¡Bienvenido/a a la Uleam!';
-        // Actualizar el estado a 14 en la tabla cpu_casos_matricula
-        $casoMatricula->id_estado = 14;
-    } else {
-        // Verificar si algún estado es igual a 11
-        if (isset($documentos['estado_cedula']) && $documentos['estado_cedula'] == 11 ||
-            isset($documentos['estado_titulo']) && $documentos['estado_titulo'] == 11 ||
-            isset($documentos['estado_cupo']) && $documentos['estado_cupo'] == 11) {
-                // Actualizar el estado a 14 en la tabla cpu_casos_matricula
-        $casoMatricula->id_estado = 13;
-            $notificacion->titulo = 'Corregir documentos';
+        // Configurar la zona horaria a Ecuador
+        date_default_timezone_set('America/Guayaquil');
+        $fechaHoraActual = date('Y-m-d H:i:s');
+
+        // Obtener el caso de matrícula
+        $casoMatricula = CpuCasosMatricula::find($idCaso);
+
+        if (!$casoMatricula) {
+            return response()->json(['error' => 'Caso de matrícula no encontrado'], 404);
+        }
+
+        // Verificar si ya existe un caso de matrícula para este estudiante con una secretaria diferente
+        $periodo = $casoMatricula->legalizacionMatricula->id_periodo;
+        $idLegalizacion = $casoMatricula->id_legalizacion_matricula;
+        $idNuevaSecretaria = $request->input('id_secretaria'); // Se asume que la nueva secretaria viene en el request
+
+        $casoExistente = CpuCasosMatricula::where('id_legalizacion_matricula', $idLegalizacion)
+            ->where('id_secretaria', '!=', $idNuevaSecretaria) // Verifica que sea una secretaria diferente
+            ->whereHas('legalizacionMatricula', function ($query) use ($periodo) {
+                $query->where('id_periodo', $periodo); // Mismo periodo
+            })->first();
+
+        // Si ya existe un caso, actualizar con la nueva secretaria
+        if ($casoExistente) {
+            $casoExistente->id_secretaria = $idNuevaSecretaria;
+            $casoExistente->save();
+        }
+
+        // Continuar con el resto del código...
+
+        $documentos = $request->all();
+        $mensaje = isset($documentos['observacion']) ? $documentos['observacion'] : 'Documentos revisados sin observaciones';
+
+        // Crear o actualizar la notificación
+        $notificacion = new CpuNotificacionMatricula();
+        $notificacion->mensaje = $mensaje;
+        $notificacion->id_legalizacion = $casoMatricula->legalizacionMatricula->id;
+        $notificacion->save();
+
+        $idNotificacion = $notificacion->id;
+
+        // Actualizar el campo id_notificacion en la tabla cpu_legalizacion_matricula
+        $legalizacionMatricula = CpuLegalizacionMatricula::find($casoMatricula->id_legalizacion_matricula);
+        if ($legalizacionMatricula) {
+            $legalizacionMatricula->id_notificacion = $idNotificacion;
+            $legalizacionMatricula->save();
         } else {
-            $notificacion->titulo = 'Legalización de matrícula satisfactoria';
+            return response()->json(['error' => 'Legalización de matrícula no encontrada'], 404);
         }
-    }
-    $notificacion->save();
-    $casoMatricula->save();
 
-    // Resto del código...
-    // Actualizar estados de cedula, titulo y cupo si se proporcionan
-    if (isset($documentos['estado_cedula'])) {
-        $casoMatricula->legalizacionMatricula->estado_identificacion = $documentos['estado_cedula'];
-    }
-    if (isset($documentos['estado_titulo'])) {
-        $casoMatricula->legalizacionMatricula->estado_titulo = $documentos['estado_titulo'];
-    }
-    if (isset($documentos['estado_cupo'])) {
-        $casoMatricula->legalizacionMatricula->estado_cupo = $documentos['estado_cupo'];
-    }
-    $casoMatricula->legalizacionMatricula->save();
-
-    // Enviar correo electrónico según el estado de los campos
-    $asunto = '';
-    $cuerpo = '';
-
-    if ($casoMatricula->legalizacionMatricula->estado_identificacion == 10 &&
-        $casoMatricula->legalizacionMatricula->estado_titulo == 10 &&
-        $casoMatricula->legalizacionMatricula->estado_cupo == 10) {
-        $asunto = 'Legalización de matrícula correcta';
-        $cuerpo = "La legalización de matrícula para el/la ciudadano/a {$casoMatricula->legalizacionMatricula->nombres} {$casoMatricula->legalizacionMatricula->apellidos} con cédula {$casoMatricula->legalizacionMatricula->cedula} en la sede {$casoMatricula->legalizacionMatricula->sede->nombre_sede} y carrera {$casoMatricula->legalizacionMatricula->carrera->name} ha sido realizada correctamente el día {$fechaHoraActual}.";
-        // Actualizar el estado a 14 en la tabla cpu_casos_matricula
-        $casoMatricula->id_estado = 14;
+        // Verificar si todos los estados son igual a 10
+        if (isset($documentos['estado_cedula']) && $documentos['estado_cedula'] == 10 &&
+            isset($documentos['estado_titulo']) && $documentos['estado_titulo'] == 10 &&
+            isset($documentos['estado_cupo']) && $documentos['estado_cupo'] == 10) {
+            $notificacion->titulo = 'Proceso de legalización de matrícula satisfactorio';
+            $notificacion->mensaje = 'Proceso de legalización de matrícula satisfactorio, esté pendiente a su correo electrónico para próximas indicaciones sobre el proceso de Nivelación. ¡Bienvenido/a a la Uleam!';
+            // Actualizar el estado a 14 en la tabla cpu_casos_matricula
+            $casoMatricula->id_estado = 14;
+        } else {
+            // Verificar si algún estado es igual a 11
+            if (isset($documentos['estado_cedula']) && $documentos['estado_cedula'] == 11 ||
+                isset($documentos['estado_titulo']) && $documentos['estado_titulo'] == 11 ||
+                isset($documentos['estado_cupo']) && $documentos['estado_cupo'] == 11) {
+                    // Actualizar el estado a 14 en la tabla cpu_casos_matricula
+            $casoMatricula->id_estado = 13;
+                $notificacion->titulo = 'Corregir documentos';
+            } else {
+                $notificacion->titulo = 'Legalización de matrícula satisfactoria';
+            }
+        }
+        $notificacion->save();
         $casoMatricula->save();
-    } elseif ($casoMatricula->legalizacionMatricula->estado_identificacion == 11 ||
-              $casoMatricula->legalizacionMatricula->estado_titulo == 11 ||
-              $casoMatricula->legalizacionMatricula->estado_cupo == 11) {
-                $asunto = 'Corregir Archivo';
 
-                if ($casoMatricula->legalizacionMatricula->estado_identificacion == 11) {
-                    $asunto .= ' Identificación';
-                }
-                if ($casoMatricula->legalizacionMatricula->estado_titulo == 11) {
-                    $asunto .= ' Título o Acta de Grado';
-                }
-                if ($casoMatricula->legalizacionMatricula->estado_cupo == 11) {
-                    $asunto .= ' Cupo';
-                }
-
-        $observacion = '';
-        if ($casoMatricula->legalizacionMatricula->estado_identificacion == 11) {
-            $observacion .= "El documento de identificación presenta inconvenientes. ";
+        // Resto del código...
+        // Actualizar estados de cedula, titulo y cupo si se proporcionan
+        if (isset($documentos['estado_cedula'])) {
+            $casoMatricula->legalizacionMatricula->estado_identificacion = $documentos['estado_cedula'];
         }
-        if ($casoMatricula->legalizacionMatricula->estado_titulo == 11) {
-            $observacion .= "El documento de título o acta de grado presenta inconvenientes. ";
+        if (isset($documentos['estado_titulo'])) {
+            $casoMatricula->legalizacionMatricula->estado_titulo = $documentos['estado_titulo'];
         }
-        if ($casoMatricula->legalizacionMatricula->estado_cupo == 11) {
-            $observacion .= "El documento de aceptación de cupo presenta inconvenientes. ";
+        if (isset($documentos['estado_cupo'])) {
+            $casoMatricula->legalizacionMatricula->estado_cupo = $documentos['estado_cupo'];
         }
-        $cuerpo = "La legalización de matrícula para el/la ciudadano/a {$casoMatricula->legalizacionMatricula->nombres} {$casoMatricula->legalizacionMatricula->apellidos} con número de identificación {$casoMatricula->legalizacionMatricula->cedula} en la sede {$casoMatricula->legalizacionMatricula->sede->nombre_sede} y carrera {$casoMatricula->legalizacionMatricula->carrera->name} presenta las siguientes novedades: {$observacion} Por favor, ingrese a la aplicación de matricula de nivelación de la Uleam y corrija los documentos necesarios a brevedad.";
+        $casoMatricula->legalizacionMatricula->save();
+
+        // Enviar correo electrónico según el estado de los campos
+        $asunto = '';
+        $cuerpo = '';
+
+        if ($casoMatricula->legalizacionMatricula->estado_identificacion == 10 &&
+            $casoMatricula->legalizacionMatricula->estado_titulo == 10 &&
+            $casoMatricula->legalizacionMatricula->estado_cupo == 10) {
+            $asunto = 'Legalización de matrícula correcta';
+            $cuerpo = "La legalización de matrícula para el/la ciudadano/a {$casoMatricula->legalizacionMatricula->nombres} {$casoMatricula->legalizacionMatricula->apellidos} con cédula {$casoMatricula->legalizacionMatricula->cedula} en la sede {$casoMatricula->legalizacionMatricula->sede->nombre_sede} y carrera {$casoMatricula->legalizacionMatricula->carrera->name} ha sido realizada correctamente el día {$fechaHoraActual}.";
+            // Actualizar el estado a 14 en la tabla cpu_casos_matricula
+            $casoMatricula->id_estado = 14;
+            $casoMatricula->save();
+        } elseif ($casoMatricula->legalizacionMatricula->estado_identificacion == 11 ||
+                $casoMatricula->legalizacionMatricula->estado_titulo == 11 ||
+                $casoMatricula->legalizacionMatricula->estado_cupo == 11) {
+                    $asunto = 'Corregir Archivo';
+
+                    if ($casoMatricula->legalizacionMatricula->estado_identificacion == 11) {
+                        $asunto .= ' Identificación';
+                    }
+                    if ($casoMatricula->legalizacionMatricula->estado_titulo == 11) {
+                        $asunto .= ' Título o Acta de Grado';
+                    }
+                    if ($casoMatricula->legalizacionMatricula->estado_cupo == 11) {
+                        $asunto .= ' Cupo';
+                    }
+
+            $observacion = '';
+            if ($casoMatricula->legalizacionMatricula->estado_identificacion == 11) {
+                $observacion .= "El documento de identificación presenta inconvenientes. ";
+            }
+            if ($casoMatricula->legalizacionMatricula->estado_titulo == 11) {
+                $observacion .= "El documento de título o acta de grado presenta inconvenientes. ";
+            }
+            if ($casoMatricula->legalizacionMatricula->estado_cupo == 11) {
+                $observacion .= "El documento de aceptación de cupo presenta inconvenientes. ";
+            }
+            $cuerpo = "La legalización de matrícula para el/la ciudadano/a {$casoMatricula->legalizacionMatricula->nombres} {$casoMatricula->legalizacionMatricula->apellidos} con número de identificación {$casoMatricula->legalizacionMatricula->cedula} en la sede {$casoMatricula->legalizacionMatricula->sede->nombre_sede} y carrera {$casoMatricula->legalizacionMatricula->carrera->name} presenta las siguientes novedades: {$observacion} Por favor, ingrese a la aplicación de matricula de nivelación de la Uleam y corrija los documentos necesarios a brevedad.";
+        }
+
+        // Obtener el email del usuario
+        $usuario = DB::table('cpu_legalizacion_matricula')
+            ->where('id', $casoMatricula->id_legalizacion_matricula)
+            ->first();
+
+        if (!$usuario) {
+            return response()->json(['error' => 'Usuario no encontrado'], 404);
+        }
+
+        // $persona = [
+        //     "destinatarios" => $usuario->email,
+        //     "cc" => "",
+        //     "cco" => "",
+        //     "asunto" => $asunto,
+        //     "cuerpo" => $cuerpo
+        // ];
+
+        // $datosCodificados = json_encode($persona);
+
+        // $url = "https://prod-44.westus.logic.azure.com:443/workflows/4046dc46113a4d8bb5da374ef1ee3e32/triggers/manual/paths/invoke?api-version=2016-06-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=lA40KwffEyLqEjVA4uyHaWAHblO77vk2jXYEkjUG08s";
+        // $ch = curl_init($url);
+
+        // curl_setopt($ch, CURLOPT_CUSTOMREQUEST, "POST");
+        // curl_setopt($ch, CURLOPT_POSTFIELDS, $datosCodificados);
+        // curl_setopt($ch, CURLOPT_HTTPHEADER, [
+        //     'Content-Type: application/json',
+        //     'Content-Length: ' . strlen($datosCodificados)
+        // ]);
+        // curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+
+        // $resultado = curl_exec($ch);
+        // $codigoRespuesta = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+
+        // curl_close($ch);
+
+        // echo "Respuesta: $resultado, Código: $codigoRespuesta";
+
+        $recipient = $usuario->email;
+        $subject = $asunto;
+        $body = $cuerpo;
+
+        try {
+            Mail::raw($body, function ($message) use ($recipient, $subject) {
+                $message->to($recipient)
+                    ->subject($subject);
+            });
+
+            // El correo se envió correctamente
+            return response()->json(['message' => 'Correo enviado correctamente'], 200);
+        } catch (\Exception $e) {
+            // Error al enviar el correo
+            return response()->json(['message' => 'Error al enviar el correo: ' . $e->getMessage()], 500);
+        }
+
+        return response()->json(['message' => 'Documentos revisados y notificación enviada', 'id_notificacion' => $idNotificacion], 200);
     }
-
-    // Obtener el email del usuario
-    $usuario = DB::table('cpu_legalizacion_matricula')
-        ->where('id', $casoMatricula->id_legalizacion_matricula)
-        ->first();
-
-    if (!$usuario) {
-        return response()->json(['error' => 'Usuario no encontrado'], 404);
-    }
-
-    // $persona = [
-    //     "destinatarios" => $usuario->email,
-    //     "cc" => "",
-    //     "cco" => "",
-    //     "asunto" => $asunto,
-    //     "cuerpo" => $cuerpo
-    // ];
-
-    // $datosCodificados = json_encode($persona);
-
-    // $url = "https://prod-44.westus.logic.azure.com:443/workflows/4046dc46113a4d8bb5da374ef1ee3e32/triggers/manual/paths/invoke?api-version=2016-06-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=lA40KwffEyLqEjVA4uyHaWAHblO77vk2jXYEkjUG08s";
-    // $ch = curl_init($url);
-
-    // curl_setopt($ch, CURLOPT_CUSTOMREQUEST, "POST");
-    // curl_setopt($ch, CURLOPT_POSTFIELDS, $datosCodificados);
-    // curl_setopt($ch, CURLOPT_HTTPHEADER, [
-    //     'Content-Type: application/json',
-    //     'Content-Length: ' . strlen($datosCodificados)
-    // ]);
-    // curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-
-    // $resultado = curl_exec($ch);
-    // $codigoRespuesta = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-
-    // curl_close($ch);
-
-    // echo "Respuesta: $resultado, Código: $codigoRespuesta";
-
-    $recipient = $usuario->email;
-    $subject = $asunto;
-    $body = $cuerpo;
-
-    try {
-        Mail::raw($body, function ($message) use ($recipient, $subject) {
-            $message->to($recipient)
-                ->subject($subject);
-        });
-
-        // El correo se envió correctamente
-        return response()->json(['message' => 'Correo enviado correctamente'], 200);
-    } catch (\Exception $e) {
-        // Error al enviar el correo
-        return response()->json(['message' => 'Error al enviar el correo: ' . $e->getMessage()], 500);
-    }
-
-    return response()->json(['message' => 'Documentos revisados y notificación enviada', 'id_notificacion' => $idNotificacion], 200);
-}
 
 //funcion para probar envio de correo
 

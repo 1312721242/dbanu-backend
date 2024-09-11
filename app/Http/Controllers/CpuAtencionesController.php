@@ -116,99 +116,113 @@ class CpuAtencionesController extends Controller
             })
             ->where('at.id_estado', 1)  // Añadir la condición de que id_estado sea igual a 1
             ->orderBy('at.created_at', 'desc')
-            ->get()
-            ->groupBy('id_caso');  // Agrupa las atenciones por id_caso
-    
-        // Prepara el resultado final
-        $resultado = $atenciones->map(function ($atencionesPorCaso, $id_caso) {
-            // Selecciona la primera atención como el registro principal
+            ->get();
+
+        // Filtramos las atenciones que tienen id_caso y las que no
+        $atencionesConCaso = $atenciones->filter(function ($atencion) {
+            return !is_null($atencion->id_caso);
+        })->groupBy('id_caso');
+
+        // No agrupamos las atenciones que no tienen id_caso
+        $atencionesSinCaso = $atenciones->filter(function ($atencion) {
+            return is_null($atencion->id_caso);
+        });
+
+        // Mapeamos las atenciones con caso
+        $resultadoConCaso = $atencionesConCaso->map(function ($atencionesPorCaso, $id_caso) {
             $atencionPrincipal = $atencionesPorCaso->first();
-    
-            if ($id_caso) {
-                $atencionPrincipal->tipo = "Caso";
-    
-                // Obtener los detalles del caso
-                $caso = DB::table('cpu_casos as c')
-                    ->join('cpu_estados as e', 'c.id_estado', '=', 'e.id')
-                    ->select('c.id', 'c.nombre_caso', 'e.id as id_estado', 'e.estado as estado')
-                    ->where('c.id', $id_caso)
-                    ->first();
-    
-                if ($caso) {
-                    $atencionPrincipal->nombre_principal = $caso->nombre_caso; // Usar el nombre del caso como nombre principal
-                    $atencionPrincipal->caso = [
-                        'id' => $caso->id,
-                        'nombre_caso' => $caso->nombre_caso,
-                        'estado' => $caso->id_estado == 8 ? 'Abierto' : 'Cerrado',
-                    ];
-    
-                    // Obtener todas las atenciones relacionadas con el caso, incluyendo los datos de la tabla cpu_atenciones_psicologia
-                    $atencionesRelacionadas = DB::table('cpu_atenciones as at')
-                        ->leftJoin('cpu_atenciones_psicologia as ap', 'at.id', '=', 'ap.id_cpu_atencion') // Hacer join con cpu_atenciones_psicologia
-                        ->where('at.id_caso', $caso->id)
-                        ->where('at.id_estado', 1)  // Añadir la condición de que id_estado sea igual a 1
-                        ->orderBy('at.created_at', 'desc')
-                        ->select(
-                            'at.id',
-                            'at.id_funcionario',
-                            'at.id_persona',
-                            'at.via_atencion',
-                            'at.motivo_atencion',
-                            'at.fecha_hora_atencion',
-                            'at.anio_atencion',
-                            'at.created_at as at_created_at',
-                            'at.updated_at as at_updated_at',
-                            'at.detalle_atencion',
-                            'at.id_caso',
-                            'at.id_tipo_usuario',
-                            'at.evolucion_enfermedad',
-                            'at.diagnostico as at_diagnostico',
-                            'at.prescripcion as at_prescripcion',
-                            'at.recomendacion',
-                            'at.tipo_atencion',
-                            // Datos de la tabla cpu_atenciones_psicologia
-                            'ap.observacion as ap_observacion',
-                            'ap.evolucion_caso as ap_evolucion_caso',
-                            'ap.abordaje_caso as ap_abordaje_caso',
-                            'ap.prescripcion as ap_prescripcion_psicologica',
-                            'ap.descripcionfinal as ap_descripcionfinal'
-                        )
-                        ->get();
-    
-                    // Formatear las fechas en atenciones relacionadas
-                    $atencionesRelacionadas->transform(function ($atRelacionada) {
-                        // Asegúrate de que la fecha es un objeto Carbon antes de formatear
-                        if (!$atRelacionada->fecha_hora_atencion instanceof Carbon) {
-                            $atRelacionada->fecha_hora_atencion = Carbon::parse($atRelacionada->fecha_hora_atencion);
-                        }
-                        // Formatear la fecha de la atención relacionada
-                        $atRelacionada->fecha_hora_atencion = $atRelacionada->fecha_hora_atencion
-                            ->translatedFormat('l, d F Y');
-                        return $atRelacionada;
-                    });
-    
-                    // Añadir las atenciones relacionadas al objeto de respuesta
-                    $atencionPrincipal->atenciones_relacionadas = $atencionesRelacionadas;
-                }
-            } else {
-                $atencionPrincipal->tipo = "Atención";
-                $atencionPrincipal->nombre_principal = $atencionPrincipal->motivo_atencion; // Usar el motivo de la atención como nombre principal
+            $atencionPrincipal->tipo = "Caso";
+
+            // Obtener los detalles del caso
+            $caso = DB::table('cpu_casos as c')
+                ->join('cpu_estados as e', 'c.id_estado', '=', 'e.id')
+                ->select('c.id', 'c.nombre_caso', 'e.id as id_estado', 'e.estado as estado')
+                ->where('c.id', $id_caso)
+                ->first();
+
+            if ($caso) {
+                $atencionPrincipal->nombre_principal = $caso->nombre_caso;
+                $atencionPrincipal->caso = [
+                    'id' => $caso->id,
+                    'nombre_caso' => $caso->nombre_caso,
+                    'estado' => $caso->id_estado == 8 ? 'Abierto' : 'Cerrado',
+                ];
+
+                // Obtener todas las atenciones relacionadas con el caso
+                $atencionesRelacionadas = DB::table('cpu_atenciones as at')
+                    ->leftJoin('cpu_atenciones_psicologia as ap', 'at.id', '=', 'ap.id_cpu_atencion')
+                    ->where('at.id_caso', $caso->id)
+                    ->where('at.id_estado', 1)
+                    ->orderBy('at.created_at', 'desc')
+                    ->select(
+                        'at.id',
+                        'at.id_funcionario',
+                        'at.id_persona',
+                        'at.via_atencion',
+                        'at.motivo_atencion',
+                        'at.fecha_hora_atencion',
+                        'at.anio_atencion',
+                        'at.created_at as at_created_at',
+                        'at.updated_at as at_updated_at',
+                        'at.detalle_atencion',
+                        'at.id_caso',
+                        'at.id_tipo_usuario',
+                        'at.evolucion_enfermedad',
+                        'at.diagnostico as at_diagnostico',
+                        'at.prescripcion as at_prescripcion',
+                        'at.recomendacion',
+                        'at.tipo_atencion',
+                        // Datos de la tabla cpu_atenciones_psicologia
+                        'ap.observacion as ap_observacion',
+                        'ap.evolucion_caso as ap_evolucion_caso',
+                        'ap.abordaje_caso as ap_abordaje_caso',
+                        'ap.prescripcion as ap_prescripcion_psicologica',
+                        'ap.descripcionfinal as ap_descripcionfinal'
+                    )
+                    ->get();
+
+                // Formatear las fechas en atenciones relacionadas
+                $atencionesRelacionadas->transform(function ($atRelacionada) {
+                    if (!$atRelacionada->fecha_hora_atencion instanceof Carbon) {
+                        $atRelacionada->fecha_hora_atencion = Carbon::parse($atRelacionada->fecha_hora_atencion);
+                    }
+                    $atRelacionada->fecha_hora_atencion = $atRelacionada->fecha_hora_atencion
+                        ->translatedFormat('l, d F Y');
+                    return $atRelacionada;
+                });
+
+                $atencionPrincipal->atenciones_relacionadas = $atencionesRelacionadas;
             }
-    
-            // Asegúrate de que la fecha es un objeto Carbon antes de formatear
+
             if (!$atencionPrincipal->fecha_hora_atencion instanceof Carbon) {
                 $atencionPrincipal->fecha_hora_atencion = Carbon::parse($atencionPrincipal->fecha_hora_atencion);
             }
-            // Formatear la fecha de la atención principal
             $atencionPrincipal->fecha_hora_atencion = $atencionPrincipal->fecha_hora_atencion
                 ->translatedFormat('l, d F Y');
-    
+
             return $atencionPrincipal;
-        })->values();
-    
+        });
+
+        // Mapeamos las atenciones sin caso individualmente
+        $resultadoSinCaso = $atencionesSinCaso->map(function ($atencion) {
+            $atencion->tipo = "Atención";
+            $atencion->nombre_principal = $atencion->motivo_atencion;
+
+            if (!$atencion->fecha_hora_atencion instanceof Carbon) {
+                $atencion->fecha_hora_atencion = Carbon::parse($atencion->fecha_hora_atencion);
+            }
+            $atencion->fecha_hora_atencion = $atencion->fecha_hora_atencion
+                ->translatedFormat('l, d F Y');
+
+            return $atencion;
+        });
+
+        // Combina ambos resultados, asegurando que las atenciones sin caso no se pierdan
+        $resultado = $resultadoSinCaso->merge($resultadoConCaso)->values();
+
         // Log de la información
         Log::info('Atenciones obtenidas:', ['atenciones' => $resultado]);
-    
+
         // Retorna la respuesta en formato JSON
         return response()->json($resultado);
     }
@@ -223,7 +237,7 @@ class CpuAtencionesController extends Controller
         }
         return response()->json(['message' => 'Atención no encontrada'], 404);
     }
-    
+
     public function obtenerUltimaConsulta($usr_tipo, $id_persona, $id_caso)
     {
         try {

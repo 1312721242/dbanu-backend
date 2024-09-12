@@ -18,6 +18,8 @@ class CpuClientesTasty extends Model
         'telefono',
         'unidad_facultad_direccion',
         'cargo_puesto',
+        'regimen',
+        'estado_tarjeta',
         'codigo_tarjeta',
         'fecha_inicio_valido',
         'fecha_fin_valido',

@@ -302,17 +302,104 @@ class CpuPersonaController extends Controller
 
     // actualizar datos personales
     public function updateDatosPersonales(Request $request, $cedula)
-{
-    Log::info('Entrando al método updateDatosPersonales');
+    {
+        Log::info('Entrando al método updateDatosPersonales');
 
-    $persona = CpuPersona::where('cedula', $cedula)->first();
-    if (!$persona) {
-        Log::warning('Persona no encontrada con cedula: ' . $cedula);
-        return response()->json(['message' => 'Persona no encontrada'], 404);
+        $persona = CpuPersona::where('cedula', $cedula)->first();
+        if (!$persona) {
+            Log::warning('Persona no encontrada con cedula: ' . $cedula);
+            return response()->json(['message' => 'Persona no encontrada'], 404);
+        }
+
+        // Validación de los datos
+        $validator = Validator::make($request->all(), [
+            'nombres' => 'required|string',
+            'nacionalidad' => 'required|string',
+            'provincia' => 'required|string',
+            'ciudad' => 'required|string',
+            'parroquia' => 'required|string',
+            'direccion' => 'required|string',
+            'sexo' => 'required|string',
+            'fechanaci' => 'required|date',
+            'celular' => 'required|string',
+            'tipoetnia' => 'required|string',
+            'discapacidad' => 'nullable|string',
+            'imagen' => 'nullable|image|max:2048', // Validación para la imagen
+            'tipoDiscapacidad' => 'nullable|string', // Validación para tipoDiscapacidad
+            'porcentaje' => 'nullable|numeric', // Validación para porcentaje
+        ]);
+
+        if ($validator->fails()) {
+            Log::info('Errores de validación:', $validator->errors()->all());
+            return response()->json(['errors' => $validator->errors()], 422);
+        }
+
+        $validatedData = $validator->validated();
+        Log::info('Datos validados:', $validatedData);
+
+        // Iniciar transacción
+        DB::beginTransaction();
+        try {
+            // Actualización de los datos
+            $persona->update($validatedData);
+
+            // Manejo de archivo de imagen
+            if ($request->hasFile('imagen')) {
+                $file = $request->file('imagen');
+
+                // Verificar si el archivo es válido
+                if ($file->isValid()) {
+                    // Eliminar imagen anterior si existe
+                    if ($persona->imagen) {
+                        Storage::delete('Perfiles/' . $persona->imagen);
+                    }
+
+                    // Construir el nuevo nombre de archivo
+                    $extension = $file->getClientOriginalExtension();
+                    $newFilename = "{$cedula}.{$extension}";
+
+                    // Almacenar el archivo en la misma ruta que los demás archivos
+                    $filePath = $file->move(public_path("Perfiles/"), $newFilename);
+                    $persona->imagen = basename($filePath); // Guardar la ruta relativa en la base de datos
+                    Log::info('Imagen subida con éxito: ' . $persona->imagen);
+                } else {
+                    Log::info('Archivo de imagen no válido.');
+                    DB::rollBack();
+                    return response()->json(['error' => 'Invalid image file.'], 422);
+                }
+            } else {
+                Log::info('No se ha subido ninguna imagen.');
+            }
+
+            // Actualizar tipoDiscapacidad y porcentaje si están presentes en la solicitud
+            if ($request->has('tipoDiscapacidad')) {
+                $persona->tipo_discapacidad = $request->input('tipoDiscapacidad');
+            }
+            if ($request->has('porcentaje')) {
+                $persona->porcentaje_discapacidad = $request->input('porcentaje');
+            }
+
+            $persona->save();
+
+            // Confirmar transacción
+            DB::commit();
+            Log::info('Datos actualizados con éxito para la persona con cedula: ' . $cedula);
+
+            return response()->json($persona);
+        } catch (\Exception $e) {
+            // Revertir transacción
+            DB::rollBack();
+            Log::error('Error al actualizar los datos: ' . $e->getMessage());
+            return response()->json(['error' => 'Error al actualizar los datos'], 500);
+        }
     }
 
-    // Validación de los datos
+    //FUNCION PARA AGREGAR USUARIOS EXTERNOS
+    public function store(Request $request)
+{
+    // Validar los datos enviados desde el formulario
     $validator = Validator::make($request->all(), [
+        'identificacion' => 'required|string|min:10',
         'nombres' => 'required|string',
         'nacionalidad' => 'required|string',
         'provincia' => 'required|string',
@@ -321,76 +408,89 @@ class CpuPersonaController extends Controller
         'direccion' => 'required|string',
         'sexo' => 'required|string',
         'fechanaci' => 'required|date',
-        'celular' => 'required|string',
+        'celular' => 'required|string|max:10',
         'tipoetnia' => 'required|string',
         'discapacidad' => 'nullable|string',
-        'imagen' => 'nullable|image|max:2048', // Validación para la imagen
-        'tipoDiscapacidad' => 'nullable|string', // Validación para tipoDiscapacidad
-        'porcentaje' => 'nullable|numeric', // Validación para porcentaje
+        'imagen' => 'nullable|image|max:2048',
+        'tipoDiscapacidad' => 'nullable|string',
+        'porcentajeDiscapacidad' => 'nullable|numeric',
+        'id_clasificacion_tipo_usuario' => 'required|integer',
     ]);
 
     if ($validator->fails()) {
-        Log::info('Errores de validación:', $validator->errors()->all());
         return response()->json(['errors' => $validator->errors()], 422);
     }
 
+    // Obtener los datos validados
     $validatedData = $validator->validated();
-    Log::info('Datos validados:', $validatedData);
 
-    // Iniciar transacción
+    // Generar el código de persona a partir de la identificación y nombres
+    $codigoPersona = $this->generarCodigoPersona($validatedData['identificacion'], $validatedData['nombres']);
+
+    // Comenzar una transacción
     DB::beginTransaction();
-    try {
-        // Actualización de los datos
-        $persona->update($validatedData);
 
-        // Manejo de archivo de imagen
+    try {
+        // Crear la nueva persona, asignando 'tipo_discapacidad' y 'porcentaje_discapacidad' solo si existen
+        $personaData = [
+            'cedula' => $validatedData['identificacion'],
+            'nombres' => $validatedData['nombres'],
+            'nacionalidad' => $validatedData['nacionalidad'],
+            'provincia' => $validatedData['provincia'],
+            'ciudad' => $validatedData['ciudad'],
+            'parroquia' => $validatedData['parroquia'],
+            'direccion' => $validatedData['direccion'],
+            'sexo' => $validatedData['sexo'],
+            'fechanaci' => $validatedData['fechanaci'],
+            'celular' => $validatedData['celular'],
+            'tipoetnia' => $validatedData['tipoetnia'],
+            'discapacidad' => $validatedData['discapacidad'],
+            'codigo_persona' => $codigoPersona,
+            'id_clasificacion_tipo_usuario' => $validatedData['id_clasificacion_tipo_usuario'],
+            'tipo_discapacidad' => $validatedData['tipoDiscapacidad'],
+            'porcentaje_discapacidad' => $validatedData['porcentajeDiscapacidad'],
+        ];
+
+        // Solo agregar los campos si están presentes
+        // if (!empty($validatedData['tipo_discapacidad'])) {
+        //     $personaData['tipo_discapacidad'] = $validatedData['tipo_discapacidad'];
+        // }
+
+        // if (!empty($validatedData['porcentaje_discapacidad'])) {
+        //     $personaData['porcentaje_discapacidad'] = $validatedData['porcentaje_discapacidad'];
+        // }
+
+        // Crear la nueva persona
+        $persona = CpuPersona::create($personaData);
+
+        // Manejar la imagen de perfil, si existe
         if ($request->hasFile('imagen')) {
             $file = $request->file('imagen');
-
-            // Verificar si el archivo es válido
             if ($file->isValid()) {
-                // Eliminar imagen anterior si existe
-                if ($persona->imagen) {
-                    Storage::delete('Perfiles/' . $persona->imagen);
-                }
-
-                // Construir el nuevo nombre de archivo
                 $extension = $file->getClientOriginalExtension();
-                $newFilename = "{$cedula}.{$extension}";
-
-                // Almacenar el archivo en la misma ruta que los demás archivos
+                $newFilename = "{$persona->cedula}.{$extension}";
                 $filePath = $file->move(public_path("Perfiles/"), $newFilename);
-                $persona->imagen = basename($filePath); // Guardar la ruta relativa en la base de datos
-                Log::info('Imagen subida con éxito: ' . $persona->imagen);
-            } else {
-                Log::info('Archivo de imagen no válido.');
-                DB::rollBack();
-                return response()->json(['error' => 'Invalid image file.'], 422);
+                $persona->imagen = basename($filePath);
             }
-        } else {
-            Log::info('No se ha subido ninguna imagen.');
-        }
-
-        // Actualizar tipoDiscapacidad y porcentaje si están presentes en la solicitud
-        if ($request->has('tipoDiscapacidad')) {
-            $persona->tipo_discapacidad = $request->input('tipoDiscapacidad');
-        }
-        if ($request->has('porcentaje')) {
-            $persona->porcentaje_discapacidad = $request->input('porcentaje');
         }
 
         $persona->save();
 
-        // Confirmar transacción
+        // Confirmar la transacción
         DB::commit();
-        Log::info('Datos actualizados con éxito para la persona con cedula: ' . $cedula);
 
-        return response()->json($persona);
+        return response()->json($persona, 201);
     } catch (\Exception $e) {
-        // Revertir transacción
+        // Revertir la transacción en caso de error
         DB::rollBack();
-        Log::error('Error al actualizar los datos: ' . $e->getMessage());
-        return response()->json(['error' => 'Error al actualizar los datos'], 500);
+        return response()->json([
+            'error' => 'Error al guardar los datos',
+            'exception' => $e->getMessage(),
+            'trace' => $e->getTraceAsString()
+        ], 500);
     }
 }
+
+
+
 }

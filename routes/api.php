@@ -318,6 +318,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     //registros bienestar
     Route::get('/cpu-persona-bienestar/{cedula}', [CpuPersonaController::class, 'showBienestar']);
     Route::put('/cpu-persona-update-bienestar/{cedula}', [CpuPersonaController::class, 'updateBienestar']);
+    Route::post('/usuarios/externos', [CpuPersonaController::class, 'store']);
 
 
     //tipos discapacidad

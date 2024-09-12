@@ -404,3 +404,4 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('/obtener-cie10', [CpuAtencionPsicologiaController::class, 'obtenerCie10']);});
 
 // Route::put('/cpu-persona-update/{cedula}', [CpuPersonaController::class, 'update']);
+

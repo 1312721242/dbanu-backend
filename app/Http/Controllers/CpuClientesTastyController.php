@@ -30,10 +30,12 @@ class CpuClientesTastyController extends Controller
                 'telefono (text)',
                 'unidad_facultad_direccion (text)',
                 'cargo_puesto (text)',
+                'regimen (text)',
+                'estado_tarjeta (text)',
                 'codigo_tarjeta (text)',
             ];
             $filename = 'funcionario_comunidad_template.xlsx';
-        } elseif ($tipoBeneficiario === 'Becado') {
+        } elseif ($tipoBeneficiario === 'Ayuda Económica') {
             // Definir los encabezados para Becado
             $headers = [
                 'periodo',
@@ -70,7 +72,7 @@ class CpuClientesTastyController extends Controller
                 'numero_matricula',
                 'codigo_tarjeta',
             ];
-            $filename = 'becado_template.xlsx';
+            $filename = 'Ayuda_económica_template.xlsx';
         } else {
             return response()->json(['error' => 'Tipo de beneficiario no válido'], 400);
         }
@@ -83,7 +85,7 @@ class CpuClientesTastyController extends Controller
         }
 
         // Configurar columnas específicas como texto
-        $columnsAsText = ['A', 'E', 'H']; // A -> identificacion, E -> telefono, H -> codigo_tarjeta
+        $columnsAsText = ['A', 'E', 'J']; // A -> identificacion, E -> telefono, J -> codigo_tarjeta
 
         foreach ($columnsAsText as $col) {
             $sheet->getStyle($col)->getNumberFormat()->setFormatCode(\PhpOffice\PhpSpreadsheet\Style\NumberFormat::FORMAT_TEXT);
@@ -140,7 +142,9 @@ class CpuClientesTastyController extends Controller
                     'telefono' => $row['E'] ?? null,
                     'unidad_facultad_direccion' => $row['F'] ?? null,
                     'cargo_puesto' => $row['G'] ?? null,
-                    'codigo_tarjeta' => $row['H'] ?? null,
+                    'regimen' => $row['H'] ?? null,
+                    'estado_tarjeta' => $row['I'] ?? null,
+                    'codigo_tarjeta' => $row['J'] ?? null,
                     'fecha_inicio_valido' => $fechaInicio,
                     'fecha_fin_valido' => $fechaFin,
                     'id_estado' => 8,
@@ -186,7 +190,7 @@ class CpuClientesTastyController extends Controller
                         'reason' => 'Datos incompletos: identificación o email faltante.'
                     ];
                 }
-            } elseif ($tipoBeneficiario === 'Becado') {
+            } elseif ($tipoBeneficiario === 'Ayuda Económica') {
                 // Procesar para la tabla cpu_becados
                 $data = [
                     'periodo' => $row['A'] ?? null,
@@ -299,7 +303,7 @@ class CpuClientesTastyController extends Controller
             if ($tipoBeneficiario === 'Personal Uleam/Otro') {
                 $identificacion = $row['A'] ?? null;
                 $email = $row['D'] ?? null; // Asegúrate de que estas son las columnas correctas para 'Personal Uleam/Otro'
-            } elseif ($tipoBeneficiario === 'Becado') {
+            } elseif ($tipoBeneficiario === 'Ayuda Económica') {
                 $identificacion = $row['B'] ?? null; // Cambio para coincidir con la estructura de datos de 'Becado'
             }
 
@@ -317,7 +321,7 @@ class CpuClientesTastyController extends Controller
                 $model = CpuClientesTasty::where('identificacion', $identificacion)
                     ->where('email', $email)
                     ->first();
-            } elseif ($tipoBeneficiario === 'Becado') {
+            } elseif ($tipoBeneficiario === 'Ayuda Económica') {
                 $model = CpuBecado::where('identificacion', $identificacion)
                     ->first();
             }

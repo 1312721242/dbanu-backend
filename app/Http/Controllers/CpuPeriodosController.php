@@ -14,11 +14,11 @@ class CpuPeriodosController extends Controller
     {
         $this->middleware('auth:api');
     }
-    
-   
+
+
     public function consultarPeriodos()
     {
-        $periodos = CpuPeriodos::all();
+        $periodos = CpuPeriodos::orderBy('nombre', 'asc')->get();
 
         return response()->json($periodos);
     }

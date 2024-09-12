@@ -412,8 +412,8 @@ class CpuPersonaController extends Controller
         'tipoetnia' => 'required|string',
         'discapacidad' => 'nullable|string',
         'imagen' => 'nullable|image|max:2048',
-        'tipo_discapacidad' => 'nullable|string',
-        'porcentaje_discapacidad' => 'nullable|numeric',
+        'tipoDiscapacidad' => 'nullable|string',
+        'porcentajeDiscapacidad' => 'nullable|numeric',
         'id_clasificacion_tipo_usuario' => 'required|integer',
     ]);
 
@@ -447,16 +447,18 @@ class CpuPersonaController extends Controller
             'discapacidad' => $validatedData['discapacidad'],
             'codigo_persona' => $codigoPersona,
             'id_clasificacion_tipo_usuario' => $validatedData['id_clasificacion_tipo_usuario'],
+            'tipo_discapacidad' => $validatedData['tipoDiscapacidad'],
+            'porcentaje_discapacidad' => $validatedData['porcentajeDiscapacidad'],
         ];
 
         // Solo agregar los campos si están presentes
-        if (!empty($validatedData['tipo_discapacidad'])) {
-            $personaData['tipo_discapacidad'] = $validatedData['tipo_discapacidad'];
-        }
+        // if (!empty($validatedData['tipo_discapacidad'])) {
+        //     $personaData['tipo_discapacidad'] = $validatedData['tipo_discapacidad'];
+        // }
 
-        if (!empty($validatedData['porcentaje_discapacidad'])) {
-            $personaData['porcentaje_discapacidad'] = $validatedData['porcentaje_discapacidad'];
-        }
+        // if (!empty($validatedData['porcentaje_discapacidad'])) {
+        //     $personaData['porcentaje_discapacidad'] = $validatedData['porcentaje_discapacidad'];
+        // }
 
         // Crear la nueva persona
         $persona = CpuPersona::create($personaData);

@@ -39,6 +39,7 @@ class CpuAtencionPsicologia extends Model
         'abordaje_caso',
         'prescripcion',
         'descripcionfinal',
+        'resu_reactivos',
     ];
 
     protected $casts = [
@@ -60,5 +61,6 @@ class CpuAtencionPsicologia extends Model
         'abordaje_caso' => 'array',
         'prescripcion' => 'array',
         'descripcionfinal' => 'array',
+        'resu_reactivos' => 'array',
     ];
 }

@@ -411,3 +411,4 @@ Route::middleware(['auth:sanctum'])->group(function () {
 });
 
 // Route::put('/cpu-persona-update/{cedula}', [CpuPersonaController::class, 'update']);
+

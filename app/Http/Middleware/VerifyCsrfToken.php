@@ -54,5 +54,6 @@ class VerifyCsrfToken extends Middleware
         'api/atenciones/updatederivacionsico',
         'api/clientes/tasty/upload',
         'api/atencionesEliminar/{atencionId}/{nuevoEstado}',
+        'api/usuarios/externos',
     ];
 }

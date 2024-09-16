@@ -19,6 +19,12 @@ class ICDController extends Controller
     public function getToken()
     {
         try {
+            // Verificar que las credenciales estén configuradas
+            if (empty($this->clientId) || empty($this->clientSecret)) {
+                \Log::error('Credenciales de API no configuradas');
+                return response()->json(['error' => 'Credenciales de API no configuradas'], 500);
+            }
+
             $response = Http::asForm()->withHeaders([
                 'Authorization' => 'Basic ' . base64_encode($this->clientId . ':' . $this->clientSecret),
                 'Content-Type' => 'application/x-www-form-urlencoded',
@@ -30,10 +36,26 @@ class ICDController extends Controller
             if ($response->successful()) {
                 return response()->json($response->json());
             } else {
-                return response()->json(['error' => 'Failed to fetch token'], 500);
+                $errorMessage = 'Error al obtener el token: ' . $response->body();
+                \Log::error($errorMessage);
+                
+                // Registrar información adicional para depuración
+                \Log::debug('Detalles de la solicitud:', [
+                    'clientId' => $this->clientId,
+                    'clientSecret' => substr($this->clientSecret, 0, 5) . '...',
+                    'responseStatus' => $response->status(),
+                    'responseBody' => $response->body(),
+                ]);
+
+                return response()->json([
+                    'error' => 'Error al obtener el token. Código de estado: ' . $response->status(),
+                    'detalles' => $response->json()
+                ], $response->status());
             }
         } catch (\Exception $e) {
-            return response()->json(['error' => $e->getMessage()], 500);
+            $errorMessage = 'Excepción al obtener el token: ' . $e->getMessage();
+            \Log::error($errorMessage);
+            return response()->json(['error' => 'Error interno del servidor: ' . $e->getMessage()], 500);
         }
     }
 

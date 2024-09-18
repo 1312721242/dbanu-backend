@@ -52,6 +52,7 @@ use App\Http\Controllers\CpuCasosPsicologiaController;
 use App\Http\Controllers\CpuCertificadoNivelacionController;
 use App\Http\Controllers\CpuClientesTastyController;
 use App\Http\Controllers\CpuDatosMedicosController;
+use App\Http\Controllers\CpuDienteController;
 
 
 
@@ -423,6 +424,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
     //atenciones medicina general
     Route::post('/atenciones-medicina-general', [CpuAtencionesController::class, 'guardarAtencionMedicinaGeneral']);
+    Route::get('/dientes/{id_paciente}', [CpuDienteController::class, 'buscarPorPaciente']);
 });
 
 // Route::put('/cpu-persona-update/{cedula}', [CpuPersonaController::class, 'update']);

@@ -276,43 +276,65 @@ class LegalizacionMatriculaSecretariaController extends Controller
     {
         $request->validate([
             'id_sede' => 'required|integer',
-            'id_periodo' => 'required|integer',
+            'fecha' => 'required|date',
         ]);
 
-        // Consultar el número total de casos con estado 13
-        $numCasosEstado13 = CpuCasosMatricula::where('id_estado', 13)->count();
-
-        // Consultar el número de secretarias habilitadas en la sede
-        $numSecretariasHabilitadas = CpuSecretariaMatricula::where('id_sede', $request->id_sede)
-            ->where('habilitada', true)
-            ->count();
-
-        // Verificar que hay al menos una secretaria habilitada para reasignar casos
-        if ($numSecretariasHabilitadas == 0) {
-            return response()->json(['message' => 'No hay secretarias habilitadas para reasignar casos'], 400);
-        }
-
-        // Calcular el número de casos a reasignar por secretaria
-        $casosPorSecretaria = $numCasosEstado13 / $numSecretariasHabilitadas;
+        // Obtener todas las secretarias de la sede
+        $todasLasSecretarias = CpuSecretariaMatricula::where('id_sede', $request->id_sede)->pluck('id');
 
         // Obtener las secretarias habilitadas de la sede
         $secretariasHabilitadas = CpuSecretariaMatricula::where('id_sede', $request->id_sede)
             ->where('habilitada', true)
-            ->pluck('id');
+            ->get(['id', 'nombre']);
 
-        // Reasignar casos a las secretarias
-        $casos = CpuCasosMatricula::where('id_estado', 13)
-            ->whereIn('id_secretaria', $secretariasHabilitadas)
-            ->orderBy('fecha_creacion', 'ASC')
-            ->limit($casosPorSecretaria)
-            ->get();
-
-        foreach ($casos as $caso) {
-            $caso->id_secretaria = $request->id_secretaria;
-            $caso->save();
+        // Verificar que hay al menos una secretaria habilitada para reasignar casos
+        if ($secretariasHabilitadas->isEmpty()) {
+            return response()->json(['message' => 'No hay secretarias habilitadas para reasignar casos'], 400);
         }
 
-        return response()->json(['message' => 'Casos reasignados correctamente']);
+        // Obtener todos los casos con estado 13 para la sede especificada
+        $casos = CpuCasosMatricula::where('id_estado', 13)
+            ->whereIn('id_secretaria', $todasLasSecretarias)
+            ->where('fecha_creacion', '>=', $request->fecha)
+            ->get();
+
+        // Verificar si hay casos para reasignar
+        if ($casos->isEmpty()) {
+            return response()->json(['message' => 'No hay casos para reasignar'], 400);
+        }
+
+        // Distribuir los casos de manera igualitaria
+        $numSecretariasHabilitadas = $secretariasHabilitadas->count();
+        $casosPorSecretaria = [];
+        foreach ($casos as $index => $caso) {
+            $secretaria = $secretariasHabilitadas[$index % $numSecretariasHabilitadas];
+            $caso->id_secretaria = $secretaria->id;
+            $caso->save();
+
+            if (!isset($casosPorSecretaria[$secretaria->id])) {
+                $casosPorSecretaria[$secretaria->id] = [
+                    'nombre' => $secretaria->nombre,
+                    'casos' => 0
+                ];
+            }
+            $casosPorSecretaria[$secretaria->id]['casos']++;
+        }
+
+        // Actualizar el campo casos_pendientes para todas las secretarias de la sede
+        foreach ($todasLasSecretarias as $secretariaId) {
+            $casosPendientes = CpuCasosMatricula::where('id_secretaria', $secretariaId)
+                ->whereIn('id_estado', [13, 15])
+                ->count();
+
+            CpuSecretariaMatricula::where('id', $secretariaId)
+                ->update(['casos_pendientes' => $casosPendientes]);
+        }
+
+        return response()->json([
+            'message' => 'Casos reasignados correctamente',
+            'total_casos' => $casos->count(),
+            'casos_por_secretaria' => $casosPorSecretaria
+        ]);
     }
 
     //actualizar el email

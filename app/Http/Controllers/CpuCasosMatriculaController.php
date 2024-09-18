@@ -60,6 +60,7 @@ class CpuCasosMatriculaController extends Controller
             'cpu_legalizacion_matricula.copia_titulo_acta_grado as copia_titulo',
             'cpu_legalizacion_matricula.estado_titulo',
             'cpu_legalizacion_matricula.copia_aceptacion_cupo',
+            'cpu_legalizacion_matricula.tipo_matricula',
             'cpu_legalizacion_matricula.estado_cupo',
             'cpu_legalizacion_matricula.id_notificacion'
         )
@@ -82,35 +83,6 @@ class CpuCasosMatriculaController extends Controller
 
     public function revisionDocumentos(Request $request, $idCaso)
     {
-        // // Configurar la zona horaria a Ecuador
-        // date_default_timezone_set('America/Guayaquil');
-        // $fechaHoraActual = date('Y-m-d H:i:s');
-        // // Obtener el caso de matrícula
-        // $casoMatricula = CpuCasosMatricula::find($idCaso);
-
-        // if (!$casoMatricula) {
-        //     return response()->json(['error' => 'Caso de matrícula no encontrado'], 404);
-        // }
-
-        // // Revisar si se han enviado documentos y guardarlos en la tabla cpu_notificacion_matricula
-        // $documentos = $request->all();
-        // $mensaje = isset($documentos['observacion']) ? $documentos['observacion'] : 'Documentos revisados sin observaciones';
-        // $notificacion = new CpuNotificacionMatricula();
-        // $notificacion->mensaje = $mensaje;
-        // $notificacion->id_legalizacion = $casoMatricula->legalizacionMatricula->id;
-        // $notificacion->save();
-
-        // // Obtener el ID de la notificación creada
-        // $idNotificacion = $notificacion->id;
-
-        // // Actualizar el campo id_notificacion en la tabla cpu_legalizacion_matricula
-        // $legalizacionMatricula = CpuLegalizacionMatricula::find($casoMatricula->id_legalizacion_matricula);
-        // if ($legalizacionMatricula) {
-        //     $legalizacionMatricula->id_notificacion = $idNotificacion;
-        //     $legalizacionMatricula->save();
-        // } else {
-        //     return response()->json(['error' => 'Legalización de matrícula no encontrada'], 404);
-        // }
 
         // Configurar la zona horaria a Ecuador
         date_default_timezone_set('America/Guayaquil');
@@ -342,7 +314,7 @@ public function getMatriculaCases($id_usuario, $id_periodo)
             'lm.canton_reside', 'lm.parroquia_reside', 'lm.instancia_postulacion',
             'lm.instancia_de_asignacion', 'lm.gratuidad', 'lm.observacion_gratuidad',
             'lm.copia_identificacion', 'lm.copia_titulo_acta_grado', 'lm.copia_aceptacion_cupo',
-            'lm.id_notificacion', 'lm.listo_para_revision', 'lm.legalizo_matricula', 'lm.created_at',
+            'lm.id_notificacion', 'lm.listo_para_revision', 'lm.legalizo_matricula', 'lm.tipo_matricula', 'lm.created_at',
             'lm.updated_at', DB::raw('CASE
                 WHEN lm.estado_identificacion = 10
                 AND lm.estado_titulo = 10
@@ -385,7 +357,8 @@ public function getAllMatriculaCases($id_periodo)
                     'lm.instancia_postulacion', 'lm.instancia_de_asignacion', 'lm.gratuidad',
                     'lm.observacion_gratuidad', 'lm.copia_identificacion', 'lm.copia_titulo_acta_grado',
                     'lm.copia_aceptacion_cupo', 'lm.id_notificacion', 'lm.listo_para_revision',
-                    'lm.legalizo_matricula', 'lm.created_at', 'lm.updated_at',
+                    'lm.legalizo_matricula', 'lm.tipo_matricula', 'lm.created_at', 'lm.updated_at',
+
                     DB::raw('CASE
                         WHEN lm.estado_identificacion = 10
                         AND lm.estado_titulo = 10

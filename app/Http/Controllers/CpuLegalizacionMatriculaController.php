@@ -22,7 +22,6 @@ class CpuLegalizacionMatriculaController extends Controller
 
       public function uploadPdf(Request $request)
     {
-
         // Obtener la configuración de matrícula activa
         $matriculaConfiguracion = CpuMatriculaConfiguracion::where('id_estado', 8)->first();
 
@@ -36,6 +35,7 @@ class CpuLegalizacionMatriculaController extends Controller
             $currentDate > $matriculaConfiguracion->fecha_fin_matricula_extraordinaria) {
             return response()->json(['error' => 'La subida de archivos no está permitida fuera del periodo de matrícula.'], 401);
         }
+
         $uploadedFiles = [];
 
         // Recorrer y procesar cada archivo
@@ -101,19 +101,15 @@ class CpuLegalizacionMatriculaController extends Controller
 
         $legalizacionMatricula->save();
 
-        // Verificar si ya existe un caso con id_estado = 15 para id_legalizacion_matricula
-        $casoExistente = null; // Inicializar la variable $casoExistente como null
-
-        // Verificar si ya existe un caso con id_estado = 15 para id_legalizacion_matricula
-        // Verificar si ya existe un caso con id_estado diferente de 14 para id_legalizacion_matricula
+        // Verificar si ya existe un caso para este id_legalizacion_matricula en el periodo actual
         $casoExistente = CpuCasosMatricula::where('id_legalizacion_matricula', $legalizacionMatricula->id)
-        ->where('id_estado', '<>', 14)
-        ->first();
+            ->whereHas('legalizacionMatricula', function ($query) use ($matriculaConfiguracion) {
+                $query->where('id_periodo', $matriculaConfiguracion->id_periodo);
+            })
+            ->first();
 
-        
         if ($casoExistente) {
-            // Reasignar el caso a la misma secretaría y cambiar el estado a 13
-            $casoExistente->id_secretaria = $casoExistente->id_secretaria; // Aquí probablemente querías asignar el mismo valor, pero corregí el nombre de la variable
+            // Actualizar el caso existente
             $casoExistente->id_estado = 13;
             $casoExistente->save();
         } else {
@@ -121,26 +117,27 @@ class CpuLegalizacionMatriculaController extends Controller
             $casoMatricula = new CpuCasosMatricula();
             $casoMatricula->id_legalizacion_matricula = $legalizacionMatricula->id;
             $casoMatricula->id_estado = 13; // Estado inicial del caso
-            $casoMatricula->save();
-        
+
             // Asignar el caso a la secretaría con menos casos pendientes en la misma sede
             $idSede = $legalizacionMatricula->id_sede;
             $secretaria = CpuSecretariaMatricula::where('id_sede', $idSede)
                 ->where('habilitada', true)
                 ->orderBy('casos_pendientes', 'asc')
                 ->first();
-        
+
             if ($secretaria) {
                 $secretaria->casos_pendientes++;
                 $secretaria->save();
                 $casoMatricula->id_secretaria = $secretaria->id;
-                $casoMatricula->save();
             }
+
+            $casoMatricula->save();
         }
+
         return response()->json(["mensaje" => "Archivos subidos correctamente", "files" => $uploadedFiles]);
     }
 
-    
+
 
     //funcion para tomar los datos de la persona
 

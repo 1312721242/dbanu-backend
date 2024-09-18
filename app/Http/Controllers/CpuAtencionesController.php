@@ -4,10 +4,12 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Models\CpuAtencion;
+use App\Models\CpuAtencionMedicinaGeneral;
 use App\Models\CpuAtencionNutricion;
 use App\Models\CpuAtencionTriaje;
 use App\Models\CpuCasosMedicos;
 use App\Models\CpuDerivacion;
+use App\Models\CpuInsumoOcupado;
 use App\Models\CpuTurno;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\DB; // Asegúrate de importar esta clase

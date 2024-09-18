@@ -82,35 +82,6 @@ class CpuCasosMatriculaController extends Controller
 
     public function revisionDocumentos(Request $request, $idCaso)
     {
-        // // Configurar la zona horaria a Ecuador
-        // date_default_timezone_set('America/Guayaquil');
-        // $fechaHoraActual = date('Y-m-d H:i:s');
-        // // Obtener el caso de matrícula
-        // $casoMatricula = CpuCasosMatricula::find($idCaso);
-
-        // if (!$casoMatricula) {
-        //     return response()->json(['error' => 'Caso de matrícula no encontrado'], 404);
-        // }
-
-        // // Revisar si se han enviado documentos y guardarlos en la tabla cpu_notificacion_matricula
-        // $documentos = $request->all();
-        // $mensaje = isset($documentos['observacion']) ? $documentos['observacion'] : 'Documentos revisados sin observaciones';
-        // $notificacion = new CpuNotificacionMatricula();
-        // $notificacion->mensaje = $mensaje;
-        // $notificacion->id_legalizacion = $casoMatricula->legalizacionMatricula->id;
-        // $notificacion->save();
-
-        // // Obtener el ID de la notificación creada
-        // $idNotificacion = $notificacion->id;
-
-        // // Actualizar el campo id_notificacion en la tabla cpu_legalizacion_matricula
-        // $legalizacionMatricula = CpuLegalizacionMatricula::find($casoMatricula->id_legalizacion_matricula);
-        // if ($legalizacionMatricula) {
-        //     $legalizacionMatricula->id_notificacion = $idNotificacion;
-        //     $legalizacionMatricula->save();
-        // } else {
-        //     return response()->json(['error' => 'Legalización de matrícula no encontrada'], 404);
-        // }
 
         // Configurar la zona horaria a Ecuador
         date_default_timezone_set('America/Guayaquil');

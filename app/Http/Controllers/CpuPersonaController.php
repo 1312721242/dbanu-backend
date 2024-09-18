@@ -49,6 +49,7 @@ class CpuPersonaController extends Controller
                 'tipoetnia' => $data['tipoetnia'],
                 'discapacidad' => $data['discapacidad'],
                 'id_clasificacion_tipo_usuario'=> 2,
+                'ocupacion' => $data['ocupacion'],
             ]);
 
             CpuDatosEmpleado::create([
@@ -141,6 +142,7 @@ class CpuPersonaController extends Controller
                     'imagen' => $data['imagen'] ?? null,
                     'email' => $data['email'] ?? '',
                     'id_clasificacion_tipo_usuario' => 2,
+                    'ocupacion' => $data['ocupacion'],
                 ]);
 
                 CpuDatosEmpleado::create([
@@ -227,6 +229,7 @@ class CpuPersonaController extends Controller
                 'codigo_persona' => $codigoPersona,
                 'imagen' => $data['imagen'] ?? null,
                 'id_clasificacion_tipo_usuario' => 1,
+                'ocupacion' => $data['ocupacion'],
             ]);
 
             CpuDatosEstudiantes::create([
@@ -290,7 +293,7 @@ class CpuPersonaController extends Controller
         }
 
         $persona->update($request->only([
-            'nombres', 'nacionalidad', 'provincia', 'ciudad', 'parroquia', 'direccion', 'sexo', 'fechanaci', 'celular', 'tipoetnia', 'discapacidad'
+            'nombres', 'nacionalidad', 'provincia', 'ciudad', 'parroquia', 'direccion', 'sexo', 'fechanaci', 'celular', 'tipoetnia', 'discapacidad','tipo_discapacidad', 'ocupacion'
         ]));
 
         $persona->datosEmpleados()->update($request->only([
@@ -327,6 +330,7 @@ class CpuPersonaController extends Controller
             'imagen' => 'nullable|image|max:2048', // Validación para la imagen
             'tipoDiscapacidad' => 'nullable|string', // Validación para tipoDiscapacidad
             'porcentaje' => 'nullable|numeric', // Validación para porcentaje
+            'ocupacion' => 'nullable|string', // Validación para ocupacion
         ]);
 
         if ($validator->fails()) {
@@ -412,9 +416,10 @@ class CpuPersonaController extends Controller
         'tipoetnia' => 'required|string',
         'discapacidad' => 'nullable|string',
         'imagen' => 'nullable|image|max:2048',
-        'tipo_discapacidad' => 'nullable|string',
-        'porcentaje_discapacidad' => 'nullable|numeric',
+        'tipoDiscapacidad' => 'nullable|string',
+        'porcentajeDiscapacidad' => 'nullable|numeric',
         'id_clasificacion_tipo_usuario' => 'required|integer',
+        'ocupacion' => 'nullable|string',
     ]);
 
     if ($validator->fails()) {
@@ -447,16 +452,19 @@ class CpuPersonaController extends Controller
             'discapacidad' => $validatedData['discapacidad'],
             'codigo_persona' => $codigoPersona,
             'id_clasificacion_tipo_usuario' => $validatedData['id_clasificacion_tipo_usuario'],
+            'tipo_discapacidad' => $validatedData['tipoDiscapacidad'],
+            'porcentaje_discapacidad' => $validatedData['porcentajeDiscapacidad'],
+            'ocupacion' => $validatedData['ocupacion'],
         ];
 
         // Solo agregar los campos si están presentes
-        if (!empty($validatedData['tipo_discapacidad'])) {
-            $personaData['tipo_discapacidad'] = $validatedData['tipo_discapacidad'];
-        }
+        // if (!empty($validatedData['tipo_discapacidad'])) {
+        //     $personaData['tipo_discapacidad'] = $validatedData['tipo_discapacidad'];
+        // }
 
-        if (!empty($validatedData['porcentaje_discapacidad'])) {
-            $personaData['porcentaje_discapacidad'] = $validatedData['porcentaje_discapacidad'];
-        }
+        // if (!empty($validatedData['porcentaje_discapacidad'])) {
+        //     $personaData['porcentaje_discapacidad'] = $validatedData['porcentaje_discapacidad'];
+        // }
 
         // Crear la nueva persona
         $persona = CpuPersona::create($personaData);

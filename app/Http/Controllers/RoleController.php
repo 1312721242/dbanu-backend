@@ -130,7 +130,7 @@ class RoleController extends Controller
     public function consultarAreas()
     {
         $roles = DB::table('cpu_userrole')
-            ->whereIn('id_userrole', [7, 8, 9, 11, 13, 14])
+            ->whereIn('id_userrole', [7, 8, 9, 11, 13, 14,15])
             ->orderBy('role', 'asc')
             ->get();
 

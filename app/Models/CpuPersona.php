@@ -12,7 +12,7 @@ class CpuPersona extends Model
     protected $table = 'cpu_personas';
 
     protected $fillable = [
-        'cedula', 'nombres', 'nacionalidad', 'provincia', 'ciudad', 'parroquia', 'direccion', 'sexo', 'fechanaci', 'celular', 'tipoetnia', 'discapacidad','tipo_discapacidad','porcentaje_discapacidad','codigo_persona','imagen','id_clasificacion_tipo_usuario'
+        'cedula', 'nombres', 'nacionalidad', 'provincia', 'ciudad', 'parroquia', 'direccion', 'sexo', 'fechanaci', 'celular', 'tipoetnia', 'discapacidad','tipo_discapacidad','porcentaje_discapacidad','codigo_persona','imagen','id_clasificacion_tipo_usuario','ocupacion'
     ];
 
     public function datosEmpleados()

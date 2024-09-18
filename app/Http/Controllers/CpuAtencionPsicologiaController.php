@@ -50,6 +50,7 @@ class CpuAtencionPsicologiaController extends Controller
             'abordaje' => 'nullable|string',
             'observacion' => 'nullable|string',
             'descripcionfinal' => 'nullable|string',
+            'reactivos' => 'nullable|string',
         ]);
 
         // Inicia la transacción
@@ -134,6 +135,7 @@ class CpuAtencionPsicologiaController extends Controller
                 'abordaje_caso' => $request->abordaje,
                 'prescripcion' => $request->observacion,
                 'descripcionfinal' => $request->descripcionfinal,
+                'resu_reactivos'=> $request->reactivos,
             ]);
 
             // Guardar datos de derivación si el switch de derivación está activo

@@ -18,7 +18,8 @@ class CpuAtencionTriaje extends Model
         'temperatura',
         'saturacion',
         'presion_sistolica',
-        'presion_diastolica'
+        'presion_diastolica',
+        'saturacion'
     ];
     public $timestamps = true;
 }

@@ -507,4 +507,97 @@ class CpuAtencionesController extends Controller
             return response()->json(['error' => 'Error al guardar la atención nutricional'], 500);
         }
     }
+
+    public function guardarAtencionMedicinaGeneral(Request $request)
+    {
+        DB::beginTransaction();
+
+        try {
+            // Guardar en cpu_atenciones
+            $atencion = new CpuAtencion();
+            $atencion->id_funcionario = $request->input('id_funcionario');
+            $atencion->id_persona = $request->input('id_persona');
+            $atencion->via_atencion = $request->input('via_atencion');
+            $atencion->motivo_atencion = $request->input('motivo_atencion');
+            $atencion->fecha_hora_atencion = $request->input('fecha_hora_atencion');
+            $atencion->anio_atencion = $request->input('anio_atencion');
+            $atencion->detalle_atencion = $request->input('detalle_atencion');
+            $atencion->id_caso = $request->input('id_caso');
+            $atencion->id_tipo_usuario = $request->input('id_tipo_usuario');
+            $atencion->evolucion_enfermedad = $request->input('evolucion_enfermedad');
+            $atencion->diagnostico = $request->input('diagnostico');
+            $atencion->prescripcion = $request->input('prescripcion');
+            $atencion->recomendacion = $request->input('recomendacion');
+            $atencion->tipo_atencion = $request->input('tipo_atencion');
+            $atencion->id_cie10 = $request->input('id_cie10');
+            $atencion->id_estado = 1;
+            $atencion->save();
+
+            // Guardar en cpu_atenciones_medicina_general
+            $medicinaGeneral = new CpuAtencionMedicinaGeneral();
+            $medicinaGeneral->id_atencion = $atencion->id;
+            $medicinaGeneral->antecedentes_personales_familiares = !empty($request->input('detalle_antecedentes'));
+            $medicinaGeneral->organos_sistemas = !empty($request->input('detalle_organos_sistemas'));
+            $medicinaGeneral->examen_fisico = !empty($request->input('detalle_examen_fisico'));
+            $medicinaGeneral->medicamentos_insumos = !empty($request->input('insumos_medicos'));
+            $medicinaGeneral->detalle_antecedentes = $request->input('detalle_antecedentes');
+            $medicinaGeneral->detalle_organos_sistemas = $request->input('detalle_organos_sistemas');
+            $medicinaGeneral->detalle_examen_fisico = $request->input('detalle_examen_fisico');
+            $medicinaGeneral->save();
+
+            // Guardar insumos médicos
+            if (!empty($request->input('insumos_medicos'))) {
+                foreach ($request->input('insumos_medicos') as $insumo) {
+                    $insumoOcupado = new CpuInsumoOcupado();
+                    $insumoOcupado->id_insumo = $insumo['id_insumo'];
+                    $insumoOcupado->id_atencion_medicina_general = $medicinaGeneral->id;
+                    $insumoOcupado->id_funcionario = $request->input('id_funcionario');
+                    $insumoOcupado->id_paciente = $request->input('id_persona');
+                    $insumoOcupado->cantidad_ocupado = $insumo['cantidad'];
+                    $insumoOcupado->detalle_ocupado = $insumo['detalle'];
+                    $insumoOcupado->fecha_uso = now();
+                    $insumoOcupado->save();
+                }
+            }
+
+            // Manejar derivación si está marcada
+            if ($request->input('derivacion')) {
+                $derivacion = new CpuDerivacion();
+                $derivacion->ate_id = $atencion->id;
+                $derivacion->id_doctor_al_que_derivan = $request->input('derivacion.id_doctor_al_que_derivan');
+                $derivacion->id_paciente = $request->input('derivacion.id_paciente');
+                $derivacion->motivo_derivacion = $request->input('derivacion.motivo_derivacion');
+                $derivacion->id_area = $request->input('derivacion.id_area');
+                $derivacion->fecha_para_atencion = $request->input('derivacion.fecha_para_atencion');
+                $derivacion->hora_para_atencion = $request->input('derivacion.hora_para_atencion');
+                $derivacion->id_estado_derivacion = $request->input('derivacion.id_estado_derivacion');
+                $derivacion->id_turno_asignado = $request->input('derivacion.id_turno_asignado');
+                $derivacion->id_funcionario_que_derivo = Auth::id();
+                $derivacion->fecha_derivacion = now();
+                $derivacion->save();
+
+                // Actualizar turno
+                $turno = CpuTurno::find($request->input('derivacion.id_turno_asignado'));
+                $turno->id_paciente = $request->input('derivacion.id_paciente');
+                $turno->estado = 7;
+                $turno->save();
+            }
+
+            // Actualizar la derivación original
+            if ($request->has('id_derivacion_actual')) {
+                $derivacionOriginal = CpuDerivacion::find($request->input('id_derivacion_actual'));
+                if ($derivacionOriginal) {
+                    $derivacionOriginal->id_estado_derivacion = 2;
+                    $derivacionOriginal->save();
+                }
+            }
+
+            DB::commit();
+            return response()->json(['success' => true, 'atencion_id' => $atencion->id]);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Error al guardar la atención de medicina general:', ['exception' => $e->getMessage()]);
+            return response()->json(['error' => 'Error al guardar la atención de medicina general'], 500);
+        }
+    }
 }

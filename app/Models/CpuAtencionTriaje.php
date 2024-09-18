@@ -16,6 +16,7 @@ class CpuAtencionTriaje extends Model
         'talla',
         'peso',
         'temperatura',
+        'saturacion',
         'presion_sistolica',
         'presion_diastolica'
     ];

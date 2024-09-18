@@ -276,6 +276,7 @@ class CpuAtencionesController extends Controller
             'talla' => 'required|integer',
             'peso' => 'required|numeric',
             'temperatura' => 'required|numeric',
+            'saturacion' => 'required|numeric',
             'presion_sistolica' => 'required|integer',
             'presion_diastolica' => 'required|integer',
         ]);
@@ -310,6 +311,7 @@ class CpuAtencionesController extends Controller
             $triaje->talla = $request->input('talla');
             $triaje->peso = $request->input('peso');
             $triaje->temperatura = $request->input('temperatura');
+            $triaje->saturacion = $request->input('saturacion');
             $triaje->presion_sistolica = $request->input('presion_sistolica');
             $triaje->presion_diastolica = $request->input('presion_diastolica');
             $triaje->save();
@@ -333,11 +335,11 @@ class CpuAtencionesController extends Controller
             'id_funcionario' => 'required|integer',
             'id_paciente' => 'required|integer',
             'id_derivacion' => 'required|integer|exists:cpu_derivaciones,id',
-            'talla' => 'required|numeric',
-            'peso' => 'required|numeric',
-            'temperatura' => 'required|numeric',
-            'presion_sistolica' => 'required|numeric',
-            'presion_diastolica' => 'required|numeric',
+            // 'talla' => 'required|numeric',
+            // 'peso' => 'required|numeric',
+            // 'temperatura' => 'required|numeric',
+            // 'presion_sistolica' => 'required|numeric',
+            // 'presion_diastolica' => 'required|numeric',
             'imc' => 'nullable|numeric',
             'peso_ideal' => 'nullable|numeric',
             'estado_paciente' => 'nullable|string|max:50',
@@ -345,6 +347,8 @@ class CpuAtencionesController extends Controller
             'motivo' => 'nullable|string',
             'patologia' => 'nullable|string',
             'alergias' => 'nullable|json',
+            'recordatorio_24h' => 'nullable|json',
+            'analisis_clinicos' => 'nullable|file|mimes:pdf',
             'intolerancias' => 'nullable|json',
             'nombre_plan_nutricional' => 'nullable|string|max:255',
             'plan_nutricional' => 'nullable|json',
@@ -355,6 +359,27 @@ class CpuAtencionesController extends Controller
 
         if ($validator->fails()) {
             return response()->json(['error' => $validator->errors()], 400);
+        }
+
+        $rutaArchivo = null;
+
+        if ($request->hasFile('analisis_clinicos')) {
+            $archivo = $request->file('analisis_clinicos');
+            $nombreArchivo = 'analisis_' . $request->input('cedula') . '.pdf'; // Cambiado para usar la cédula del paciente
+
+            // Definir la ruta del directorio
+            $directorioDestino = public_path('Files/analisis_clinico');
+
+            // Verificar si el directorio existe, si no, crearlo
+            if (!file_exists($directorioDestino)) {
+                mkdir($directorioDestino, 0775, true); // Crea el directorio si no existe
+            }
+
+            $archivo->move($directorioDestino, $nombreArchivo);
+
+            // Guardar el archivo en el directorio especificado
+            $rutaArchivo = $nombreArchivo; // Solo el nombre del archivo
+            Log::info('Archivo guardado:', ['ruta' => $rutaArchivo]);
         }
 
         DB::beginTransaction();
@@ -384,25 +409,51 @@ class CpuAtencionesController extends Controller
             $atencion->tipo_atencion = $request->input('tipo_atencion');
             $atencion->save();
 
+            $triaje = CpuAtencionTriaje::where('id_derivacion', $request->input('id_derivacion'))->first();
+            if ($triaje) {
+                // Actualizar solo si los valores son diferentes
+                $updateData = [
+                    'talla' => $request->input('talla'),
+                    'peso' => $request->input('peso'),
+                    'temperatura' => $request->input('temperatura'),
+                    'saturacion' => $request->input('saturacion'),
+                    'presion_sistolica' => $request->input('presion_sistolica'),
+                    'presion_diastolica' => $request->input('presion_diastolica'),
+                ];
+                foreach ($updateData as $key => $value) {
+                    if ($triaje[$key] != $value) {
+                        $triaje[$key] = $value;
+                    }
+                }
+                $triaje->save();
+            }
+
             // Guardar la atención nutricional
             $nutricion = new CpuAtencionNutricion();
             $nutricion->id_derivacion = $request->input('id_derivacion');
-            $nutricion->talla = $request->input('talla');
-            $nutricion->peso = $request->input('peso');
-            $nutricion->temperatura = $request->input('temperatura');
-            $nutricion->presion_sistolica = $request->input('presion_sistolica');
-            $nutricion->presion_diastolica = $request->input('presion_diastolica');
+            // $nutricion->talla = $request->input('talla');
+            // $nutricion->peso = $request->input('peso');
+            // $nutricion->temperatura = $request->input('temperatura');
+            // $nutricion->presion_sistolica = $request->input('presion_sistolica');
+            // $nutricion->presion_diastolica = $request->input('presion_diastolica');
             $nutricion->imc = $request->input('imc');
             $nutricion->peso_ideal = $request->input('peso_ideal');
             $nutricion->estado_paciente = $request->input('estado_paciente');
             $nutricion->antecedente_medico = $request->input('antecedente_medico');
             $nutricion->patologia = $request->input('patologia');
+            $nutricion->recordatorio_24h = json_decode($request->input('recordatorio_24h'), true);
+            $nutricion->analisis_clinicos = $rutaArchivo;
             $nutricion->alergias = json_decode($request->input('alergias'), true);
             $nutricion->intolerancias = json_decode($request->input('intolerancias'), true);
             $nutricion->nombre_plan_nutricional = $request->input('nombre_plan_nutricional');
             $nutricion->plan_nutricional = json_decode($request->input('plan_nutricional'), true);
             $nutricion->permitidos = json_decode($request->input('permitidos'), true);
             $nutricion->no_permitidos = json_decode($request->input('no_permitidos'), true);
+
+            if ($rutaArchivo) {
+                $nutricion->analisis_clinicos = $rutaArchivo;
+            }
+
             $nutricion->save();
 
             // Guardar caso (si existe id_estado)
@@ -411,6 +462,42 @@ class CpuAtencionesController extends Controller
                 $caso->nombre_caso = $request->input('nombre_plan_nutricional');
                 $caso->id_estado = $request->input('id_estado');
                 $caso->save();
+            }
+
+            // Verificar si se envía el `id_turno_asignado`
+            if ($request->filled('id_turno_asignado')) {
+                Log::info('Valor de id_turno_asignado:', ['id_turno_asignado' => $request->input('id_turno_asignado')]);
+                try {
+                    // Validar los datos de derivación
+                    $derivacionData = $request->validate([
+                        'id_doctor_al_que_derivan' => 'required|integer|exists:users,id',
+                        'id_paciente' => 'required|integer|exists:cpu_personas,id',
+                        'motivo_derivacion' => 'required|string',
+                        'detalle_derivacion' => 'required|string',
+                        'id_area' => 'required|integer',
+                        'fecha_para_atencion' => 'required|date',
+                        'hora_para_atencion' => 'required|date_format:H:i:s',
+                        'id_estado_derivacion' => 'integer|exists:cpu_estados,id',
+                        'id_turno_asignado' => 'required|integer|exists:cpu_turnos,id_turnos',
+                    ]);
+
+                    // Lógica adicional si la validación es exitosa
+                    $derivacionData['ate_id'] = $atencion->id;
+                    $derivacionData['id_funcionario_que_derivo'] = $request->input('id_funcionario');
+                    $derivacionData['fecha_derivacion'] = Carbon::now();
+                    $derivacion = CpuDerivacion::create($derivacionData);
+
+                    // Actualizar el estado del turno relacionado
+                    $turno = CpuTurno::findOrFail($derivacionData['id_turno_asignado']);
+                    $turno->estado = 2; // Actualiza el estado del turno a 2
+                    $turno->save();
+                } catch (\Illuminate\Validation\ValidationException $e) {
+                    // Capturar los errores de validación y devolver una respuesta JSON
+                    return response()->json([
+                        'error' => 'Error de validación',
+                        'messages' => $e->errors(), // Aquí se devuelven los detalles de los errores
+                    ], 422);
+                }
             }
 
             DB::commit();

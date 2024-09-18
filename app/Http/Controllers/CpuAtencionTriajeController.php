@@ -39,6 +39,7 @@ class CpuAtencionTriajeController extends Controller
             'talla' => $triaje->talla,
             'peso' => $triaje->peso,
             'temperatura' => $triaje->peso,
+            'saturacion' => $triaje->saturacion,
             'presion_sistolica' => $triaje->presion_sistolica,
             'presion_diastolica' => $triaje->presion_diastolica
         ]);
@@ -67,6 +68,7 @@ class CpuAtencionTriajeController extends Controller
             'talla' => $triaje->talla,
             'peso' => $triaje->peso,
             'temperatura' => $triaje->temperatura,
+            'saturacion' => $triaje->saturacion,
             'presion_sistolica' => $triaje->presion_sistolica,
             'presion_diastolica' => $triaje->presion_diastolica,
             'saturacion' => $triaje->saturacion

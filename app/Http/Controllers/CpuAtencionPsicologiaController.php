@@ -52,10 +52,10 @@ class CpuAtencionPsicologiaController extends Controller
             'descripcionfinal' => 'nullable|string',
             'reactivos' => 'nullable|string',
         ]);
-    
+
         // Inicia la transacción
         DB::beginTransaction();
-    
+
         try {
             // Crear o asociar el caso y la atención psicológica
             if ($request->activarcaso && in_array($request->tipo_atencion, ['INICIO'])) {
@@ -63,7 +63,7 @@ class CpuAtencionPsicologiaController extends Controller
                     'nombre_caso' => $request->caso,
                     'id_estado' => 8, // Estado inicial del caso
                 ]);
-    
+
                 $cpuAtencion = CpuAtencion::create([
                     'id_funcionario' => $request->funcionarios,
                     'id_persona' => $request->id_persona,
@@ -99,7 +99,7 @@ class CpuAtencionPsicologiaController extends Controller
                     'id_cie10' => $request->id_cie10,
                     'id_estado' =>1,
                 ]);
-    
+
                 if ($request->input('altacaso') && $request->input('tipo_atencion') === 'SUBSECUENTE') {
                     CpuCasosMedicos::where('id', $request->id_caso)->update(['id_estado' => 9]);
                 }
@@ -107,7 +107,7 @@ class CpuAtencionPsicologiaController extends Controller
                     CpuCasosMedicos::where('id', $request->id_caso)->update(['id_estado' => 8]);
                 }
             }
-    
+
             // Crear la atención de psicología con el ID obtenido
             $atencionPsicologia = CpuAtencionPsicologia::create([
                 'id_cpu_atencion' => $cpuAtencion->id,
@@ -116,9 +116,9 @@ class CpuAtencionPsicologiaController extends Controller
                 'medio_atencion' => $request->medio_atencion,
                 'motivo_consulta' => $request->motivo,
                 'evolucion' => $request->evolucion,
-                'diagnostico' => $request->diagnostico,
-                'referido' => $request->referido,
-                'acciones_afirmativas' => $request->acciones_afirmativas,
+                'diagnodo' => $request->referido,
+                'accionstico' => $request->diagnostico,
+                'referies_afirmativas' => $request->acciones_afirmativas,
                 'consumo_sustancias' => $request->consumo_sustancias,
                 'frecuencia_consumo' => $request->frecuencia_consumo,
                 'detalles_complementarios' => $request->detalles_complementarios,
@@ -137,7 +137,7 @@ class CpuAtencionPsicologiaController extends Controller
                 'descripcionfinal' => $request->descripcionfinal,
                 'resu_reactivos'=> $request->reactivos,
             ]);
-    
+
             // Guardar datos de derivación si el switch de derivación está activo
             if ($request->input('derivacionFlag')) {
                 $derivacionData = $request->validate([
@@ -151,16 +151,16 @@ class CpuAtencionPsicologiaController extends Controller
                     'id_estado_derivacion' => 'integer|exists:cpu_estados,id',
                     'id_turno_asignado' => 'required|integer|exists:cpu_turnos,id_turnos',
                 ]);
-    
+
                 $derivacionData['ate_id'] = $cpuAtencion->id;
                 $derivacionData['id_funcionario_que_derivo'] = Auth::id();
                 $derivacionData['fecha_derivacion'] = Carbon::now();
                 $derivacion = CpuDerivacion::create($derivacionData);
-    
+
                 // Actualizar el estado del turno si la derivación es exitosa
                 CpuTurno::where('id_turnos', $derivacionData['id_turno_asignado'])
                     ->update(['estado' => 18]);
-    
+
                 // Guardar el triaje siempre después de la derivación
                 $triaje = new CpuAtencionTriaje();
                 $triaje->id_derivacion = $derivacion->id; // Usar el ID de la derivación recién creada
@@ -171,32 +171,32 @@ class CpuAtencionPsicologiaController extends Controller
                 $triaje->presion_diastolica = $request->input('presion_diastolica');
                 $triaje->save();
             }
-    
+
             // Confirmar la transacción
             DB::commit();
-    
+
             return response()->json($atencionPsicologia, 201);
-    
+
         } catch (\Exception $e) {
             // Revertir la transacción en caso de error
             DB::rollBack();
-    
+
             return response()->json([
                 'error' => 'Ocurrió un error durante el proceso de guardado',
                 'details' => $e->getMessage(),
             ], 500);
         }
     }
-    
+
     // Nueva función para actualizar el estado de derivacion
     public function actulizarderivacionsico(Request $request)
     {
         $id_derivacion = $request->input('id_derivacion');
         CpuDerivacion::where('id', $id_derivacion)->update(['id_estado_derivacion' => 2]);
-    
+
         return response()->json(['message' => 'Derivación actualizada correctamente']);
     }
-        
+
     public function index()
     {
         $casos = CpuCasosMedicos::all();
@@ -205,12 +205,12 @@ class CpuAtencionPsicologiaController extends Controller
     public function obtenerCie10(Request $request)
     {
         $query = $request->input('query');
-    
+
         $cie10 = DB::table('cpu_cie10')
             ->where('cie10', 'ILIKE', "%{$query}%")
             ->orWhere('descripcioncie', 'ILIKE', "%{$query}%")
             ->get();
-    
+
         return response()->json($cie10);
     }
 }

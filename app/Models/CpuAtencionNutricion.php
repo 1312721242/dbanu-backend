@@ -10,16 +10,19 @@ class CpuAtencionNutricion extends Model
 
     protected $fillable = [
         'id_derivacion',
-        'talla',
-        'peso',
-        'temperatura',
-        'presion_sistolica',
-        'presion_diastolica',
+        // 'talla',
+        // 'peso',
+        // 'temperatura',
+        // 'presion_sistolica',
+        // 'presion_diastolica',
         'imc',
         'peso_ideal',
         'estado_paciente',
         'antecedente_medico',
+        'motivo',
         'patologia',
+        'recordatorio_24h',
+        'analisis_clinicos',
         'alergias',
         'intolerancias',
         'nombre_plan_nutricional',
@@ -29,6 +32,7 @@ class CpuAtencionNutricion extends Model
     ];
 
     protected $casts = [
+        'recordatorio_24h' => 'array',
         'alergias' => 'array',
         'intolerancias' => 'array',
         'plan_nutricional' => 'array',

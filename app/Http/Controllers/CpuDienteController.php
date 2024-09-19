@@ -22,6 +22,7 @@ class CpuDienteController extends Controller
         }
 
         $respuesta = [
+            'id_paciente' => $diente->id_paciente,
             'arcada' => [
                 'adulto' => $arcada['adulto']
             ]

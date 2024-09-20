@@ -335,17 +335,12 @@ class CpuAtencionesController extends Controller
             'id_funcionario' => 'required|integer',
             'id_paciente' => 'required|integer',
             'id_derivacion' => 'required|integer|exists:cpu_derivaciones,id',
-            // 'talla' => 'required|numeric',
-            // 'peso' => 'required|numeric',
-            // 'temperatura' => 'required|numeric',
-            // 'presion_sistolica' => 'required|numeric',
-            // 'presion_diastolica' => 'required|numeric',
             'imc' => 'nullable|numeric',
             'peso_ideal' => 'nullable|numeric',
             'estado_paciente' => 'nullable|string|max:50',
             'antecedente_medico' => 'nullable|string',
+            'diagnostico' => 'nullable|json',
             'motivo' => 'nullable|string',
-            'patologia' => 'nullable|string',
             'alergias' => 'nullable|json',
             'recordatorio_24h' => 'nullable|json',
             'analisis_clinicos' => 'nullable|file|mimes:pdf',
@@ -365,20 +360,15 @@ class CpuAtencionesController extends Controller
 
         if ($request->hasFile('analisis_clinicos')) {
             $archivo = $request->file('analisis_clinicos');
-            $nombreArchivo = 'analisis_' . $request->input('cedula') . '.pdf'; // Cambiado para usar la cédula del paciente
-
-            // Definir la ruta del directorio
+            $nombreArchivo = 'analisis_' . $request->input('cedula') . '.pdf';
             $directorioDestino = public_path('Files/analisis_clinico');
 
-            // Verificar si el directorio existe, si no, crearlo
             if (!file_exists($directorioDestino)) {
-                mkdir($directorioDestino, 0775, true); // Crea el directorio si no existe
+                mkdir($directorioDestino, 0775, true);
             }
 
             $archivo->move($directorioDestino, $nombreArchivo);
-
-            // Guardar el archivo en el directorio especificado
-            $rutaArchivo = $nombreArchivo; // Solo el nombre del archivo
+            $rutaArchivo = $nombreArchivo;
             Log::info('Archivo guardado:', ['ruta' => $rutaArchivo]);
         }
 
@@ -392,55 +382,64 @@ class CpuAtencionesController extends Controller
 
             // Actualizar el estado del turno relacionado
             $turno = CpuTurno::findOrFail($derivacion->id_turno_asignado);
-            $turno->estado = 2; // Actualiza el estado del turno a 2
+            $turno->estado = 2;
             $turno->save();
+
+            // Guardar caso (si existe id_estado)
+            $idCaso = null;
+            if ($request->has('id_estado')) {
+                $caso = new CpuCasosMedicos();
+                $caso->nombre_caso = $request->input('nombre_plan_nutricional');
+                $caso->id_estado = $request->input('id_estado');
+                $caso->save();
+                $idCaso = $caso->id;
+            }
 
             // Guardar la atención
             $atencion = new CpuAtencion();
             $atencion->id_funcionario = $request->input('id_funcionario');
             $atencion->id_persona = $request->input('id_paciente');
             $atencion->via_atencion = $request->input('via_atencion');
-            $atencion->motivo_atencion = $request->input('motivo_atencion');
+            $atencion->motivo_atencion = $request->input('motivo');
             $atencion->id_tipo_usuario = $request->input('id_tipo_usuario');
+            $atencion->diagnostico = json_decode($request->input('diagnostico'), true);
             $atencion->detalle_atencion = 'Atención Nutrición';
             $atencion->fecha_hora_atencion = Carbon::now();
             $atencion->anio_atencion = Carbon::now()->year;
             $atencion->recomendacion = $request->input('recomendaciones');
             $atencion->tipo_atencion = $request->input('tipo_atencion');
+            $atencion->id_caso = $idCaso;
             $atencion->save();
 
             $triaje = CpuAtencionTriaje::where('id_derivacion', $request->input('id_derivacion'))->first();
+            $updateData = [
+                'talla' => $request->input('talla'),
+                'peso' => $request->input('peso'),
+                'temperatura' => $request->input('temperatura'),
+                'saturacion' => $request->input('saturacion'),
+                'presion_sistolica' => $request->input('presion_sistolica'),
+                'presion_diastolica' => $request->input('presion_diastolica'),
+            ];
+
             if ($triaje) {
-                // Actualizar solo si los valores son diferentes
-                $updateData = [
-                    'talla' => $request->input('talla'),
-                    'peso' => $request->input('peso'),
-                    'temperatura' => $request->input('temperatura'),
-                    'saturacion' => $request->input('saturacion'),
-                    'presion_sistolica' => $request->input('presion_sistolica'),
-                    'presion_diastolica' => $request->input('presion_diastolica'),
-                ];
                 foreach ($updateData as $key => $value) {
                     if ($triaje[$key] != $value) {
                         $triaje[$key] = $value;
                     }
                 }
                 $triaje->save();
+            } else {
+                $updateData['id_derivacion'] = $request->input('id_derivacion');
+                CpuAtencionTriaje::create($updateData);
             }
 
             // Guardar la atención nutricional
             $nutricion = new CpuAtencionNutricion();
             $nutricion->id_derivacion = $request->input('id_derivacion');
-            // $nutricion->talla = $request->input('talla');
-            // $nutricion->peso = $request->input('peso');
-            // $nutricion->temperatura = $request->input('temperatura');
-            // $nutricion->presion_sistolica = $request->input('presion_sistolica');
-            // $nutricion->presion_diastolica = $request->input('presion_diastolica');
             $nutricion->imc = $request->input('imc');
             $nutricion->peso_ideal = $request->input('peso_ideal');
             $nutricion->estado_paciente = $request->input('estado_paciente');
             $nutricion->antecedente_medico = $request->input('antecedente_medico');
-            $nutricion->patologia = $request->input('patologia');
             $nutricion->recordatorio_24h = json_decode($request->input('recordatorio_24h'), true);
             $nutricion->analisis_clinicos = $rutaArchivo;
             $nutricion->alergias = json_decode($request->input('alergias'), true);
@@ -455,14 +454,6 @@ class CpuAtencionesController extends Controller
             }
 
             $nutricion->save();
-
-            // Guardar caso (si existe id_estado)
-            if ($request->has('id_estado')) {
-                $caso = new CpuCasosMedicos();
-                $caso->nombre_caso = $request->input('nombre_plan_nutricional');
-                $caso->id_estado = $request->input('id_estado');
-                $caso->save();
-            }
 
             // Verificar si se envía el `id_turno_asignado`
             if ($request->filled('id_turno_asignado')) {

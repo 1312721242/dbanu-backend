@@ -71,7 +71,6 @@ class CpuAtencionTriajeController extends Controller
             'saturacion' => $triaje->saturacion,
             'presion_sistolica' => $triaje->presion_sistolica,
             'presion_diastolica' => $triaje->presion_diastolica,
-            'saturacion' => $triaje->saturacion
         ]);
     }
 }

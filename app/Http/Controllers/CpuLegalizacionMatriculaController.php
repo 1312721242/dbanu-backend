@@ -10,8 +10,7 @@ use Illuminate\Support\Facades\DB;
 use App\Models\CpuMatriculaConfiguracion;
 use App\Models\CpuCasosMatricula;
 use App\Models\CpuSecretariaMatricula;
-
-
+use Carbon\Carbon;
 
 class CpuLegalizacionMatriculaController extends Controller
 {
@@ -20,7 +19,7 @@ class CpuLegalizacionMatriculaController extends Controller
         $this->middleware('auth:sanctum');
     }
 
-      public function uploadPdf(Request $request)
+    public function uploadPdf(Request $request)
     {
         // Obtener la configuración de matrícula activa
         $matriculaConfiguracion = CpuMatriculaConfiguracion::where('id_estado', 8)->first();
@@ -31,8 +30,10 @@ class CpuLegalizacionMatriculaController extends Controller
 
         // Verificar si la fecha actual está dentro del rango de fechas de matrícula
         $currentDate = now();
-        if ($currentDate < $matriculaConfiguracion->fecha_inicio_matricula_ordinaria ||
-            $currentDate > $matriculaConfiguracion->fecha_fin_matricula_extraordinaria) {
+        if (
+            $currentDate < $matriculaConfiguracion->fecha_inicio_matricula_ordinaria ||
+            $currentDate > $matriculaConfiguracion->fecha_fin_matricula_extraordinaria
+        ) {
             return response()->json(['error' => 'La subida de archivos no está permitida fuera del periodo de matrícula.'], 401);
         }
 
@@ -111,6 +112,7 @@ class CpuLegalizacionMatriculaController extends Controller
         if ($casoExistente) {
             // Actualizar el caso existente
             $casoExistente->id_estado = 13;
+            $casoExistente->fecha_actualizacion = Carbon::now();
             $casoExistente->save();
         } else {
             // Crear un nuevo caso de matrícula
@@ -156,7 +158,7 @@ class CpuLegalizacionMatriculaController extends Controller
             'cedula' => $user->cedula,
             'apellidos' => $user->apellidos,
             'nombres' => $user->nombres,
-            'copia_identificacion' => url('Files/' .$user->copia_identificacion),
+            'copia_identificacion' => url('Files/' . $user->copia_identificacion),
             'estado_identificacion' => $user->estado_identificacion,
             'copia_titulo_acta_grado' => url('Files/' .  $user->copia_titulo_acta_grado),
             'estado_titulo' => $user->estado_titulo,
@@ -166,6 +168,4 @@ class CpuLegalizacionMatriculaController extends Controller
 
         return response()->json($personData);
     }
-
-
 }

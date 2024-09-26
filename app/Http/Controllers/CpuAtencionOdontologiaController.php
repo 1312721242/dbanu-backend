@@ -15,6 +15,11 @@ class CpuAtencionOdontologiaController extends Controller
         try {
             DB::beginTransaction();
     
+            // Validar que los campos necesarios estén presentes
+            if (!isset($request->atencion['id_persona'], $request->atencion['id_funcionario'], $request->odontograma['arcada'])) {
+                return response()->json(['message' => 'Datos insuficientes para procesar la atención'], 422);
+            }
+
             // Crear la atención general
             $atencion = CpuAtencion::create([
                 'id_persona' => $request->atencion['id_persona'],
@@ -24,40 +29,59 @@ class CpuAtencionOdontologiaController extends Controller
                 'fecha_hora_atencion' => now(),
                 'anio_atencion' => now()->year,
                 'diagnostico' => json_encode($request->diagnostico),
+                'id_estado' =>1,
             ]);
-    
-            // Si el id_diente existe, actualiza, sino inserta uno nuevo
-            if (isset($request->odontograma['id_diente']) && !empty($request->odontograma['id_diente'])) {
-                // Actualizar el registro del diente existente
-                $cpuDientes = CpuDiente::where('id_diente', $request->odontograma['id_diente'])
-                    ->update([
-                        'arcada' => json_encode($request->odontograma['arcada']),
-                    ]);
-            } else {
-                // Crear un nuevo registro en la tabla `cpu_dientes`
-                $cpuDientes = CpuDiente::create([
-                    'id_paciente' => $request->atencion['id_persona'],
-                    'arcada' => json_encode($request->odontograma['arcada']),
-                ]);
+
+            // Inicializamos un array para guardar todas las atenciones odontológicas creadas
+            $atencionesOdontologicas = [];
+
+            // Iterar sobre los dientes de la arcada (tanto adulto como infantil)
+            $arcada = $request->odontograma['arcada']; // Aquí están los dientes
+
+            foreach (['adulto', 'infantil'] as $tipo) {
+                if (isset($arcada[$tipo])) {
+                    foreach ($arcada[$tipo] as $diente) {
+                        // Verificar si el id_diente existe
+                        if (isset($diente['id']) && !empty($diente['id'])) {
+                            // Buscar y actualizar el registro del diente existente
+                            $cpuDiente = CpuDiente::find($diente['id']);
+                            if ($cpuDiente) {
+                                $cpuDiente->arcada = json_encode($diente['faces']);
+                                $cpuDiente->save();  // Guardar los cambios
+                            } else {
+                                return response()->json(['message' => 'Diente no encontrado'], 404);
+                            }
+                        } else {
+                            // Crear un nuevo registro en la tabla `cpu_dientes`
+                            $cpuDiente = CpuDiente::create([
+                                'id_paciente' => $request->atencion['id_persona'],
+                                'arcada' => json_encode($diente['faces']),
+                            ]);
+                        }
+
+                        // Crear la atención odontológica específica para cada diente
+                        $atencionOdontologica = CpuAtencionOdontologia::create([
+                            'id_cpu_atencion' => $atencion->id,
+                            'id_diente' => $cpuDiente->id,  // Relacionar la atención con el diente
+                            'enfermedad_actual' => $request->atencion['enfermedad_proble_actual'] ?? null,
+                            'examenes_estomatognatico' => json_encode($request->examen_estomatognatico ?? []),
+                            'planes' => json_encode($request->planes ?? []),
+                            'tratamiento' => json_encode($request->tratamientos ?? []),
+                        ]);
+
+                        // Agregar la atención odontológica creada al array
+                        $atencionesOdontologicas[] = $atencionOdontologica;
+                    }
+                }
             }
-    
-            // Crear la atención odontológica específica
-            $atencionOdontologica = CpuAtencionOdontologia::create([
-                'id_cpu_atencion' => $atencion->id,
-                'id_diente' => $cpuDientes->id_diente,
-                'enfermedad_actual' => $request->atencion['enfermedad_proble_actual'],
-                'examenes_estomatognatico' => json_encode($request->examen_estomatognatico),
-                'planes' => json_encode($request->planes),
-                'tratamiento' => json_encode($request->tratamientos),
-            ]);
     
             DB::commit();
     
             return response()->json([
                 'message' => 'Atención odontológica guardada con éxito',
                 'atencion' => $atencion,
-                'atencionOdontologica' => $atencionOdontologica,
-                'cpuDientes' => $cpuDientes
+                'atencionesOdontologicas' => $atencionesOdontologicas, // Devolver todas las atenciones creadas
+                'cpuDiente' => $cpuDiente // Regresando el último diente procesado
             ], 201);
     
         } catch (\Exception $e) {
@@ -68,5 +92,4 @@ class CpuAtencionOdontologiaController extends Controller
             ], 500);
         }
     }
-    
 }

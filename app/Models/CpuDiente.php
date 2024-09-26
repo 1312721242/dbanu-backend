@@ -7,21 +7,13 @@ use Illuminate\Database\Eloquent\Model;
 
 class CpuDiente extends Model
 {
-    use HasFactory;
-
-    protected $table = 'cpu_dientes';
-
     protected $fillable = [
         'id_paciente',
         'arcada',
     ];
 
     protected $casts = [
-        'arcada' => 'json',
+        'arcada' => 'array',
     ];
-
-    public function paciente()
-    {
-        return $this->belongsTo(CpuPersona::class, 'id_paciente');
-    }
 }
+

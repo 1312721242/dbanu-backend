@@ -14,6 +14,17 @@ class CpuAtencionOdontologiaController extends Controller
     {
         try {
             DB::beginTransaction();
+            // Validar los datos del request
+            $request->validate([
+                'atencion.id_persona' => 'required|exists:cpu_personas,id',
+                'atencion.id_funcionario' => 'required|exists:cpu_funcionarios,id',
+                'odontograma.id_diente' => 'nullable|exists:cpu_dientes,id', // Si id_diente no existe, esto puede fallar
+                'atencion.motivo_atencion' => 'required|string',
+                'odontograma.arcada' => 'required|array', // Asegúrate de que sea un array
+                'diagnostico' => 'required|array',
+                'examen_estomatognatico' => 'required|array',
+                'tratamientos' => 'required|array',
+            ]);
     
             // Crear la atención general
             $atencion = CpuAtencion::create([
@@ -25,8 +36,14 @@ class CpuAtencionOdontologiaController extends Controller
                 'anio_atencion' => now()->year,
                 'diagnostico' => json_encode($request->diagnostico),
             ]);
-    
-            // Si el id_diente existe, actualiza, sino inserta uno nuevo
+            if ($validator->fails()) {
+                return response()->json([
+                    'message' => 'Error en la validación',
+                    'errors' => $validator->errors()
+                ], 422);
+            }
+            // Manejar el odontograma (crear o actualizar diente)
+            $cpuDientes = null;
             if (isset($request->odontograma['id_diente']) && !empty($request->odontograma['id_diente'])) {
                 // Actualizar el registro del diente existente
                 $cpuDientes = CpuDiente::where('id_diente', $request->odontograma['id_diente'])
@@ -41,6 +58,10 @@ class CpuAtencionOdontologiaController extends Controller
                 ]);
             }
     
+            if (!$cpuDientes) {
+                throw new \Exception('No se pudo procesar el odontograma.');
+            }
+    
             // Crear la atención odontológica específica
             $atencionOdontologica = CpuAtencionOdontologia::create([
                 'id_cpu_atencion' => $atencion->id,
@@ -52,21 +73,15 @@ class CpuAtencionOdontologiaController extends Controller
             ]);
     
             DB::commit();
-    
-            return response()->json([
-                'message' => 'Atención odontológica guardada con éxito',
-                'atencion' => $atencion,
-                'atencionOdontologica' => $atencionOdontologica,
-                'cpuDientes' => $cpuDientes
-            ], 201);
-    
+            return response()->json(['message' => 'Atención guardada con éxito'], 201);
         } catch (\Exception $e) {
             DB::rollBack();
             return response()->json([
                 'message' => 'Error al guardar la atención odontológica',
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(), // Esto da más detalles sobre el error
             ], 500);
         }
-    }
+    }  
     
 }

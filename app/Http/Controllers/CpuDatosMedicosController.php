@@ -37,9 +37,16 @@ class CpuDatosMedicosController extends Controller
 
     public function show($id_persona)
     {
-        $datosMedicos = CpuDatosMedicos::where('id_persona', $id_persona)->firstOrFail();
+        $datosMedicos = CpuDatosMedicos::where('id_persona', $id_persona)->first();
+    
+        // Si no se encuentran datos, retornamos una respuesta vacía
+        if (!$datosMedicos) {
+            return response()->json(['message' => 'No se encontraron datos médicos'], 200);
+        }
+    
         return response()->json($datosMedicos);
     }
+    
 
     public function update(Request $request, $id)
     {

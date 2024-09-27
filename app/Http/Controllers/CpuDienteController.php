@@ -22,8 +22,6 @@ class CpuDienteController extends Controller
             ]
         ], 404);
     }
-
-    // Dado que Eloquent ya castea automáticamente a array, no necesitamos json_decode aquí
     $arcada = $diente->arcada; // Eloquent ya lo convierte a array, no uses json_decode
 
     // Preparar la respuesta con los datos del paciente

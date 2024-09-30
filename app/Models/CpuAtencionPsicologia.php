@@ -61,6 +61,5 @@ class CpuAtencionPsicologia extends Model
         'abordaje_caso' => 'array',
         'prescripcion' => 'array',
         'descripcionfinal' => 'array',
-        'resu_reactivos' => 'array',
     ];
 }

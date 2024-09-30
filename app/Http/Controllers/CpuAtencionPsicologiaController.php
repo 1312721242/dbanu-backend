@@ -29,7 +29,10 @@ class CpuAtencionPsicologiaController extends Controller
             'motivo' => 'nullable|string',
             'evolucion' => 'nullable|string',
             'anio_atencion' => 'required|integer',
-            'diagnostico' => 'nullable|string',
+            'diagnostico' => 'nullable|array',
+            'diagnostico.*.cie10' => 'required|string', // Valida que cada diagnóstico tenga un código CIE-10
+            'diagnostico.*.diagnostico' => 'required|string', // Valida que cada diagnóstico tenga una descripción
+            'diagnostico.*.tipo' => 'required|string|in:PRESUNTIVO,DEFINITIVO', // Valida que el tipo sea válido
             'referido' => 'nullable|string',
             'acciones_afirmativas' => 'required|string',
             'consumo_sustancias' => 'required|string',
@@ -76,7 +79,7 @@ class CpuAtencionPsicologiaController extends Controller
                     'id_tipo_usuario' => $request->tipo_usuario,
                     'tipo_atencion' => $request->tipo_atencion,
                     'evolucion_enfermedad' => $request->evolucion,
-                    'diagnostico' => $request->diagnostico,
+                    'diagnostico' => is_array($request->diagnostico) ? json_encode($request->diagnostico) : $request->diagnostico,
                     'prescripcion' => $request->observacion,
                     'id_cie10' => $request->id_cie10,
                     'id_estado' =>1,
@@ -94,7 +97,7 @@ class CpuAtencionPsicologiaController extends Controller
                     'id_tipo_usuario' => $request->tipo_usuario,
                     'tipo_atencion' => $request->tipo_atencion,
                     'evolucion_enfermedad' => $request->evolucion,
-                    'diagnostico' => $request->diagnostico,
+                    'diagnostico' => is_array($request->diagnostico) ? json_encode($request->diagnostico) : $request->diagnostico,
                     'prescripcion' => $request->observacion,
                     'id_cie10' => $request->id_cie10,
                     'id_estado' =>1,

@@ -240,28 +240,46 @@ class CpuAtencionesController extends Controller
         return response()->json(['message' => 'Atención no encontrada'], 404);
     }
 
-    public function obtenerUltimaConsulta($usr_tipo, $id_persona, $id_caso)
+    public function obtenerUltimaConsulta($area_atencion, $usr_tipo, $id_persona, $id_caso)
     {
         try {
-            // Busca la última atención del paciente con el id_persona e id_caso especificados
+            // Registra el área de atención en el log
+            Log::info('Área de atención: ' . $area_atencion);
+
+            // Busca la última atención del paciente
             $ultimaConsulta = CpuAtencion::where('id_persona', $id_persona)
                 ->where('id_funcionario', $usr_tipo)
                 ->where('id_caso', $id_caso)
                 ->orderBy('fecha_hora_atencion', 'desc')
                 ->first();
 
-            // Si se encuentra una consulta
-            if ($ultimaConsulta) {
-                // Formatear la fecha para mostrar el día de la semana y el nombre completo del mes en español
-                $ultimaConsulta->fecha_hora_atencion = Carbon::parse($ultimaConsulta->fecha_hora_atencion)->translatedFormat('l, d F Y');
-            } else {
+            if (!$ultimaConsulta) {
                 return response()->json(['mensaje' => 'No se encontraron consultas para el paciente con el caso especificado'], 404);
             }
 
-            // Devuelve la última consulta encontrada
-            return response()->json($ultimaConsulta, 200);
+            // Formatea la fecha
+            $ultimaConsulta->fecha_hora_atencion = Carbon::parse($ultimaConsulta->fecha_hora_atencion)->translatedFormat('l, d F Y');
+
+            // Incluye el diagnóstico
+            $ultimaConsulta->diagnostico = $ultimaConsulta->diagnostico ?? 'Sin diagnóstico';
+
+            // Obtener el id_derivacion
+            $derivacion = CpuDerivacion::where('ate_id', $ultimaConsulta->id)->first();
+            $ultimaConsulta->id_derivacion = $derivacion ? $derivacion->id : null;
+
+            $respuesta = $ultimaConsulta->toArray();
+
+            if (strtoupper($area_atencion) === "NUTRICIÓN") {
+                $atencionNutricion = CpuAtencionNutricion::where('id_derivacion', $ultimaConsulta->id_derivacion)->first();
+
+                if ($atencionNutricion) {
+                    $respuesta['datos_nutricion'] = $atencionNutricion->toArray();
+                }
+            }
+
+            return response()->json($respuesta, 200);
         } catch (\Exception $e) {
-            // Maneja cualquier error que ocurra durante la ejecución
+            Log::error('Error al obtener la última consulta: ' . $e->getMessage());
             return response()->json(['error' => 'Error al obtener la última consulta: ' . $e->getMessage()], 500);
         }
     }
@@ -356,6 +374,8 @@ class CpuAtencionesController extends Controller
             return response()->json(['error' => $validator->errors()], 400);
         }
 
+        Log::info('Diagnóstico antes de insertar:', ['diagnostico' => $request->input('diagnostico')]);
+
         $rutaArchivo = null;
 
         if ($request->hasFile('analisis_clinicos')) {
@@ -402,7 +422,7 @@ class CpuAtencionesController extends Controller
             $atencion->via_atencion = $request->input('via_atencion');
             $atencion->motivo_atencion = $request->input('motivo');
             $atencion->id_tipo_usuario = $request->input('id_tipo_usuario');
-            $atencion->diagnostico = json_decode($request->input('diagnostico'), true);
+            $atencion->diagnostico = is_array($request->diagnostico) ? json_encode($request->diagnostico) : $request->diagnostico;
             $atencion->detalle_atencion = 'Atención Nutrición';
             $atencion->fecha_hora_atencion = Carbon::now();
             $atencion->anio_atencion = Carbon::now()->year;
@@ -439,7 +459,7 @@ class CpuAtencionesController extends Controller
             $nutricion->imc = $request->input('imc');
             $nutricion->peso_ideal = $request->input('peso_ideal');
             $nutricion->estado_paciente = $request->input('estado_paciente');
-            $nutricion->antecedente_medico = $request->input('antecedente_medico');
+            // $nutricion->antecedente_medico = $request->input('antecedente_medico');
             $nutricion->recordatorio_24h = json_decode($request->input('recordatorio_24h'), true);
             $nutricion->analisis_clinicos = $rutaArchivo;
             $nutricion->alergias = json_decode($request->input('alergias'), true);

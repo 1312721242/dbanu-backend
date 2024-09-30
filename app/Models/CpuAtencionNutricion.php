@@ -10,34 +10,30 @@ class CpuAtencionNutricion extends Model
 
     protected $fillable = [
         'id_derivacion',
-        // 'talla',
-        // 'peso',
-        // 'temperatura',
-        // 'presion_sistolica',
-        // 'presion_diastolica',
         'imc',
         'peso_ideal',
         'estado_paciente',
         'antecedente_medico',
-        'motivo',
         'patologia',
         'recordatorio_24h',
         'analisis_clinicos',
         'alergias',
         'intolerancias',
-        'nombre_plan_nutricional',
-        'plan_nutricional',
         'permitidos',
         'no_permitidos',
+        'nombre_plan_nutricional',
+        'plan_nutricional',
     ];
 
     protected $casts = [
-        'recordatorio_24h' => 'array',
-        'alergias' => 'array',
-        'intolerancias' => 'array',
-        'plan_nutricional' => 'array',
-        'permitidos' => 'array',
-        'no_permitidos' => 'array',
+        'imc' => 'float',
+        'peso_ideal' => 'float',
+        'recordatorio_24h' => 'json',
+        'alergias' => 'json',
+        'intolerancias' => 'json',
+        'permitidos' => 'json',
+        'no_permitidos' => 'json',
+        'plan_nutricional' => 'json',
     ];
 
     public function derivacion()

@@ -18,16 +18,16 @@ class CpuDatosMedicosController extends Controller
     {
         $request->validate([
             'id_persona' => 'required|exists:cpu_personas,id',
-            'enfermedades_catastroficas' => 'required|boolean',
+            'enfermedades_catastroficas' => 'nullable|boolean',
             'detalle_enfermedades' => 'nullable|json',
-            'tipo_sangre' => 'required|exists:cpu_tipos_sangre,id',
-            'tiene_seguro_medico' => 'required|boolean',
-            'alergias' => 'required|boolean',
+            'tipo_sangre' => 'nullable|exists:cpu_tipos_sangre,id',
+            'tiene_seguro_medico' => 'nullable|boolean',
+            'alergias' => 'nullable|boolean',
             'detalles_alergias' => 'nullable|json',
-            'embarazada' => 'required|boolean',
+            'embarazada' => 'nullable|boolean',
             'meses_embarazo' => 'nullable|numeric',
             'observacion_embarazo' => 'nullable|string',
-            'dependiente_medicamento' => 'required|boolean',
+            'dependiente_medicamento' => 'nullable|boolean',
             'medicamentos_dependiente' => 'nullable|json',
         ]);
 
@@ -38,15 +38,15 @@ class CpuDatosMedicosController extends Controller
     public function show($id_persona)
     {
         $datosMedicos = CpuDatosMedicos::where('id_persona', $id_persona)->first();
-    
+
         // Si no se encuentran datos, retornamos una respuesta vacía
         if (!$datosMedicos) {
             return response()->json(['message' => 'No se encontraron datos médicos'], 200);
         }
-    
+
         return response()->json($datosMedicos);
     }
-    
+
 
     public function update(Request $request, $id)
     {

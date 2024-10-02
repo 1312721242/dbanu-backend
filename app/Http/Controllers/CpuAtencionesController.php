@@ -571,9 +571,9 @@ class CpuAtencionesController extends Controller
                     $insumoOcupado->fecha_uso = now();
                     $insumoOcupado->save();
                     // Actualizar la cantidad disponible del insumo o medicamento
-                    $insumo = CpuInsumo::find($insumo['id']);
-                    if ($insumo) {
-                        $insumo->decrement('cantidad_unidades', (int)$insumo['cantidad']);
+                    $insumoresul = CpuInsumo::find($insumo['id']);
+                    if ($insumoresul) {
+                        $insumoresul->decrement('cantidad_unidades', (int)$insumo['cantidad']);
                     }
                 }
             }
@@ -603,27 +603,27 @@ class CpuAtencionesController extends Controller
                 $derivacion = new CpuDerivacion();
                 $derivacion->ate_id = $atencion->id;
                 $derivacion->id_doctor_al_que_derivan = $request->input('derivacion.id_doctor_al_que_derivan');
-                $derivacion->id_paciente = $request->input('derivacion.id_paciente');
+                $derivacion->id_paciente = $request->input('id_persona');
                 $derivacion->motivo_derivacion = $request->input('derivacion.motivo_derivacion');
                 $derivacion->id_area = $request->input('derivacion.id_area');
                 $derivacion->fecha_para_atencion = $request->input('derivacion.fecha_para_atencion');
                 $derivacion->hora_para_atencion = $request->input('derivacion.hora_para_atencion');
                 $derivacion->id_estado_derivacion = $request->input('derivacion.id_estado_derivacion');
                 $derivacion->id_turno_asignado = $request->input('derivacion.id_turno_asignado');
-                $derivacion->id_funcionario_que_derivo = Auth::user()->id; // Corregido para utilizar Auth::id() en lugar de Auth::user()->id
+                $derivacion->id_funcionario_que_derivo = $request->input('id_funcionario'); // Corregido para utilizar Auth::id() en lugar de Auth::user()->id
                 $derivacion->fecha_derivacion = now();
                 $derivacion->save();
 
                 // Actualizar turno
                 $turno = CpuTurno::find($request->input('derivacion.id_turno_asignado'));
-                $turno->id_paciente = $request->input('derivacion.id_paciente');
+                $turno->id_paciente = $request->input('id_persona');
                 $turno->estado = 7;
                 $turno->save();
             }
 
             // Actualizar la derivación original
-            if ($request->has('id_derivacion_actual')) {
-                $derivacionOriginal = CpuDerivacion::find($request->input('id_derivacion_actual'));
+            if ($request->has('id_derivacion')) {
+                $derivacionOriginal = CpuDerivacion::find($request->input('id_derivacion'));
                 if ($derivacionOriginal) {
                     $derivacionOriginal->id_estado_derivacion = 2;
                     $derivacionOriginal->save();

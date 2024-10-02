@@ -297,6 +297,9 @@ class CpuAtencionesController extends Controller
             'saturacion' => 'required|numeric',
             'presion_sistolica' => 'required|integer',
             'presion_diastolica' => 'required|integer',
+            'imc' => 'required|string',
+            'pesoIdeal' => 'required|string',
+            'estadoPaciente' => 'required|string',
         ]);
 
         if ($validator->fails()) {
@@ -332,6 +335,9 @@ class CpuAtencionesController extends Controller
             $triaje->saturacion = $request->input('saturacion');
             $triaje->presion_sistolica = $request->input('presion_sistolica');
             $triaje->presion_diastolica = $request->input('presion_diastolica');
+            $triaje->imc = $request->input('imc');
+            $triaje->peso_ideal = $request->input('pesoIdeal');
+            $triaje->estado_paciente = $request->input('estadoPaciente');
             $triaje->save();
 
             // Confirmar la transacción
@@ -363,6 +369,7 @@ class CpuAtencionesController extends Controller
             'recordatorio_24h' => 'nullable|json',
             'analisis_clinicos' => 'nullable|file|mimes:pdf',
             'intolerancias' => 'nullable|json',
+            'nombre_caso' => 'nullable|string|max:255',
             'nombre_plan_nutricional' => 'nullable|string|max:255',
             'plan_nutricional' => 'nullable|json',
             'permitidos' => 'nullable|json',
@@ -409,7 +416,7 @@ class CpuAtencionesController extends Controller
             $idCaso = null;
             if ($request->has('id_estado')) {
                 $caso = new CpuCasosMedicos();
-                $caso->nombre_caso = $request->input('nombre_plan_nutricional');
+                $caso->nombre_caso = $request->input('nombre_caso');
                 $caso->id_estado = $request->input('id_estado');
                 $caso->save();
                 $idCaso = $caso->id;

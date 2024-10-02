@@ -19,7 +19,10 @@ class CpuAtencionTriaje extends Model
         'saturacion',
         'presion_sistolica',
         'presion_diastolica',
-        'saturacion'
+        'saturacion',
+        'imc',
+        'peso_ideal',
+        'estado_paciente'
     ];
     public $timestamps = true;
 }

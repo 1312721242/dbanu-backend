@@ -316,16 +316,16 @@ class CpuPersonaController extends Controller
 
         // Validación de los datos
         $validator = Validator::make($request->all(), [
-            'nombres' => 'required|string',
-            'nacionalidad' => 'required|string',
-            'provincia' => 'required|string',
-            'ciudad' => 'required|string',
-            'parroquia' => 'required|string',
-            'direccion' => 'required|string',
-            'sexo' => 'required|string',
-            'fechanaci' => 'required|date',
-            'celular' => 'required|string',
-            'tipoetnia' => 'required|string',
+            'nombres' => 'nullable|string',
+            'nacionalidad' => 'nullable|string',
+            'provincia' => 'nullable|string',
+            'ciudad' => 'nullable|string',
+            'parroquia' => 'nullable|string',
+            'direccion' => 'nullable|string',
+            'sexo' => 'nullable|string',
+            'fechanaci' => 'nullable|date',
+            'celular' => 'nullable|string',
+            'tipoetnia' => 'nullable|string',
             'discapacidad' => 'nullable|string',
             'imagen' => 'nullable|image|max:2048', // Validación para la imagen
             'tipoDiscapacidad' => 'nullable|string', // Validación para tipoDiscapacidad

@@ -429,6 +429,10 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('/dientes/{id_paciente}', [CpuDienteController::class, 'buscarPorPaciente']);
     // Ruta para guardar atención odontológica
     Route::post('/atenciones-odontologicas', [CpuAtencionOdontologiaController::class, 'store']);
+
+    // historia clinica
+    Route::get('/historia-clinica/{id_paciente}', [CpuAtencionesController::class, 'historiaClinica']);
+
 });
 
 // Route::put('/cpu-persona-update/{cedula}', [CpuPersonaController::class, 'update']);

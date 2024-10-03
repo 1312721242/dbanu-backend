@@ -663,4 +663,80 @@ class CpuAtencionesController extends Controller
             return response()->json(['error' => 'Error al guardar la atención de medicina general', 'details' => $e->getMessage()], 500);
         }
     }
+
+    public function historiaClinica($id_paciente)
+    {
+        $historiaClinica = DB::table('cpu_derivaciones as der')
+            ->leftJoin('users as usr', 'usr.id', '=', 'der.id_doctor_al_que_derivan')
+            ->leftJoin('cpu_personas as per', 'per.id', '=', 'der.id_paciente')
+            ->leftJoin('cpu_atenciones as ate', 'ate.id', '=', 'der.ate_id')
+            ->leftJoin('cpu_userrole as rol', 'rol.id_userrole', '=', 'der.id_area')
+            ->leftJoin('cpu_atenciones_triaje as tri', 'tri.id_derivacion', '=', 'der.id')
+            ->select(
+                'der.ate_id',
+                'der.id_doctor_al_que_derivan',
+                'der.id_paciente',
+                'der.id_area',
+                'der.id_estado_derivacion',
+                'usr.name as doctor',
+                'per.nombres as paciente',
+                'per.cedula as cedula',
+                'per.fechanaci as fecha_nacimiento',
+                'per.discapacidad as discapacidad',
+                'per.sexo as sexo',
+                'per.imagen',
+                'rol.role as area',
+                'ate.motivo_atencion as motivo',
+                'ate.via_atencion as medio_atencion',
+                'ate.diagnostico as diagnostico',
+                'ate.evolucion_enfermedad as evolucion_enfermedad',
+                'ate.prescripcion',
+                'ate.recomendacion',
+                'ate.fecha_hora_atencion',
+                'tri.talla',
+                'tri.peso',
+                'tri.temperatura',
+                'tri.presion_sistolica',
+                'tri.presion_diastolica',
+                'tri.saturacion',
+                'tri.imc'
+            )
+            ->where('der.id_paciente', $id_paciente)
+            ->whereIn('der.id_area', [7, 8, 9, 10, 11, 13, 14, 15])
+            ->where('der.id_estado_derivacion', 2)
+            ->get();
+
+        // Procesar los resultados para formatear el diagnóstico y la URL de la imagen
+        $historiaClinica = $historiaClinica->map(function ($item) {
+            // Construir la URL completa de la imagen
+            if ($item->imagen) {
+                $item->imagen = url('Perfiles/' . $item->imagen);
+            }
+
+            // Convertir el diagnóstico en una cadena de texto con el formato "CIE10 y descripción"
+            if (is_string($item->diagnostico)) {
+                $diagnosticos = json_decode($item->diagnostico, true);
+                if (is_array($diagnosticos)) {
+                    $formattedDiagnosticos = array_map(function ($diagnostico) {
+                        // Convertir las claves a minúsculas para facilitar el acceso
+                        $diagnostico = array_change_key_case($diagnostico, CASE_LOWER);
+
+                        return 'CIE10: ' . $diagnostico['cie10'] . ' - ' . $diagnostico['diagnostico'] . ' (' . $diagnostico['tipo'] . ')';
+                    }, $diagnosticos);
+                    $item->diagnostico = implode(', ', $formattedDiagnosticos);
+                } else {
+                    $item->diagnostico = 'CIE10: No especificado';
+                }
+            } elseif (is_null($item->diagnostico)) {
+                $item->diagnostico = 'CIE10: No especificado';
+            }
+            
+            return $item;
+        });
+
+        return response()->json($historiaClinica)
+        ->header('Access-Control-Allow-Origin', '*');
+    }
+
+
 }

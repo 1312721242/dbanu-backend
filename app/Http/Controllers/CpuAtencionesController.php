@@ -377,7 +377,8 @@ class CpuAtencionesController extends Controller
             'permitidos' => 'nullable|json',
             'no_permitidos' => 'nullable|json',
             'recomendaciones' => 'nullable|string',
-            'tipo_atencion' => 'required|string|in:INICIAL,SUBSECUENTE',
+            'tipo_atencion' => 'required|string|in:INICIAL,SUBSECUENTE,REAPERTURA',
+            'informe_final' => 'nullable|json',
         ]);
 
         if ($validator->fails()) {
@@ -431,7 +432,58 @@ class CpuAtencionesController extends Controller
             // Si la atención es SUBSECUENTE, se usa el id_caso del request
             else if ($request->input('tipo_atencion') === 'SUBSECUENTE') {
                 $idCaso = $request->input('id_caso'); // Se usa el id_caso enviado en el request
+
+                // Verificar si se envía `informe_final`
+                if ($request->has('informe_final')) {
+                    $caso = CpuCasosMedicos::findOrFail($idCaso);
+
+                    // Decodificar el nuevo informe enviado
+                    $nuevoInforme = json_decode($request->input('informe_final'), true);
+
+                    // Asegurarse de que `informe_final` sea un array antes de agregar la fecha
+                    if (!is_array($nuevoInforme)) {
+                        return response()->json(['error' => 'Formato inválido en informe_final'], 400);
+                    }
+
+                    // Agregar la fecha actual al informe
+                    $nuevoInforme['fecha'] = Carbon::now()->toDateTimeString();
+
+                    // Si ya hay algo en `informe_final`, agregar el nuevo informe
+                    if (!empty($caso->informe_final)) {
+                        $informesPrevios = json_decode($caso->informe_final, true);
+
+                        // Asegurarse de que `informesPrevios` sea un array antes de agregar el nuevo informe
+                        if (!is_array($informesPrevios)) {
+                            $informesPrevios = [$informesPrevios];
+                        }
+
+                        $informesPrevios[] = $nuevoInforme; // Agregar el nuevo informe
+                    } else {
+                        // Si no hay nada en `informe_final`, simplemente creamos un nuevo array con el nuevo informe
+                        $informesPrevios = [$nuevoInforme];
+                    }
+
+                    // Actualizar `informe_final` con la nueva información
+                    $caso->informe_final = json_encode($informesPrevios);
+                    $caso->id_estado = 20; // Actualizar estado del caso
+                    $caso->save();
+                }
             }
+            // Si la atención es REAPERTURAR, se actualiza el estado del caso a 8
+            else if ($request->input('tipo_atencion') === 'REAPERTURA') {
+                // Asegúrate de obtener el id del caso enviado en la solicitud
+                $idCaso = $request->input('id_caso'); // Se usa el id_caso enviado en el request
+
+                if (!$idCaso) {
+                    return response()->json(['error' => 'id_caso es requerido para reaperturar un caso.'], 400);
+                }
+
+                // Encontrar el caso correspondiente y actualizar su estado
+                $caso = CpuCasosMedicos::findOrFail($idCaso);
+                $caso->id_estado = 8; // Actualizar el estado del caso a '8' para reapertura
+                $caso->save();
+            }
+
             // if ($request->has('id_estado')) {
             //     $caso = new CpuCasosMedicos();
             //     $caso->nombre_caso = $request->input('nombre_caso');
@@ -730,13 +782,11 @@ class CpuAtencionesController extends Controller
             } elseif (is_null($item->diagnostico)) {
                 $item->diagnostico = 'CIE10: No especificado';
             }
-            
+
             return $item;
         });
 
         return response()->json($historiaClinica)
-        ->header('Access-Control-Allow-Origin', '*');
+            ->header('Access-Control-Allow-Origin', '*');
     }
-
-
 }

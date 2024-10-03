@@ -17,7 +17,7 @@ class CpuCasosPsicologiaController extends Controller
             $query = CpuAtencion::where('id_persona', $id_persona)
                                 ->where('id_funcionario', $usr_tipo)
                                 ->join('cpu_casos', 'cpu_atenciones.id_caso', '=', 'cpu_casos.id')
-                                ->select('cpu_casos.id', 'cpu_casos.nombre_caso')
+                                ->select('cpu_casos.id', 'cpu_casos.nombre_caso', 'cpu_casos.informe_final')
                                 ->distinct();
 
             // Aplicar filtro según el tipo de atención

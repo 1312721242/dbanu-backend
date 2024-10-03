@@ -33,17 +33,18 @@ class CpuCasosMatriculaController extends Controller
 
         // Obtener el id_secretaria
         $idSecretaria = $secretaria->id;
+        Log::info('idSecretaria: ' . $idSecretaria);
 
         // Consulta para obtener los casos de matricula asignados a la secretaria en el periodo dado
         $casosMatricula = DB::table('cpu_casos_matricula')
-        ->join('cpu_legalizacion_matricula', 'cpu_casos_matricula.id_legalizacion_matricula', '=', 'cpu_legalizacion_matricula.id')
-        ->join('cpu_carrera', 'cpu_legalizacion_matricula.id_carrera', '=', 'cpu_carrera.id')
-        ->join('cpu_sede', 'cpu_legalizacion_matricula.id_sede', '=', 'cpu_sede.id')
+        ->leftJoin('cpu_legalizacion_matricula', 'cpu_casos_matricula.id_legalizacion_matricula', '=', 'cpu_legalizacion_matricula.id')
+        ->leftJoin('cpu_carrera', 'cpu_legalizacion_matricula.id_carrera', '=', 'cpu_carrera.id')
+        ->leftJoin('cpu_sede', 'cpu_legalizacion_matricula.id_sede', '=', 'cpu_sede.id')
         ->where('cpu_casos_matricula.id_secretaria', $idSecretaria)
         ->where('cpu_legalizacion_matricula.id_periodo', $idPeriodo)
-        ->where('cpu_casos_matricula.id_estado', '!=', 14)
         ->select(
             'cpu_casos_matricula.id as id_caso',
+            'cpu_casos_matricula.id_estado',
             'cpu_legalizacion_matricula.id as id_legalizacion',
             'cpu_legalizacion_matricula.nombres',
             'cpu_legalizacion_matricula.apellidos',
@@ -66,7 +67,11 @@ class CpuCasosMatriculaController extends Controller
         )
         ->get();
 
-        foreach ($casosMatricula as $caso) {
+        $casosMatriculaFiltrados = $casosMatricula->filter(function ($caso) {
+            return $caso->id_estado != 14;
+        });
+
+        foreach ($casosMatriculaFiltrados as $caso) {
             $caso->copia_identificacion = url('Files/' . $caso->copia_identificacion);
             $caso->copia_titulo = url('Files/' . $caso->copia_titulo);
             $caso->copia_aceptacion_cupo = url('Files/' . $caso->copia_aceptacion_cupo);
@@ -74,11 +79,9 @@ class CpuCasosMatriculaController extends Controller
             // Obtener el mensaje de la notificación asociada al caso de matrícula si existe
             $notificacionMatricula = CpuNotificacionMatricula::find($caso->id_notificacion);
             $caso->observacion = $notificacionMatricula ? $notificacionMatricula->mensaje : null;
-
         }
 
-        return response()->json($casosMatricula);
-
+        return response()->json($casosMatriculaFiltrados->values());
     }
 
     public function revisionDocumentos(Request $request, $idCaso)

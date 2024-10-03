@@ -13,23 +13,21 @@ class CpuAtencionMedicinaGeneral extends Model
 
     protected $fillable = [
         'id_atencion',
-        'antecedentes_personales_familiares',
-        'detalle_antecedentes',
         'organos_sistemas',
         'detalle_organos_sistemas',
         'examen_fisico',
         'detalle_examen_fisico',
-        'medicamentos_insumos',
+        'insumos_medicos',
+        'medicamentos',
     ];
 
     protected $casts = [
-        'antecedentes_personales_familiares' => 'boolean',
-        'detalle_antecedentes' => 'json',
         'organos_sistemas' => 'boolean',
         'detalle_organos_sistemas' => 'json',
         'examen_fisico' => 'boolean',
         'detalle_examen_fisico' => 'json',
-        'medicamentos_insumos' => 'boolean',
+        'insumos_medicos' => 'json',
+        'medicamentos' => 'json',
     ];
 
     public function atencion()

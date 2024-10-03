@@ -51,6 +51,13 @@ use App\Http\Controllers\CpuAtencionPsicologiaController;
 use App\Http\Controllers\CpuCasosPsicologiaController;
 use App\Http\Controllers\CpuCertificadoNivelacionController;
 use App\Http\Controllers\CpuClientesTastyController;
+use App\Http\Controllers\CpuDatosMedicosController;
+use App\Http\Controllers\CpuDienteController;
+use App\Http\Controllers\CpuAtencionOdontologiaController;
+
+
+
+
 
 // Autenticación
 Route::get('credencial-pdf/{identificacion}/{periodo}', [CpuBecadoController::class, 'generarCredencialPDF']);
@@ -62,6 +69,7 @@ Route::get('/me', [AuthController::class, 'me'])->middleware('auth:sanctum');
 
 // Route::get('legalizacion-matricula/export-template', [LegalizacionMatriculaSecretariaController::class, 'exportTemplate']);
 Route::middleware(['auth:sanctum'])->group(function () {
+    // Route::middleware(['api'])->group(function () {
     // Menú
     Route::get('/menu', [MenuController::class, 'index']);
     // menu aspirantes
@@ -302,7 +310,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('registros-por-fechas/{fechaInicio}/{fechaFin}', [CpuConsumoBecadoController::class, 'registrosPorFechas']);
     Route::get('detalle-registros/{fechaInicio}/{fechaFin}', [CpuConsumoBecadoController::class, 'detalleRegistros']);
 
-
+    Route::get('/obtener-cie10', [CpuAtencionPsicologiaController::class, 'obtenerCie10']);
     // routes/api.php
     Route::post('/agregarTurnos', [TurnosController::class, 'agregarTurnos']);
     Route::post('/turnos', [TurnosController::class, 'listarTurnos']); // Cambiar a POST
@@ -399,15 +407,29 @@ Route::middleware(['auth:sanctum'])->group(function () {
     //MODULO DE PSICOLOGIA
     Route::post('/atenciones-psicologia', [CpuAtencionPsicologiaController::class, 'store']);
     Route::get('/casos/{tipo_atencion}/{usr_tipo}/{id_persona}', [CpuCasosPsicologiaController::class, 'getCasos']);
-    Route::get('/ultima-consulta/{usr_tipo}/{id_persona}/{id_caso}', [CpuAtencionesController::class, 'obtenerUltimaConsulta']);
+    Route::get('/ultima-consulta/{area_atencion}/{usr_tipo}/{id_persona}/{id_caso}', [CpuAtencionesController::class, 'obtenerUltimaConsulta']);
     Route::post('/atenciones/triajesico', [CpuAtencionPsicologiaController::class, 'guardarAtencionConTriaje']);
     Route::post('/atenciones/updatederivacionsico', [CpuAtencionPsicologiaController::class, 'actulizarderivacionsico']);
-    Route::get('/obtener-cie10', [CpuAtencionPsicologiaController::class, 'obtenerCie10']);
+    Route::get('/obtener-cie10', [CpuAtencionPsicologiaController::class, 'obtenerCie10']);    Route::get('/obtener-cie10', [CpuAtencionPsicologiaController::class, 'obtenerCie10']);
 
     // Ruta para certificados
     Route::get('/certificados/{periodo_certificado}/{sede}/{carrera}', [CpuCertificadoNivelacionController::class, 'datosCertificado']);
     Route::get('/sedes-periodo-certificado/{periodo}', [CpuCertificadoNivelacionController::class, 'getSedesByPeriodo']);
     Route::get('/carreras-certificado/{periodo_certificado}/{sede}', [CpuCertificadoNivelacionController::class, 'getCarrerasByPeriodoAndSede']);
+
+    // Rutas para CpuDatosMedicos
+    Route::get('/datos-medicos', [CpuDatosMedicosController::class, 'index']);
+    Route::post('/datos-medicos', [CpuDatosMedicosController::class, 'store']);
+    Route::get('/datos-medicos/{id_persona}', [CpuDatosMedicosController::class, 'show']);
+    Route::patch('/datos-medicos/{id}', [CpuDatosMedicosController::class, 'update'])->withoutMiddleware(['csrf']);
+    Route::delete('/datos-medicos/{id}', [CpuDatosMedicosController::class, 'destroy']);
+
+    //atenciones medicina general
+    Route::post('/atenciones-medicina-general', [CpuAtencionesController::class, 'guardarAtencionMedicinaGeneral']);
+    Route::get('/dientes/{id_paciente}', [CpuDienteController::class, 'buscarPorPaciente']);
+    // Ruta para guardar atención odontológica
+    Route::post('/atenciones-odontologicas', [CpuAtencionOdontologiaController::class, 'store']);
 });
 
 // Route::put('/cpu-persona-update/{cedula}', [CpuPersonaController::class, 'update']);
+

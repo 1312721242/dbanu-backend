@@ -407,7 +407,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     //MODULO DE PSICOLOGIA
     Route::post('/atenciones-psicologia', [CpuAtencionPsicologiaController::class, 'store']);
     Route::get('/casos/{tipo_atencion}/{usr_tipo}/{id_persona}', [CpuCasosPsicologiaController::class, 'getCasos']);
-    Route::get('/ultima-consulta/{usr_tipo}/{id_persona}/{id_caso}', [CpuAtencionesController::class, 'obtenerUltimaConsulta']);
+    Route::get('/ultima-consulta/{area_atencion}/{usr_tipo}/{id_persona}/{id_caso}', [CpuAtencionesController::class, 'obtenerUltimaConsulta']);
     Route::post('/atenciones/triajesico', [CpuAtencionPsicologiaController::class, 'guardarAtencionConTriaje']);
     Route::post('/atenciones/updatederivacionsico', [CpuAtencionPsicologiaController::class, 'actulizarderivacionsico']);
     Route::get('/obtener-cie10', [CpuAtencionPsicologiaController::class, 'obtenerCie10']);    Route::get('/obtener-cie10', [CpuAtencionPsicologiaController::class, 'obtenerCie10']);
@@ -429,6 +429,10 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('/dientes/{id_paciente}', [CpuDienteController::class, 'buscarPorPaciente']);
     // Ruta para guardar atención odontológica
     Route::post('/atenciones-odontologicas', [CpuAtencionOdontologiaController::class, 'store']);
+
+    // historia clinica
+    Route::get('/historia-clinica/{id_paciente}', [CpuAtencionesController::class, 'historiaClinica']);
+
 });
 
 // Route::put('/cpu-persona-update/{cedula}', [CpuPersonaController::class, 'update']);

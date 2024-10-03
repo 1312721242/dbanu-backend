@@ -9,6 +9,7 @@ use App\Models\CpuAtencionNutricion;
 use App\Models\CpuAtencionTriaje;
 use App\Models\CpuCasosMedicos;
 use App\Models\CpuDerivacion;
+use App\Models\CpuInsumo;
 use App\Models\CpuInsumoOcupado;
 use App\Models\CpuTurno;
 use Illuminate\Support\Facades\Validator;
@@ -240,28 +241,46 @@ class CpuAtencionesController extends Controller
         return response()->json(['message' => 'Atención no encontrada'], 404);
     }
 
-    public function obtenerUltimaConsulta($usr_tipo, $id_persona, $id_caso)
+    public function obtenerUltimaConsulta($area_atencion, $usr_tipo, $id_persona, $id_caso)
     {
         try {
-            // Busca la última atención del paciente con el id_persona e id_caso especificados
+            // Registra el área de atención en el log
+            Log::info('Área de atención: ' . $area_atencion);
+
+            // Busca la última atención del paciente
             $ultimaConsulta = CpuAtencion::where('id_persona', $id_persona)
                 ->where('id_funcionario', $usr_tipo)
                 ->where('id_caso', $id_caso)
                 ->orderBy('fecha_hora_atencion', 'desc')
                 ->first();
 
-            // Si se encuentra una consulta
-            if ($ultimaConsulta) {
-                // Formatear la fecha para mostrar el día de la semana y el nombre completo del mes en español
-                $ultimaConsulta->fecha_hora_atencion = Carbon::parse($ultimaConsulta->fecha_hora_atencion)->translatedFormat('l, d F Y');
-            } else {
+            if (!$ultimaConsulta) {
                 return response()->json(['mensaje' => 'No se encontraron consultas para el paciente con el caso especificado'], 404);
             }
 
-            // Devuelve la última consulta encontrada
-            return response()->json($ultimaConsulta, 200);
+            // Formatea la fecha
+            $ultimaConsulta->fecha_hora_atencion = Carbon::parse($ultimaConsulta->fecha_hora_atencion)->translatedFormat('l, d F Y');
+
+            // Incluye el diagnóstico
+            $ultimaConsulta->diagnostico = $ultimaConsulta->diagnostico ?? 'Sin diagnóstico';
+
+            // Obtener el id_derivacion
+            $derivacion = CpuDerivacion::where('ate_id', $ultimaConsulta->id)->first();
+            $ultimaConsulta->id_derivacion = $derivacion ? $derivacion->id : null;
+
+            $respuesta = $ultimaConsulta->toArray();
+
+            if (strtoupper($area_atencion) === "NUTRICIÓN") {
+                $atencionNutricion = CpuAtencionNutricion::where('id_derivacion', $ultimaConsulta->id_derivacion)->first();
+
+                if ($atencionNutricion) {
+                    $respuesta['datos_nutricion'] = $atencionNutricion->toArray();
+                }
+            }
+
+            return response()->json($respuesta, 200);
         } catch (\Exception $e) {
-            // Maneja cualquier error que ocurra durante la ejecución
+            Log::error('Error al obtener la última consulta: ' . $e->getMessage());
             return response()->json(['error' => 'Error al obtener la última consulta: ' . $e->getMessage()], 500);
         }
     }
@@ -279,6 +298,9 @@ class CpuAtencionesController extends Controller
             'saturacion' => 'required|numeric',
             'presion_sistolica' => 'required|integer',
             'presion_diastolica' => 'required|integer',
+            'imc' => 'required|string',
+            'pesoIdeal' => 'required|string',
+            'estadoPaciente' => 'required|string',
         ]);
 
         if ($validator->fails()) {
@@ -314,6 +336,9 @@ class CpuAtencionesController extends Controller
             $triaje->saturacion = $request->input('saturacion');
             $triaje->presion_sistolica = $request->input('presion_sistolica');
             $triaje->presion_diastolica = $request->input('presion_diastolica');
+            $triaje->imc = $request->input('imc');
+            $triaje->peso_ideal = $request->input('pesoIdeal');
+            $triaje->estado_paciente = $request->input('estadoPaciente');
             $triaje->save();
 
             // Confirmar la transacción
@@ -345,6 +370,7 @@ class CpuAtencionesController extends Controller
             'recordatorio_24h' => 'nullable|json',
             'analisis_clinicos' => 'nullable|file|mimes:pdf',
             'intolerancias' => 'nullable|json',
+            'nombre_caso' => 'nullable|string|max:255',
             'nombre_plan_nutricional' => 'nullable|string|max:255',
             'plan_nutricional' => 'nullable|json',
             'permitidos' => 'nullable|json',
@@ -355,6 +381,8 @@ class CpuAtencionesController extends Controller
         if ($validator->fails()) {
             return response()->json(['error' => $validator->errors()], 400);
         }
+
+        Log::info('Diagnóstico antes de insertar:', ['diagnostico' => $request->input('diagnostico')]);
 
         $rutaArchivo = null;
 
@@ -389,7 +417,7 @@ class CpuAtencionesController extends Controller
             $idCaso = null;
             if ($request->has('id_estado')) {
                 $caso = new CpuCasosMedicos();
-                $caso->nombre_caso = $request->input('nombre_plan_nutricional');
+                $caso->nombre_caso = $request->input('nombre_caso');
                 $caso->id_estado = $request->input('id_estado');
                 $caso->save();
                 $idCaso = $caso->id;
@@ -402,7 +430,7 @@ class CpuAtencionesController extends Controller
             $atencion->via_atencion = $request->input('via_atencion');
             $atencion->motivo_atencion = $request->input('motivo');
             $atencion->id_tipo_usuario = $request->input('id_tipo_usuario');
-            $atencion->diagnostico = json_decode($request->input('diagnostico'), true);
+            $atencion->diagnostico = is_array($request->diagnostico) ? json_encode($request->diagnostico) : $request->diagnostico;
             $atencion->detalle_atencion = 'Atención Nutrición';
             $atencion->fecha_hora_atencion = Carbon::now();
             $atencion->anio_atencion = Carbon::now()->year;
@@ -439,7 +467,7 @@ class CpuAtencionesController extends Controller
             $nutricion->imc = $request->input('imc');
             $nutricion->peso_ideal = $request->input('peso_ideal');
             $nutricion->estado_paciente = $request->input('estado_paciente');
-            $nutricion->antecedente_medico = $request->input('antecedente_medico');
+            // $nutricion->antecedente_medico = $request->input('antecedente_medico');
             $nutricion->recordatorio_24h = json_decode($request->input('recordatorio_24h'), true);
             $nutricion->analisis_clinicos = $rutaArchivo;
             $nutricion->alergias = json_decode($request->input('alergias'), true);
@@ -517,9 +545,9 @@ class CpuAtencionesController extends Controller
             $atencion->detalle_atencion = $request->input('detalle_atencion');
             $atencion->id_caso = $request->input('id_caso');
             $atencion->id_tipo_usuario = $request->input('id_tipo_usuario');
-            $atencion->evolucion_enfermedad = $request->input('evolucion_enfermedad');
+            $atencion->evolucion_enfermedad = $request->input('enfermedad_actual');
             $atencion->diagnostico = $request->input('diagnostico');
-            $atencion->prescripcion = $request->input('prescripcion');
+            $atencion->prescripcion = $request->input('planes_tratamiento');
             $atencion->recomendacion = $request->input('recomendacion');
             $atencion->tipo_atencion = $request->input('tipo_atencion');
             $atencion->id_cie10 = $request->input('id_cie10');
@@ -529,27 +557,51 @@ class CpuAtencionesController extends Controller
             // Guardar en cpu_atenciones_medicina_general
             $medicinaGeneral = new CpuAtencionMedicinaGeneral();
             $medicinaGeneral->id_atencion = $atencion->id;
-            $medicinaGeneral->antecedentes_personales_familiares = !empty($request->input('detalle_antecedentes'));
-            $medicinaGeneral->organos_sistemas = !empty($request->input('detalle_organos_sistemas'));
-            $medicinaGeneral->examen_fisico = !empty($request->input('detalle_examen_fisico'));
-            $medicinaGeneral->medicamentos_insumos = !empty($request->input('insumos_medicos'));
-            $medicinaGeneral->detalle_antecedentes = $request->input('detalle_antecedentes');
-            $medicinaGeneral->detalle_organos_sistemas = $request->input('detalle_organos_sistemas');
+            $medicinaGeneral->organos_sistemas = !empty($request->input('revision_organos'));
+            $medicinaGeneral->examen_fisico = !empty($request->input('examen_fisico'));
+            $medicinaGeneral->detalle_organos_sistemas = $request->input('detalle_revision_organos');
             $medicinaGeneral->detalle_examen_fisico = $request->input('detalle_examen_fisico');
+            $medicinaGeneral->insumos_medicos = $request->input('insumos');
+            $medicinaGeneral->medicamentos = $request->input('medicamentos');
             $medicinaGeneral->save();
 
-            // Guardar insumos médicos
-            if (!empty($request->input('insumos_medicos'))) {
-                foreach ($request->input('insumos_medicos') as $insumo) {
+            // Guardar insumos
+            if ($request->has('insumos')) {
+                foreach ($request->input('insumos') as $insumo) {
                     $insumoOcupado = new CpuInsumoOcupado();
-                    $insumoOcupado->id_insumo = $insumo['id_insumo'];
+                    $insumoOcupado->id_insumo = $insumo['id'];
                     $insumoOcupado->id_atencion_medicina_general = $medicinaGeneral->id;
                     $insumoOcupado->id_funcionario = $request->input('id_funcionario');
                     $insumoOcupado->id_paciente = $request->input('id_persona');
                     $insumoOcupado->cantidad_ocupado = $insumo['cantidad'];
-                    $insumoOcupado->detalle_ocupado = $insumo['detalle'];
+                    $insumoOcupado->detalle_ocupado = $request->input('detalle_atencion');
                     $insumoOcupado->fecha_uso = now();
                     $insumoOcupado->save();
+                    // Actualizar la cantidad disponible del insumo o medicamento
+                    $insumoresul = CpuInsumo::find($insumo['id']);
+                    if ($insumoresul) {
+                        $insumoresul->decrement('cantidad_unidades', (int)$insumo['cantidad']);
+                    }
+                }
+            }
+
+            // Guardar medicamentos
+            if ($request->has('medicamentos')) {
+                foreach ($request->input('medicamentos') as $medicamento) {
+                    $insumoOcupado = new CpuInsumoOcupado();
+                    $insumoOcupado->id_insumo = $medicamento['id'];
+                    $insumoOcupado->id_atencion_medicina_general = $medicinaGeneral->id;
+                    $insumoOcupado->id_funcionario = $request->input('id_funcionario');
+                    $insumoOcupado->id_paciente = $request->input('id_persona');
+                    $insumoOcupado->cantidad_ocupado = $medicamento['cantidad'];
+                    $insumoOcupado->detalle_ocupado = $request->input('detalle_atencion');
+                    $insumoOcupado->fecha_uso = now();
+                    $insumoOcupado->save();
+                    // Actualizar la cantidad disponible del insumo o medicamento
+                    $insumo = CpuInsumo::find($medicamento['id']);
+                    if ($insumo) {
+                        $insumo->decrement('cantidad_unidades', (int)$medicamento['cantidad']);
+                    }
                 }
             }
 
@@ -558,27 +610,27 @@ class CpuAtencionesController extends Controller
                 $derivacion = new CpuDerivacion();
                 $derivacion->ate_id = $atencion->id;
                 $derivacion->id_doctor_al_que_derivan = $request->input('derivacion.id_doctor_al_que_derivan');
-                $derivacion->id_paciente = $request->input('derivacion.id_paciente');
+                $derivacion->id_paciente = $request->input('id_persona');
                 $derivacion->motivo_derivacion = $request->input('derivacion.motivo_derivacion');
                 $derivacion->id_area = $request->input('derivacion.id_area');
                 $derivacion->fecha_para_atencion = $request->input('derivacion.fecha_para_atencion');
                 $derivacion->hora_para_atencion = $request->input('derivacion.hora_para_atencion');
                 $derivacion->id_estado_derivacion = $request->input('derivacion.id_estado_derivacion');
                 $derivacion->id_turno_asignado = $request->input('derivacion.id_turno_asignado');
-                $derivacion->id_funcionario_que_derivo = Auth::id();
+                $derivacion->id_funcionario_que_derivo = $request->input('id_funcionario'); // Corregido para utilizar Auth::id() en lugar de Auth::user()->id
                 $derivacion->fecha_derivacion = now();
                 $derivacion->save();
 
                 // Actualizar turno
                 $turno = CpuTurno::find($request->input('derivacion.id_turno_asignado'));
-                $turno->id_paciente = $request->input('derivacion.id_paciente');
+                $turno->id_paciente = $request->input('id_persona');
                 $turno->estado = 7;
                 $turno->save();
             }
 
             // Actualizar la derivación original
-            if ($request->has('id_derivacion_actual')) {
-                $derivacionOriginal = CpuDerivacion::find($request->input('id_derivacion_actual'));
+            if ($request->has('id_derivacion')) {
+                $derivacionOriginal = CpuDerivacion::find($request->input('id_derivacion'));
                 if ($derivacionOriginal) {
                     $derivacionOriginal->id_estado_derivacion = 2;
                     $derivacionOriginal->save();
@@ -590,7 +642,83 @@ class CpuAtencionesController extends Controller
         } catch (\Exception $e) {
             DB::rollBack();
             Log::error('Error al guardar la atención de medicina general:', ['exception' => $e->getMessage()]);
-            return response()->json(['error' => 'Error al guardar la atención de medicina general'], 500);
+            return response()->json(['error' => 'Error al guardar la atención de medicina general', 'details' => $e->getMessage()], 500);
         }
     }
+
+    public function historiaClinica($id_paciente)
+    {
+        $historiaClinica = DB::table('cpu_derivaciones as der')
+            ->leftJoin('users as usr', 'usr.id', '=', 'der.id_doctor_al_que_derivan')
+            ->leftJoin('cpu_personas as per', 'per.id', '=', 'der.id_paciente')
+            ->leftJoin('cpu_atenciones as ate', 'ate.id', '=', 'der.ate_id')
+            ->leftJoin('cpu_userrole as rol', 'rol.id_userrole', '=', 'der.id_area')
+            ->leftJoin('cpu_atenciones_triaje as tri', 'tri.id_derivacion', '=', 'der.id')
+            ->select(
+                'der.ate_id',
+                'der.id_doctor_al_que_derivan',
+                'der.id_paciente',
+                'der.id_area',
+                'der.id_estado_derivacion',
+                'usr.name as doctor',
+                'per.nombres as paciente',
+                'per.cedula as cedula',
+                'per.fechanaci as fecha_nacimiento',
+                'per.discapacidad as discapacidad',
+                'per.sexo as sexo',
+                'per.imagen',
+                'rol.role as area',
+                'ate.motivo_atencion as motivo',
+                'ate.via_atencion as medio_atencion',
+                'ate.diagnostico as diagnostico',
+                'ate.evolucion_enfermedad as evolucion_enfermedad',
+                'ate.prescripcion',
+                'ate.recomendacion',
+                'ate.fecha_hora_atencion',
+                'tri.talla',
+                'tri.peso',
+                'tri.temperatura',
+                'tri.presion_sistolica',
+                'tri.presion_diastolica',
+                'tri.saturacion',
+                'tri.imc'
+            )
+            ->where('der.id_paciente', $id_paciente)
+            ->whereIn('der.id_area', [7, 8, 9, 10, 11, 13, 14, 15])
+            ->where('der.id_estado_derivacion', 2)
+            ->get();
+
+        // Procesar los resultados para formatear el diagnóstico y la URL de la imagen
+        $historiaClinica = $historiaClinica->map(function ($item) {
+            // Construir la URL completa de la imagen
+            if ($item->imagen) {
+                $item->imagen = url('Perfiles/' . $item->imagen);
+            }
+
+            // Convertir el diagnóstico en una cadena de texto con el formato "CIE10 y descripción"
+            if (is_string($item->diagnostico)) {
+                $diagnosticos = json_decode($item->diagnostico, true);
+                if (is_array($diagnosticos)) {
+                    $formattedDiagnosticos = array_map(function ($diagnostico) {
+                        // Convertir las claves a minúsculas para facilitar el acceso
+                        $diagnostico = array_change_key_case($diagnostico, CASE_LOWER);
+
+                        return 'CIE10: ' . $diagnostico['cie10'] . ' - ' . $diagnostico['diagnostico'] . ' (' . $diagnostico['tipo'] . ')';
+                    }, $diagnosticos);
+                    $item->diagnostico = implode(', ', $formattedDiagnosticos);
+                } else {
+                    $item->diagnostico = 'CIE10: No especificado';
+                }
+            } elseif (is_null($item->diagnostico)) {
+                $item->diagnostico = 'CIE10: No especificado';
+            }
+            
+            return $item;
+        });
+
+        return response()->json($historiaClinica)
+        ->header('Access-Control-Allow-Origin', '*');
+    }
+
+
 }

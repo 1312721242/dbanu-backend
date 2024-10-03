@@ -21,6 +21,13 @@ class CpuLegalizacionMatriculaController extends Controller
 
     public function uploadPdf(Request $request)
     {
+        // Verificar si el usuario está autenticado
+        $user = auth()->guard('sanctum')->user();
+
+        if (!$user) {
+            return response()->json(['error' => 'User not authenticated.'], 401);
+        }
+
         // Obtener la configuración de matrícula activa
         $matriculaConfiguracion = CpuMatriculaConfiguracion::where('id_estado', 8)->first();
 

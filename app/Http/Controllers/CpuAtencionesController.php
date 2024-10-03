@@ -265,13 +265,14 @@ class CpuAtencionesController extends Controller
             $ultimaConsulta->diagnostico = $ultimaConsulta->diagnostico ?? 'Sin diagnóstico';
 
             // Obtener el id_derivacion
+            Log::info('ID de la última consulta: ' . $ultimaConsulta->id);
             $derivacion = CpuDerivacion::where('ate_id', $ultimaConsulta->id)->first();
             $ultimaConsulta->id_derivacion = $derivacion ? $derivacion->id : null;
 
             $respuesta = $ultimaConsulta->toArray();
 
             if (strtoupper($area_atencion) === "NUTRICIÓN") {
-                $atencionNutricion = CpuAtencionNutricion::where('id_derivacion', $ultimaConsulta->id_derivacion)->first();
+                $atencionNutricion = CpuAtencionNutricion::where('ate_id', $ultimaConsulta->id)->first();
 
                 if ($atencionNutricion) {
                     $respuesta['datos_nutricion'] = $atencionNutricion->toArray();
@@ -376,6 +377,7 @@ class CpuAtencionesController extends Controller
             'permitidos' => 'nullable|json',
             'no_permitidos' => 'nullable|json',
             'recomendaciones' => 'nullable|string',
+            'tipo_atencion' => 'required|string|in:INICIAL,SUBSECUENTE',
         ]);
 
         if ($validator->fails()) {
@@ -415,13 +417,28 @@ class CpuAtencionesController extends Controller
 
             // Guardar caso (si existe id_estado)
             $idCaso = null;
-            if ($request->has('id_estado')) {
-                $caso = new CpuCasosMedicos();
-                $caso->nombre_caso = $request->input('nombre_caso');
-                $caso->id_estado = $request->input('id_estado');
-                $caso->save();
-                $idCaso = $caso->id;
+
+            // Si la atención es INICIAL, se crea un nuevo caso
+            if ($request->input('tipo_atencion') === 'INICIAL') {
+                if ($request->has('id_estado')) {
+                    $caso = new CpuCasosMedicos();
+                    $caso->nombre_caso = $request->input('nombre_caso');
+                    $caso->id_estado = $request->input('id_estado');
+                    $caso->save();
+                    $idCaso = $caso->id;
+                }
             }
+            // Si la atención es SUBSECUENTE, se usa el id_caso del request
+            else if ($request->input('tipo_atencion') === 'SUBSECUENTE') {
+                $idCaso = $request->input('id_caso'); // Se usa el id_caso enviado en el request
+            }
+            // if ($request->has('id_estado')) {
+            //     $caso = new CpuCasosMedicos();
+            //     $caso->nombre_caso = $request->input('nombre_caso');
+            //     $caso->id_estado = $request->input('id_estado');
+            //     $caso->save();
+            //     $idCaso = $caso->id;
+            // }
 
             // Guardar la atención
             $atencion = new CpuAtencion();
@@ -462,8 +479,9 @@ class CpuAtencionesController extends Controller
             }
 
             // Guardar la atención nutricional
+            Log::info('ID_DERIVACION:', ['id_derivacion' => $request->input('id_derivacion')]);
             $nutricion = new CpuAtencionNutricion();
-            $nutricion->id_derivacion = $request->input('id_derivacion');
+            $nutricion->ate_id = $atencion->id;
             $nutricion->imc = $request->input('imc');
             $nutricion->peso_ideal = $request->input('peso_ideal');
             $nutricion->estado_paciente = $request->input('estado_paciente');

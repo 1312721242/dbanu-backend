@@ -9,7 +9,7 @@ class CpuAtencionNutricion extends Model
     protected $table = 'cpu_atenciones_nutricion';
 
     protected $fillable = [
-        'id_derivacion',
+        'ate_id',
         'imc',
         'peso_ideal',
         'estado_paciente',

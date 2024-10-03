@@ -22,7 +22,7 @@ class CpuCasosPsicologiaController extends Controller
 
             // Aplicar filtro según el tipo de atención
             if ($tipo_atencion === 'REAPERTURA') {
-                $query->where('cpu_casos.id_estado', '9');
+                $query->where('cpu_casos.id_estado', '20');
             } else {
                 $query->where('cpu_casos.id_estado', '8');
             }

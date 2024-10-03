@@ -16,5 +16,6 @@ class CpuCasosMedicos extends Model
     protected $fillable = [
         'nombre_caso',
         'id_estado',
+        'informe_final',
     ];
 }

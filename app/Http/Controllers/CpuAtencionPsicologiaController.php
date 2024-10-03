@@ -104,8 +104,30 @@ class CpuAtencionPsicologiaController extends Controller
                 ]);
 
                 if ($request->input('altacaso') && $request->input('tipo_atencion') === 'SUBSECUENTE') {
-                    CpuCasosMedicos::where('id', $request->id_caso)->update(['id_estado' => 9]);
+                    // Obtener el caso médico actual para acceder a la columna informe_final
+                    $casoActual = CpuCasosMedicos::find($request->id_caso);
+                
+                    // Si ya existe un informe_final, decodificarlo; de lo contrario, inicializar como array vacío
+                    $informeFinalArray = $casoActual->informe_final ? json_decode($casoActual->informe_final, true) : [];
+                
+                    // Crear un nuevo elemento para agregar al array
+                    $nuevoElemento = [
+                        'fecha' => Carbon::now()->format('Y-m-d H:i:s'),  // Fecha actual
+                        'descripcionfinal' => $request->descripcionfinal  // La descripción se toma directamente del request
+                    ];
+                
+                    // Agregar el nuevo elemento al array existente
+                    $informeFinalArray[] = $nuevoElemento;
+                
+                    // Actualizar el campo informe_final con el nuevo array
+                    CpuCasosMedicos::where('id', $request->id_caso)->update([
+                        'id_estado' => 20,
+                        'informe_final' => json_encode($informeFinalArray, JSON_UNESCAPED_UNICODE)  // Utilizar JSON_UNESCAPED_UNICODE para evitar el escape de caracteres
+                    ]);
                 }
+                
+                
+                
                 if ($request->tipo_atencion == 'REAPERTURA') {
                     CpuCasosMedicos::where('id', $request->id_caso)->update(['id_estado' => 8]);
                 }
@@ -137,7 +159,7 @@ class CpuAtencionPsicologiaController extends Controller
                 'evolucion_caso' => $request->evolucion,
                 'abordaje_caso' => $request->abordaje,
                 'prescripcion' => $request->observacion,
-                'descripcionfinal' => $request->descripcionfinal,
+                // 'descripcionfinal' => $request->descripcionfinal,
                 'resu_reactivos'=> $request->reactivos,
             ]);
 

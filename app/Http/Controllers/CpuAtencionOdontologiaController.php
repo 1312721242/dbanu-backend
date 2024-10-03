@@ -9,6 +9,8 @@ use App\Models\CpuTurno;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\Auth;
+use Carbon\Carbon;
 class CpuAtencionOdontologiaController extends Controller
 {
     public function store(Request $request)
@@ -88,28 +90,28 @@ class CpuAtencionOdontologiaController extends Controller
             // Guardar datos de derivación si el switch de derivación está activo
             if ($request->input('atencion.derivacionActive')) {
                 $derivacion = $request->input('derivacion');
-              // Validar los datos de la derivación
-    $derivacionData = Validator::make($derivacion, [
-        'id_doctor_al_que_derivan' => 'required|integer|exists:users,id',
-        'id_paciente' => 'required|integer|exists:cpu_personas,id',
-        'motivo_derivacion' => 'required|string',
-        'id_area' => 'required|integer',
-        'fecha_para_atencion' => 'required|date',
-        'hora_para_atencion' => 'required|date_format:H:i:s',
-        'id_estado_derivacion' => 'integer|exists:cpu_estados,id',
-        'id_turno_asignado' => 'required|integer|exists:cpu_turnos,id_turnos',
-    ])->validate();
-
-                $derivacionData['ate_id'] = $cpuAtencion->id;
+                // Validar los datos de la derivación
+                $derivacionData = Validator::make($derivacion, [
+                    'id_doctor_al_que_derivan' => 'required|integer|exists:users,id',
+                    'id_paciente' => 'required|integer|exists:cpu_personas,id',
+                    'motivo_derivacion' => 'required|string',
+                    'id_area' => 'required|integer',
+                    'fecha_para_atencion' => 'required|date',
+                    'hora_para_atencion' => 'required|date_format:H:i:s',
+                    'id_estado_derivacion' => 'integer|exists:cpu_estados,id',
+                    'id_turno_asignado' => 'required|integer|exists:cpu_turnos,id_turnos',
+                ])->validate();
+            
+                $derivacionData['ate_id'] = $atencion->id; // Aquí usas $atencion correctamente
                 $derivacionData['id_funcionario_que_derivo'] = Auth::id();
                 $derivacionData['fecha_derivacion'] = Carbon::now();
                 $derivacion = CpuDerivacion::create($derivacionData);
-
+            
                 // Actualizar el estado del turno si la derivación es exitosa
                 CpuTurno::where('id_turnos', $derivacionData['id_turno_asignado'])
                     ->update(['estado' => 7]);
-
             }
+            
             DB::commit();
             return response()->json(['message' => 'Atención guardada con éxito'], 201);
 

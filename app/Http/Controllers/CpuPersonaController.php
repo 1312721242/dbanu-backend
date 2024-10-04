@@ -76,7 +76,7 @@ class CpuPersonaController extends Controller
    // Aquí para atenciones de bienestar
     public function showBienestar($cedula)
     {
-        if (strlen($cedula) < 10) {
+        if (strlen($cedula) <= 10) {
             $personas = CpuPersona::where('cedula', 'like', "{$cedula}%")
                 ->with(['datosEmpleados', 'datosEstudiantes'])
                 ->get();

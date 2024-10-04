@@ -76,7 +76,7 @@ class CpuPersonaController extends Controller
    // Aquí para atenciones de bienestar
     public function showBienestar($cedula)
     {
-        if (strlen($cedula) < 10) {
+        if (strlen($cedula) <= 10) {
             $personas = CpuPersona::where('cedula', 'like', "{$cedula}%")
                 ->with(['datosEmpleados', 'datosEstudiantes'])
                 ->get();
@@ -331,6 +331,7 @@ class CpuPersonaController extends Controller
             'tipoDiscapacidad' => 'nullable|string', // Validación para tipoDiscapacidad
             'porcentaje' => 'nullable|numeric', // Validación para porcentaje
             'ocupacion' => 'nullable|string', // Validación para ocupacion
+            'bonoDesarrollo' => 'nullable|string', // Validación para ocupacion
         ]);
 
         if ($validator->fails()) {
@@ -420,6 +421,7 @@ class CpuPersonaController extends Controller
         'porcentajeDiscapacidad' => 'nullable|numeric',
         'id_clasificacion_tipo_usuario' => 'required|integer',
         'ocupacion' => 'nullable|string',
+        'bonoDesarrollo' => 'nullable|string',
     ]);
 
     if ($validator->fails()) {
@@ -455,6 +457,7 @@ class CpuPersonaController extends Controller
             'tipo_discapacidad' => $validatedData['tipoDiscapacidad'],
             'porcentaje_discapacidad' => $validatedData['porcentajeDiscapacidad'],
             'ocupacion' => $validatedData['ocupacion'],
+            'bono_desarrollo' => $validatedData['bonoDesarrollo'],
         ];
 
         // Solo agregar los campos si están presentes

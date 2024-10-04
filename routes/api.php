@@ -54,6 +54,7 @@ use App\Http\Controllers\CpuClientesTastyController;
 use App\Http\Controllers\CpuDatosMedicosController;
 use App\Http\Controllers\CpuDienteController;
 use App\Http\Controllers\CpuAtencionOdontologiaController;
+use App\Http\Controllers\CpuTerapiaLenguajeController;
 
 
 
@@ -433,7 +434,12 @@ Route::middleware(['auth:sanctum'])->group(function () {
     // historia clinica
     Route::get('/historia-clinica/{id_paciente}', [CpuAtencionesController::class, 'historiaClinica']);
 
+    //agregar usuarios externos
+    Route::post('/usuarios/externos',[CpuPersonaController::class, 'store']);
+
 });
 
 // Route::put('/cpu-persona-update/{cedula}', [CpuPersonaController::class, 'update']);
 
+    //MODULO DE TERAPIA DE LENGUAJE
+    Route::post('/terapia-lenguaje', [CpuTerapiaLenguajeController::class, 'guardarConsultaTerapia']);

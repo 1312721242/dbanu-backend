@@ -52,7 +52,7 @@ class CpuAtencionPsicologiaController extends Controller
             'evolucion_caso' => 'nullable|string',
             'abordaje' => 'nullable|string',
             'observacion' => 'nullable|string',
-            'descripcionfinal' => 'nullable|string',
+            'descripcionfinal' => 'nullable|json',
             'reactivos' => 'nullable|string',
         ]);
 
@@ -104,8 +104,54 @@ class CpuAtencionPsicologiaController extends Controller
                 ]);
 
                 if ($request->input('altacaso') && $request->input('tipo_atencion') === 'SUBSECUENTE') {
-                    CpuCasosMedicos::where('id', $request->id_caso)->update(['id_estado' => 9]);
+                    // Obtener el caso médico actual para acceder a la columna informe_final
+                    $casoActual = CpuCasosMedicos::find($request->id_caso);
+
+                    $nuevoInforme = json_decode($request->input('descripcionfinal'), true);
+
+                    // Asegurarse de que `informe_final` sea un array antes de agregar la fecha
+                    if (!is_array($nuevoInforme)) {
+                        return response()->json(['error' => 'Formato inválido en informe_final'], 400);
+                    }
+
+                    $nuevoInforme['fecha'] = Carbon::now()->toDateTimeString();
+
+                    // Si ya hay algo en `informe_final`, agregar el nuevo informe
+                    if (!empty($casoActual->informe_final)) {
+                        $informesPrevios = json_decode($casoActual->informe_final, true);
+
+                        // Asegurarse de que `informesPrevios` sea un array antes de agregar el nuevo informe
+                        if (!is_array($informesPrevios)) {
+                            $informesPrevios = [$informesPrevios];
+                        }
+
+                        $informesPrevios[] = $nuevoInforme; // Agregar el nuevo informe
+                    } else {
+                        // Si no hay nada en `informe_final`, simplemente creamos un nuevo array con el nuevo informe
+                        $informesPrevios = [$nuevoInforme];
+                    }
+
+                    // // Si ya existe un informe_final, decodificarlo; de lo contrario, inicializar como array vacío
+                    // $informeFinalArray = $casoActual->informe_final ? json_decode($casoActual->informe_final, true) : [];
+
+                    // // Crear un nuevo elemento para agregar al array
+                    // $nuevoElemento = [
+                    //     'fecha' => Carbon::now()->format('Y-m-d H:i:s'),  // Fecha actual
+                    //     'descripcionfinal' => $request->descripcionfinal  // La descripción se toma directamente del request
+                    // ];
+
+                    // // Agregar el nuevo elemento al array existente
+                    // $informeFinalArray[] = $nuevoElemento;
+
+                    // Actualizar el campo informe_final con el nuevo array
+                    CpuCasosMedicos::where('id', $request->id_caso)->update([
+                        'id_estado' => 20,
+                        'informe_final' => json_encode($informesPrevios)  // Utilizar JSON_UNESCAPED_UNICODE para evitar el escape de caracteres
+                    ]);
                 }
+
+
+
                 if ($request->tipo_atencion == 'REAPERTURA') {
                     CpuCasosMedicos::where('id', $request->id_caso)->update(['id_estado' => 8]);
                 }
@@ -137,7 +183,7 @@ class CpuAtencionPsicologiaController extends Controller
                 'evolucion_caso' => $request->evolucion,
                 'abordaje_caso' => $request->abordaje,
                 'prescripcion' => $request->observacion,
-                'descripcionfinal' => $request->descripcionfinal,
+                // 'descripcionfinal' => $request->descripcionfinal,
                 'resu_reactivos'=> $request->reactivos,
             ]);
 

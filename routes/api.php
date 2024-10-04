@@ -433,6 +433,9 @@ Route::middleware(['auth:sanctum'])->group(function () {
     // historia clinica
     Route::get('/historia-clinica/{id_paciente}', [CpuAtencionesController::class, 'historiaClinica']);
 
+    //agregar usuarios externos
+    Route::post('/usuarios/externos',[CpuPersonaController::class, 'store']);
+
 });
 
 // Route::put('/cpu-persona-update/{cedula}', [CpuPersonaController::class, 'update']);

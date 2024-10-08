@@ -36,6 +36,7 @@ class CpuAtencionTriajeController extends Controller
 
         // Devolver los datos de talla y peso como respuesta JSON
         return response()->json([
+            'id' => $triaje->id,
             'talla' => $triaje->talla,
             'peso' => $triaje->peso,
             'temperatura' => $triaje->peso,

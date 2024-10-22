@@ -601,6 +601,24 @@ class CpuAtencionesController extends Controller
 
     public function guardarAtencionMedicinaGeneral(Request $request)
     {
+        // Validar que los campos requeridos estén presentes
+        $request->validate([
+            'id_funcionario' => 'required|integer|exists:users,id',
+            'id_persona' => 'required|integer|exists:cpu_personas,id',
+            'via_atencion' => 'required|string',
+            'motivo_atencion' => 'required|string',
+            'fecha_hora_atencion' => 'required|date_format:Y-m-d H:i:s',
+            'anio_atencion' => 'required|integer',
+            'detalle_atencion' => 'required|string',
+            'id_tipo_usuario' => 'required|integer|exists:cpu_tipos_usuario,id',
+            'evolucion_enfermedad' => 'required|string',
+            'diagnostico' => 'required|string',
+            'prescripcion' => 'required|string',
+            'recomendacion' => 'required|string',
+            'tipo_atencion' => 'required|string',
+            'id_cie10' => 'required|integer|exists:cpu_cie10,id',
+        ]);
+
         DB::beginTransaction();
 
         try {

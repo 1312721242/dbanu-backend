@@ -77,7 +77,7 @@ class CpuAtencionesController extends Controller
                 'at.id_caso',
                 'at.id_tipo_usuario',
                 'at.evolucion_enfermedad',
-                'at.diagnostico',
+                DB::raw('at.diagnostico::text as diagnostico'), // Convertir el campo jsonb a texto
                 'at.prescripcion',
                 'at.recomendacion',
                 'at.tipo_atencion',
@@ -171,7 +171,7 @@ class CpuAtencionesController extends Controller
                         'at.id_caso',
                         'at.id_tipo_usuario',
                         'at.evolucion_enfermedad',
-                        'at.diagnostico as at_diagnostico',
+                        DB::raw('at.diagnostico::text as at_diagnostico'), // Convertir el campo jsonb a texto
                         'at.prescripcion as at_prescripcion',
                         'at.recomendacion',
                         'at.tipo_atencion',
@@ -601,6 +601,24 @@ class CpuAtencionesController extends Controller
 
     public function guardarAtencionMedicinaGeneral(Request $request)
     {
+        // Validar que los campos requeridos estén presentes
+        $request->validate([
+            'id_funcionario' => 'required|integer|exists:users,id',
+            'id_persona' => 'required|integer|exists:cpu_personas,id',
+            'via_atencion' => 'required|string',
+            'motivo_atencion' => 'required|string',
+            'fecha_hora_atencion' => 'required|date_format:Y-m-d H:i:s',
+            'anio_atencion' => 'required|integer',
+            'detalle_atencion' => 'required|string',
+            'id_tipo_usuario' => 'required|integer|exists:cpu_tipos_usuario,id',
+            'evolucion_enfermedad' => 'required|string',
+            'diagnostico' => 'required|string',
+            'prescripcion' => 'required|string',
+            'recomendacion' => 'required|string',
+            'tipo_atencion' => 'required|string',
+            'id_cie10' => 'required|integer|exists:cpu_cie10,id',
+        ]);
+
         DB::beginTransaction();
 
         try {
@@ -621,6 +639,7 @@ class CpuAtencionesController extends Controller
             $atencion->recomendacion = $request->input('recomendacion');
             $atencion->tipo_atencion = $request->input('tipo_atencion');
             $atencion->id_cie10 = $request->input('id_cie10');
+            $atencion->tipo_atencion = $request->input('tipo_atencion');
             $atencion->id_estado = 1;
             $atencion->save();
 

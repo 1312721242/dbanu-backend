@@ -164,7 +164,7 @@ class CpuPersonaController extends Controller
             }
         }
 
-        // Second API call if first API doesn't provide any data
+        //Second API call if first API doesn't provide any data
         $response = Http::get("https://apps.uleam.edu.ec/SGAAPI/api/Estudiantes/{$cedula}/bienestar");
         if ($response->successful() && !empty($response->json())) {
             $data = $response->json();
@@ -207,7 +207,6 @@ class CpuPersonaController extends Controller
                 }
                 $etnia = $etniaData ? $etniaData->etnia : $etnia;
             }
-
             // Generar el código de persona
             $codigoPersona = $this->generarCodigoPersona($cedula, $data['nombres']);
 

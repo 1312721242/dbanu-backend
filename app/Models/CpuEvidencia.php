@@ -10,7 +10,7 @@ class CpuEvidencia extends Model
     protected $table = 'cpu_evidencia';
 
     protected $fillable = [
-        'id_elemento_fundamental', 'descripcion', 'enlace_evidencia'
+        'id_elemento_fundamental', 'descripcion', 'enlace_evidencia', 'id_fuente_informacion'
     ];
 
     public function fuenteInformacion()

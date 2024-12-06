@@ -76,7 +76,7 @@ class CpuPersonaController extends Controller
    // Aquí para atenciones de bienestar
     public function showBienestar($cedula)
     {
-        if (strlen($cedula) <= 10) {
+        if (strlen($cedula) <= 9) {
             $personas = CpuPersona::where('cedula', 'like', "{$cedula}%")
                 ->with(['datosEmpleados', 'datosEstudiantes'])
                 ->get();
@@ -164,8 +164,40 @@ class CpuPersonaController extends Controller
             }
         }
 
-        // Second API call if first API doesn't provide any data
-        $response = Http::get("https://apps.uleam.edu.ec/SGAAPI/api/Estudiantes/{$cedula}/bienestar");
+        //Second API call if first API doesn't provide any data
+        try {
+            $response = Http::asForm()->post('https://login.microsoftonline.com/31a17900-7589-4cfc-b11a-f4e83c27b8ed/oauth2/v2.0/token', [
+                'grant_type' => 'client_credentials',
+                'client_id' => '13e24fa4-9c64-4653-a96c-20964510b52a',
+                'client_secret' => 'ywq8Q~1mk.SSMpJV1KjeUZPZfY~~1diPvVCT0c.b',
+                'scope' => 'https://service.flow.microsoft.com//.default'
+            ]);
+
+            if ($response->failed()) {
+                Log::error('Error al obtener el token de acceso: ' . $response->status() . ' ' . $response->body());
+                return response()->json(['error' => 'Error al obtener el token de acceso'], 500);
+            }
+
+            $access_token = $response->json()['access_token'];
+            $identificacion = $cedula;
+
+            $response = Http::withHeaders([
+                'Authorization' => 'Bearer ' . $access_token,
+                'Content-Type' => 'application/json'
+            ])->post('https://prod-146.westus.logic.azure.com:443/workflows/033f8b54b4cc42f4ac0fdea481c0c27c/triggers/manual/paths/invoke?api-version=2016-06-01', [
+                'identificacion' => $identificacion
+            ]);
+
+            if ($response->failed()) {
+                Log::error('Error al enviar la solicitud a Azure Logic Apps: ' . $response->status() . ' ' . $response->body());
+                return response()->json(['error' => 'Error al enviar la solicitud a Azure Logic Apps'], 500);
+            }
+
+            // return response()->json($response->json());
+        } catch (\Exception $e) {
+            Log::error('Error al obtener el token de acceso: ' . $e->getMessage());
+            return response()->json(['error' => 'Error al obtener el token de acceso'], 500);
+        }
         if ($response->successful() && !empty($response->json())) {
             $data = $response->json();
 
@@ -207,7 +239,6 @@ class CpuPersonaController extends Controller
                 }
                 $etnia = $etniaData ? $etniaData->etnia : $etnia;
             }
-
             // Generar el código de persona
             $codigoPersona = $this->generarCodigoPersona($cedula, $data['nombres']);
 
@@ -229,7 +260,7 @@ class CpuPersonaController extends Controller
                 'codigo_persona' => $codigoPersona,
                 'imagen' => $data['imagen'] ?? null,
                 'id_clasificacion_tipo_usuario' => 1,
-                'ocupacion' => $data['ocupacion'],
+                // 'ocupacion' => $data['ocupacion'],
             ]);
 
             CpuDatosEstudiantes::create([

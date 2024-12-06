@@ -55,10 +55,7 @@ use App\Http\Controllers\CpuDatosMedicosController;
 use App\Http\Controllers\CpuDienteController;
 use App\Http\Controllers\CpuAtencionOdontologiaController;
 use App\Http\Controllers\CpuTerapiaLenguajeController;
-
-
-
-
+use App\Http\Controllers\ReporteController;
 
 // Autenticación
 Route::get('credencial-pdf/{identificacion}/{periodo}', [CpuBecadoController::class, 'generarCredencialPDF']);
@@ -156,6 +153,11 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::post('/elementos', [CpuElementoFundamentalController::class, 'agregarFuenteInformacione']);
     Route::put('/actualizar-elemento/{id}', [CpuElementoFundamentalController::class, 'modificarFuenteInformacion']);
     Route::delete('/eliminar-fuente-informacion/{id}', [CpuElementoFundamentalController::class, 'eliminarFuenteSInformacion']);
+
+    //Fuentes de Información
+    Route::get('/fuente-informacion/{id_indicador}', [CpuFuenteInformacionController::class, 'getFuenteInformacion']);
+    Route::post('/fuente-informacion', [CpuFuenteInformacionController::class, 'storeFuenteInformacion']);
+    Route::put('/fuente-informacion/{id}', [CpuFuenteInformacionController::class, 'updateFuenteInformacion']);
 
     //Elementos Fundamentales
     // Route::post('/crearatencionpsicologia', [CpuElementoFundamentalController::class, 'agregarFuenteInformacione']);
@@ -419,7 +421,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('/carreras-certificado/{periodo_certificado}/{sede}', [CpuCertificadoNivelacionController::class, 'getCarrerasByPeriodoAndSede']);
 
     // Rutas para CpuDatosMedicos
-    Route::get('/datos-medicos', [CpuDatosMedicosController::class, 'index']);
+
     Route::post('/datos-medicos', [CpuDatosMedicosController::class, 'store']);
     Route::get('/datos-medicos/{id_persona}', [CpuDatosMedicosController::class, 'show']);
     Route::patch('/datos-medicos/{id}', [CpuDatosMedicosController::class, 'update'])->withoutMiddleware(['csrf']);
@@ -436,6 +438,8 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
     //agregar usuarios externos
     Route::post('/usuarios/externos',[CpuPersonaController::class, 'store']);
+    //reporte para obtener valores unicos de cada campo requerido
+    Route::get('/valores-unicos', [ReporteController::class, 'getAllUnifiedUniqueValuesForSelects']);
 
 });
 
@@ -443,3 +447,5 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
     //MODULO DE TERAPIA DE LENGUAJE
     Route::post('/terapia-lenguaje', [CpuTerapiaLenguajeController::class, 'guardarConsultaTerapia']);
+
+    Route::get('/datos-medicos', [CpuDatosMedicosController::class, 'index']);

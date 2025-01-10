@@ -166,7 +166,7 @@ class CpuPersonaController extends Controller
             }
         }
 
-        // Second API call if first API doesn't provide any data
+        //Second API call if first API doesn't provide any data
         try {
             $response = Http::asForm()->post('https://login.microsoftonline.com/31a17900-7589-4cfc-b11a-f4e83c27b8ed/oauth2/v2.0/token', [
                 'grant_type' => 'client_credentials',
@@ -241,7 +241,6 @@ class CpuPersonaController extends Controller
                 }
                 $etnia = $etniaData ? $etniaData->etnia : $etnia;
             }
-
             // Generar el código de persona
             $codigoPersona = $this->generarCodigoPersona($cedula, $data['nombres']);
 

@@ -154,6 +154,11 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::put('/actualizar-elemento/{id}', [CpuElementoFundamentalController::class, 'modificarFuenteInformacion']);
     Route::delete('/eliminar-fuente-informacion/{id}', [CpuElementoFundamentalController::class, 'eliminarFuenteSInformacion']);
 
+    //Fuentes de Información
+    Route::get('/fuente-informacion/{id_indicador}', [CpuFuenteInformacionController::class, 'getFuenteInformacion']);
+    Route::post('/fuente-informacion', [CpuFuenteInformacionController::class, 'storeFuenteInformacion']);
+    Route::put('/fuente-informacion/{id}', [CpuFuenteInformacionController::class, 'updateFuenteInformacion']);
+
     //Elementos Fundamentales
     // Route::post('/crearatencionpsicologia', [CpuElementoFundamentalController::class, 'agregarFuenteInformacione']);
 
@@ -448,4 +453,5 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
     //MODULO DE TERAPIA DE LENGUAJE
     Route::post('/terapia-lenguaje', [CpuTerapiaLenguajeController::class, 'guardarConsultaTerapia']);
+
     Route::get('/datos-medicos', [CpuDatosMedicosController::class, 'index']);

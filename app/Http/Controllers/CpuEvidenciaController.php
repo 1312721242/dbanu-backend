@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use App\Models\CpuObjetivoNacional;
 use App\Models\CpuElementoFundamental;
+use App\Models\CpuFuenteInformacion;
 use App\Models\CpuYear;
 use App\Models\CpuSede;
 use Illuminate\Support\Facades\Log;
@@ -28,13 +29,15 @@ class CpuEvidenciaController extends Controller
             'id_elemento_fundamental' => 'required|integer',
             'descripcion' => 'required|string',
             'evidencia' => 'required|file|mimes:pdf|max:50000', // Max 50MB
-            'year' => 'required|integer',  // Añade validación para el año
+            'year' => 'required|integer',
+            'id_fuente_informacion' => 'required|integer',
         ]);
 
         $fuenteId = $request->input('id_elemento_fundamental');
         $descripcion = $request->input('descripcion');
         $evidenciaFile = $request->file('evidencia');
         $yearId = $request->input('year');
+        $fuenteInformacionId = $request->input('id_fuente_informacion');
 
         // Verificar si la entrada 'year' es válida
         $year = CpuYear::find($yearId);
@@ -46,6 +49,12 @@ class CpuEvidenciaController extends Controller
         $fuente = CpuElementoFundamental::find($fuenteId);
         if (!$fuente) {
             return response()->json(['error' => 'Elemento fundamental no encontrado'], 404);
+        }
+
+        // Verificar si la fuente de información es válida
+        $fuenteInformacion = CpuFuenteInformacion::find($fuenteInformacionId);
+        if (!$fuenteInformacion) {
+            return response()->json(['error' => 'Fuente de información no encontrada'], 404);
         }
 
         $fileName = $year->descripcion . '_' . str_replace(' ', '_', $descripcion) . '.pdf';
@@ -71,6 +80,7 @@ class CpuEvidenciaController extends Controller
         $evidencia->id_elemento_fundamental = $fuenteId;
         $evidencia->descripcion = $descripcion;
         $evidencia->enlace_evidencia = $filePath;
+        $evidencia->id_fuente_informacion = $fuenteInformacionId;
         $evidencia->save();
 
         return response()->json(['message' => 'Evidencia agregada correctamente']);
@@ -215,23 +225,34 @@ class CpuEvidenciaController extends Controller
 
                     $evidencias = [];
                     foreach ($elemento->evidencias as $evidencia) {
-                        // Generar URL firmada para la evidencia
-                        $urlFirmada = URL::temporarySignedRoute(
-                            'descargar-archivo',
-                            now()->addMinutes(30), // La URL expirará en 30 minutos
-                            ['ano' => $ano, 'archivo' => 'Files/evidencias/' . $evidencia->enlace_evidencia]
-                        );
+                        // Consultar la fuente de información relacionada
+                        $fuenteInformacion = CpuFuenteInformacion::find($evidencia->id_fuente_informacion);
 
                         // Construir la URL de la evidencia sin firmar
-                        $urlEvidencia = $baseUrl . '/' . $evidencia->enlace_evidencia;
+                        $urlEvidencia = $baseUrl . '/Files/evidencias/' . $evidencia->enlace_evidencia;
 
-                        // Remover parte no deseada de la URL
-                        $urlFirmada = str_replace('api/descargar-archivo/1/', '', $urlFirmada);
+                        // Generar manualmente la firma
+                        $expires = now()->addMinutes(30)->timestamp;
+                        $signature = hash_hmac(
+                            'sha256',
+                            sprintf('/Files/evidencias/%s?expires=%s', $evidencia->enlace_evidencia, $expires),
+                            config('app.key') // Clave de la aplicación
+                        );
 
-                        // Asignar ambas URLs a la evidencia
+                        // Construir la URL firmada
+                        $urlFirmada = sprintf(
+                            '%s?expires=%s&signature=%s',
+                            $urlEvidencia,
+                            $expires,
+                            $signature
+                        );
+
+                        // Asignar ambas URLs y la descripción de la fuente a la evidencia
                         $evidenciaData = [
                             'id' => $evidencia->id,
                             'descripcion' => $evidencia->descripcion,
+                            'id_fuente_informacion' => $evidencia->id_fuente_informacion,
+                            'fuente_informacion_descripcion' => $fuenteInformacion ? $fuenteInformacion->descripcion : null,
                             'enlace_evidencia' => [
                                 'url_firmada' => $urlFirmada
                             ]
@@ -267,10 +288,6 @@ class CpuEvidenciaController extends Controller
 
         return response()->json(['ano' => $ano, 'objetivos_nacionales' => $response]);
     }
-
-
-
-
 
 
     public function descargarArchivo($ano, $archivo)

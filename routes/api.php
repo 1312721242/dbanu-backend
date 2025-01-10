@@ -435,7 +435,13 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::post('/usuarios/externos',[CpuPersonaController::class, 'store']);
     //reporte para obtener valores unicos de cada campo requerido
     Route::get('/valores-unicos', [ReporteController::class, 'getAllUnifiedUniqueValuesForSelects']);
+    // API para obtener el total de atenciones por fecha
+    Route::post('/reporte/total-atenciones-por-fecha', [ReporteController::class, 'getTotalAtencionesPorFecha']);
 
+    // API para guardar o actualizar datos sociales
+    Route::post('/datos-sociales', [CpuDatosSocialesController::class, 'store']);
+    Route::post('/datos-sociales/{id_persona}', [CpuDatosSocialesController::class, 'updateByPersonaId']);
+    Route::get('/datos-sociales/{id_persona}', [CpuDatosSocialesController::class, 'show']);
 });
 
 // Route::put('/cpu-persona-update/{cedula}', [CpuPersonaController::class, 'update']);

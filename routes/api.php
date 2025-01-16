@@ -294,7 +294,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
     // Rutas para el controlador CpuEvidenciaController
     Route::post('/evidencia/agregar', [CpuEvidenciaController::class, 'agregarEvidencia']);
-    Route::put('/evidencia/actualizar/{id}', [CpuEvidenciaController::class, 'actualizarEvidencia']);
+    Route::post('/evidencia/{id}/actualizar', [CpuEvidenciaController::class, 'actualizarEvidencia']);
     Route::delete('/evidencia/{id}/eliminar', [CpuEvidenciaController::class, 'eliminarEvidencia']);
     Route::get('/evidencia', [CpuEvidenciaController::class, 'consultarEvidencias']);
     Route::get('obtener-informacion/{ano}', [CpuEvidenciaController::class, 'obtenerInformacionPorAno']);
@@ -413,7 +413,8 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('/ultima-consulta/{area_atencion}/{usr_tipo}/{id_persona}/{id_caso}', [CpuAtencionesController::class, 'obtenerUltimaConsulta']);
     Route::post('/atenciones/triajesico', [CpuAtencionPsicologiaController::class, 'guardarAtencionConTriaje']);
     Route::post('/atenciones/updatederivacionsico', [CpuAtencionPsicologiaController::class, 'actulizarderivacionsico']);
-    Route::get('/obtener-cie10', [CpuAtencionPsicologiaController::class, 'obtenerCie10']);    Route::get('/obtener-cie10', [CpuAtencionPsicologiaController::class, 'obtenerCie10']);
+    Route::get('/obtener-cie10', [CpuAtencionPsicologiaController::class, 'obtenerCie10']);
+    Route::get('/obtener-cie10', [CpuAtencionPsicologiaController::class, 'obtenerCie10']);
 
     // Ruta para certificados
     Route::get('/certificados/{periodo_certificado}/{sede}/{carrera}', [CpuCertificadoNivelacionController::class, 'datosCertificado']);
@@ -437,15 +438,14 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('/historia-clinica/{id_paciente}', [CpuAtencionesController::class, 'historiaClinica']);
 
     //agregar usuarios externos
-    Route::post('/usuarios/externos',[CpuPersonaController::class, 'store']);
+    Route::post('/usuarios/externos', [CpuPersonaController::class, 'store']);
     //reporte para obtener valores unicos de cada campo requerido
     Route::get('/valores-unicos', [ReporteController::class, 'getAllUnifiedUniqueValuesForSelects']);
-
 });
 
 // Route::put('/cpu-persona-update/{cedula}', [CpuPersonaController::class, 'update']);
 
-    //MODULO DE TERAPIA DE LENGUAJE
-    Route::post('/terapia-lenguaje', [CpuTerapiaLenguajeController::class, 'guardarConsultaTerapia']);
+//MODULO DE TERAPIA DE LENGUAJE
+Route::post('/terapia-lenguaje', [CpuTerapiaLenguajeController::class, 'guardarConsultaTerapia']);
 
-    Route::get('/datos-medicos', [CpuDatosMedicosController::class, 'index']);
+Route::get('/datos-medicos', [CpuDatosMedicosController::class, 'index']);

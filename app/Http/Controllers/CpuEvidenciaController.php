@@ -86,51 +86,54 @@ class CpuEvidenciaController extends Controller
         return response()->json(['message' => 'Evidencia agregada correctamente']);
     }
 
-
     public function actualizarEvidencia(Request $request, $id)
     {
         $request->validate([
             'id_elemento_fundamental' => 'required|integer',
             'descripcion' => 'required|string',
-            'evidencia' => 'file|mimes:pdf|max:50000', // Max 50MB
+            'evidencia' => 'nullable|file|mimes:pdf|max:50000', // Opcional
+            'year' => 'required|integer',
+            'id_fuente_informacion' => 'required|integer',
         ]);
 
         $evidencia = CpuEvidencia::find($id);
-
         if (!$evidencia) {
-            return response()->json(['warning' => true, 'message' => 'Evidencia no encontrada'], 404);
+            return response()->json(['error' => 'Evidencia no encontrada'], 404);
         }
 
-        $fuenteId = $request->input('id_elemento_fundamental');
-        $descripcion = $request->input('descripcion');
-        $evidenciaFile = $request->file('evidencia');
+        $evidencia->id_elemento_fundamental = $request->input('id_elemento_fundamental');
+        $evidencia->descripcion = $request->input('descripcion');
+        $evidencia->id_fuente_informacion = $request->input('id_fuente_informacion');
 
-        $year = CpuYear::find($fuenteId);
-        $fileName = $year->descripcion . '_' . str_replace(' ', '_', $descripcion) . '.pdf';
-        $filePath = 'Files/evidencias/' . $year->descripcion . '/' . $fileName;
-
-        if ($evidenciaFile) {
-            // Verificar si la carpeta 'evidencias' existe en public/file
-            $evidenciasFolder = public_path('Files/evidencias');
-            if (!file_exists($evidenciasFolder)) {
-                mkdir($evidenciasFolder, 0777, true); // Crear la carpeta 'evidencias'
+        // Verificar si hay un archivo nuevo
+        if ($request->hasFile('evidencia')) {
+            $year = CpuYear::find($request->input('year'));
+            if (!$year) {
+                return response()->json(['error' => 'Año no encontrado'], 404);
             }
 
-            // Verificar si la carpeta del año existe en public/file/evidencias
-            $yearFolder = $evidenciasFolder . '/' . $year->descripcion;
+            $fileName = $year->descripcion . '_' . str_replace(' ', '_', $request->input('descripcion')) . '.pdf';
+            $yearFolder = public_path('Files/evidencias') . '/' . $year->descripcion;
+
             if (!file_exists($yearFolder)) {
-                mkdir($yearFolder, 0777, true); // Crear la carpeta del año
+                mkdir($yearFolder, 0777, true);
             }
 
-            // Mover el archivo a la carpeta del año
-            $evidenciaFile->move($yearFolder, $fileName);
+            $fullPath = $yearFolder . '/' . $fileName;
 
-            // Actualizar el enlace de evidencia
+            // Si el archivo ya existe, eliminarlo
+            if (file_exists($fullPath)) {
+                unlink($fullPath);
+            }
+
+            // Mover el archivo al directorio de destino
+            $request->file('evidencia')->move($yearFolder, $fileName);
+            $filePath = $year->descripcion . '/' . $fileName;
+
+            // Actualizar la referencia del archivo en la base de datos
             $evidencia->enlace_evidencia = $filePath;
         }
 
-        $evidencia->id_elemento_fundamental = $fuenteId;
-        $evidencia->descripcion = $descripcion;
         $evidencia->save();
 
         return response()->json(['message' => 'Evidencia actualizada correctamente']);
@@ -140,55 +143,26 @@ class CpuEvidenciaController extends Controller
     public function eliminarEvidencia($id)
     {
         $evidencia = CpuEvidencia::find($id);
-
         if (!$evidencia) {
-            return response()->json(['warning' => true, 'message' => 'Evidencia no encontrada'], 404);
+            return response()->json(['error' => 'Evidencia no encontrada'], 404);
         }
 
-        $year = CpuYear::find($evidencia->id_elemento_fundamental);
-
-        // Construir la ruta completa del archivo
-        $filePath = public_path('Files/evidencias/' . $year->descripcion . '/' . $evidencia->enlace_evidencia);
-
-        if (!file_exists($filePath)) {
-            return response()->json(['warning' => true, 'message' => 'El archivo no existe'], 404);
+        // Eliminar el archivo asociado si existe
+        if ($evidencia->enlace_evidencia && file_exists(public_path('Files/evidencias/' . $evidencia->enlace_evidencia))) {
+            unlink(public_path('Files/evidencias/' . $evidencia->enlace_evidencia));
         }
 
-        try {
-            // Eliminar el archivo asociado a la evidencia
-            unlink($filePath);
+        $evidencia->delete();
 
-            // Eliminar la evidencia de la base de datos
-            $evidencia->delete();
-
-            $fecha = now();
-
-            DB::table('cpu_auditoria')->insert([
-                'aud_user' => 'System',
-                'aud_tabla' => 'cpu_evidencia',
-                'aud_campo' => 'descripcion',
-                'aud_dataold' => $evidencia->descripcion,
-                'aud_datanew' => '',
-                'aud_tipo' => 'ELIMINACIÓN',
-                'aud_fecha' => $fecha,
-                'aud_ip' => request()->ip(),
-                'aud_tipoauditoria' => 3,
-                'aud_descripcion' => "ELIMINACIÓN DE EVIDENCIA " . $evidencia->descripcion,
-                'aud_nombreequipo' => gethostbyaddr(request()->ip()),
-                'created_at' => $fecha,
-                'updated_at' => $fecha,
-            ]);
-
-            return response()->json(['success' => true, 'message' => 'Evidencia eliminada correctamente']);
-        } catch (\Throwable $th) {
-            return response()->json(['warning' => true, 'message' => 'No se pudo eliminar la evidencia']);
-        }
+        return response()->json(['message' => 'Evidencia eliminada correctamente']);
     }
+
 
 
     public function consultarEvidencias()
     {
-        $evidencias = CpuEvidencia::all();
+        // Obtener las evidencias ordenadas por id_fuente_informacion
+        $evidencias = CpuEvidencia::orderBy('id_fuente_informacion', 'asc')->get();
 
         $baseUrl = URL::to('/'); // Obtiene la URL base de la aplicación
 
@@ -201,13 +175,16 @@ class CpuEvidenciaController extends Controller
         return response()->json($evidencias);
     }
 
+
     public function obtenerInformacionPorAno($ano)
     {
         // Obtener los objetivos nacionales que pertenecen al año dado
         $objetivos = CpuObjetivoNacional::where('id_year', $ano)
-            ->with([
-                'estandares.elementosFundamentales.evidencias',
-            ])
+        ->with([
+            'estandares.elementosFundamentales.evidencias' => function ($query) {
+                $query->orderBy('id_fuente_informacion', 'asc');
+            },
+        ])
             ->get();
 
         // URL base de la aplicación

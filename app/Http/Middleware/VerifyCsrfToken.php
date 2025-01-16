@@ -15,11 +15,11 @@ class VerifyCsrfToken extends Middleware
         //
         // 'api/login',
         // 'api/upload-pdf',
-        // 'api/obtener-funciones-distinct-role', 
+        // 'api/obtener-funciones-distinct-role',
         // 'api/obtener-funciones-distinct',
-        // 'api/agregar-usuario', 
-        // 'api/agregar-funcion', 
-        // 'api/agregarFunciones', 
+        // 'api/agregar-usuario',
+        // 'api/agregar-funcion',
+        // 'api/agregarFunciones',
         // 'api/agregar-menu',
         // 'api/agregar-funcion-rol',
         // 'api/agregarTurnos',
@@ -59,6 +59,9 @@ class VerifyCsrfToken extends Middleware
         // 'api/derivaciones/guardar',
         // '/api/datos-medicos',
         // '/api/datos-medicos/{id}',
-        'api/*', 
+        'api/*',
+        'api/datos-sociales',
+        'api/datos-sociales/{id}',
+        'api/datos-sociales/{id_persona}',
     ];
 }

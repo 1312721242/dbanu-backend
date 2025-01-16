@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -254,9 +255,106 @@ class ReporteController extends Controller
     ]);
 }
 
+    // Función para obtener el total de registros de atenciones en un rango de fechas
+    public function getTotalAtencionesPorFecha(Request $request)
+{
+    $fechaInicio = $request->input('fechaInicio');
+    $fechaFin = $request->input('fechaFin');
 
+    // Función para normalizar cadenas
+    $normalize = function ($value) {
+        if (is_null($value)) {
+            return null;
+        }
+        $value = mb_strtoupper(trim($value)); // Convertir a mayúsculas y quitar espacios
+        $value = str_replace(['Á', 'É', 'Í', 'Ó', 'Ú'], ['A', 'E', 'I', 'O', 'U'], $value); // Normaliza caracteres con tilde
+        return preg_replace('/(\/A|\/O)$/', '', $value); // Elimina sufijos como "/A" o "/O"
+    };
 
+    // Función para convertir valores booleanos a "SI" o "NO"
+    $booleanToSiNo = function ($value) {
+        return $value ? 'SI' : 'NO';
+    };
 
+    // Obtener las atenciones dentro del rango de fechas
+    $atenciones = DB::table('cpu_atenciones as at')
+        ->join('cpu_personas as p', 'at.id_persona', '=', 'p.id')
+        ->leftJoin('cpu_datos_estudiantes as de', 'p.id', '=', 'de.id_persona')
+        ->leftJoin('cpu_datos_empleados as dem', 'p.id', '=', 'dem.id_persona')
+        ->leftJoin('cpu_datos_medicos as dm', 'p.id', '=', 'dm.id_persona')
+        ->select(
+            'at.id',
+            'at.id_persona',
+            'at.via_atencion',
+            'at.motivo_atencion',
+            'at.fecha_hora_atencion',
+            'at.detalle_atencion',
+            'at.tipo_atencion',
+            'at.recomendacion',
+            'p.cedula',
+            'p.nombres',
+            'p.provincia',
+            'p.ciudad',
+            'p.tipoetnia',
+            'p.discapacidad',
+            'p.sexo',
+            'p.direccion',
+            'de.campus',
+            'de.estado_civil',
+            'de.segmentacion_persona',
+            'dem.puesto',
+            'dem.modalidad',
+            'dem.unidad as facultad',
+            'dem.carrera',
+            'dm.enfermedades_catastroficas',
+            'dm.tiene_seguro_medico',
+            'dm.embarazada'
+        )
+        ->whereBetween('at.fecha_hora_atencion', [$fechaInicio, $fechaFin])
+        ->get();
 
+    // Agrupar por persona
+    $agrupadoPorPersona = $atenciones->groupBy('id_persona')->map(function ($atenciones, $id_persona) use ($normalize, $booleanToSiNo) {
+        $persona = $atenciones->first(); // Información principal de la persona
+        return [
+            'id_persona' => $id_persona,
+            'cedula' => $persona->cedula,
+            'nombres' => $normalize($persona->nombres),
+            'provincia' => $normalize($persona->provincia),
+            'ciudad' => $normalize($persona->ciudad),
+            'sexo' => $normalize($persona->sexo),
+            'tipoetnia' => $normalize($persona->tipoetnia),
+            'discapacidad' => $booleanToSiNo($persona->discapacidad),
+            'clasificacionUsuario' => $normalize($persona->tipoetnia), // Este campo puede adaptarse según la tabla
+            'campus' => $normalize($persona->campus),
+            'estadoCivil' => $normalize($persona->estado_civil),
+            'segmentacionPersona' => $normalize($persona->segmentacion_persona),
+            'enfermedadesCatastroficas' => $booleanToSiNo($persona->enfermedades_catastroficas),
+            'tieneSeguroMedico' => $booleanToSiNo($persona->tiene_seguro_medico),
+            'embarazada' => $booleanToSiNo($persona->embarazada),
+            'puesto' => $normalize($persona->puesto),
+            'modalidad' => $normalize($persona->modalidad),
+            'facultad' => $normalize($persona->facultad),
+            'carrera' => $normalize($persona->carrera),
+            'totalAtenciones' => $atenciones->count(),
+            'atenciones' => $atenciones->map(function ($atencion) use ($normalize) {
+                return [
+                    'id' => $atencion->id,
+                    'via_atencion' => $normalize($atencion->via_atencion),
+                    'motivo_atencion' => $normalize($atencion->motivo_atencion),
+                    'fecha_hora_atencion' => Carbon::parse($atencion->fecha_hora_atencion)->translatedFormat('l, d F Y'),
+                    'detalle_atencion' => $normalize($atencion->detalle_atencion),
+                    'tipo_atencion' => $normalize($atencion->tipo_atencion),
+                    'recomendacion' => $normalize($atencion->recomendacion),
+                ];
+            })
+        ];
+    })->values();
+
+    return response()->json([
+        'total_atenciones' => $agrupadoPorPersona->sum(fn($persona) => $persona['totalAtenciones']), // Total de atenciones
+        'personas' => $agrupadoPorPersona // Datos agrupados por persona
+    ]);
+}
 
 }

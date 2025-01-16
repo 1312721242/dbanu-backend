@@ -143,6 +143,8 @@ class CpuPersonaController extends Controller
                     'email' => $data['email'] ?? '',
                     'id_clasificacion_tipo_usuario' => 2,
                     'ocupacion' => $data['ocupacion'],
+                    'estado_civil' => $data['estado_civil'] ?? 'SIN INFORMACIÓN',
+                    'bono_desarrollo' => $data['bono_desarrollo'] ?? 'SIN INFORMACIÓN',
                 ]);
 
                 CpuDatosEmpleado::create([
@@ -362,7 +364,8 @@ class CpuPersonaController extends Controller
             'tipoDiscapacidad' => 'nullable|string', // Validación para tipoDiscapacidad
             'porcentaje' => 'nullable|numeric', // Validación para porcentaje
             'ocupacion' => 'nullable|string', // Validación para ocupacion
-            'bonoDesarrollo' => 'nullable|string', // Validación para ocupacion
+            'bonoDesarrollo' => 'nullable|string', // Validación para bonoDesarrollo
+            'estadoCivil' => 'nullable|string', // Validación para estadoCivil
         ]);
 
         if ($validator->fails()) {
@@ -407,12 +410,18 @@ class CpuPersonaController extends Controller
                 Log::info('No se ha subido ninguna imagen.');
             }
 
-            // Actualizar tipoDiscapacidad y porcentaje si están presentes en la solicitud
+            // Actualizar tipoDiscapacidad, porcentaje, bonoDesarrollo y estadoCivil si están presentes en la solicitud
             if ($request->has('tipoDiscapacidad')) {
                 $persona->tipo_discapacidad = $request->input('tipoDiscapacidad');
             }
             if ($request->has('porcentaje')) {
                 $persona->porcentaje_discapacidad = $request->input('porcentaje');
+            }
+            if ($request->has('bonoDesarrollo')) {
+                $persona->bono_desarrollo = $request->input('bonoDesarrollo');
+            }
+            if ($request->has('estadoCivil')) {
+                $persona->estado_civil = $request->input('estadoCivil');
             }
 
             $persona->save();
@@ -453,6 +462,8 @@ class CpuPersonaController extends Controller
         'id_clasificacion_tipo_usuario' => 'required|integer',
         'ocupacion' => 'nullable|string',
         'bonoDesarrollo' => 'nullable|string',
+        'estadoCivil' => 'nullable|string',
+        'id_tipo_usuario' => 'required|integer',
     ]);
 
     if ($validator->fails()) {
@@ -489,6 +500,8 @@ class CpuPersonaController extends Controller
             'porcentaje_discapacidad' => $validatedData['porcentajeDiscapacidad'],
             'ocupacion' => $validatedData['ocupacion'],
             'bono_desarrollo' => $validatedData['bonoDesarrollo'],
+            'estado_civil' => $validatedData['estadoCivil'],
+            'id_tipo_usuario' => $validatedData['id_tipo_usuario'],
         ];
 
         // Solo agregar los campos si están presentes

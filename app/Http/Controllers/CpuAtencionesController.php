@@ -59,8 +59,11 @@ class CpuAtencionesController extends Controller
 
 
     // // Consulta de traer las atenciones de cada usuario en la tabla de la opcion de regitros
-    public function obtenerAtencionesPorPaciente($id_persona, $id_funcionario)
+    public function obtenerAtencionesPorPaciente($id_persona, $id_funcionario, $usr_tipo = null)
     {
+        // // $usr_tipo = 10;
+        // $id_persona =32;
+        // $id_funcionario =35;
         // Realiza la consulta filtrando por id_persona, id_funcionario e id_estado = 1 y selecciona todas las columnas necesarias
         $atenciones = DB::table('cpu_atenciones as at')
             ->select(
@@ -108,18 +111,32 @@ class CpuAtencionesController extends Controller
                 'ap.evolucion_caso as ap_evolucion_caso',
                 'ap.abordaje_caso as ap_abordaje_caso',
                 'ap.prescripcion as ap_prescripcion_psicologica',
-                'ap.descripcionfinal as ap_descripcionfinal'
-            )
-            ->leftJoin('cpu_atenciones_psicologia as ap', 'at.id', '=', 'ap.id_cpu_atencion')  // Hacer el join con cpu_atenciones_psicologia
-            ->when($id_persona, function ($query, $id_persona) {
-                return $query->where('at.id_persona', $id_persona);
-            })
-            ->when($id_funcionario, function ($query, $id_funcionario) {
-                return $query->where('at.id_funcionario', $id_funcionario);
-            })
-            ->where('at.id_estado', 1)  // Añadir la condición de que id_estado sea igual a 1
-            ->orderBy('at.created_at', 'desc')
-            ->get();
+                'ap.descripcionfinal as ap_descripcionfinal',
+                // Datos adicionales de otras tablas
+                'ts.tipo_informe as ts_tipo_informe',
+                'ts.requiriente as ts_requiriente',
+                'ts.numero_tramite as ts_numero_tramite',
+                'ts.detalle_general as ts_detalle_general',
+                'ts.observaciones as ts_observaciones',
+                'ts.url_informe as ts_url_informe',
+                'ts.periodo as ts_periodo'
+                )
+                ->leftJoin('cpu_atenciones_trabajo_social as ts', function ($join) use ($usr_tipo) {
+                    $join->on('at.id', '=', 'ts.id_atenciones');
+                    if ($usr_tipo !== null && $usr_tipo == 10) {
+                        $join->whereNotNull('ts.id'); // Solo incluye los registros si usr_tipo es 10
+                    }
+                })
+                ->leftJoin('cpu_atenciones_psicologia as ap', 'at.id', '=', 'ap.id_cpu_atencion')  // Hacer el join con cpu_atenciones_psicologia
+                ->when($id_persona, function ($query, $id_persona) {
+                    return $query->where('at.id_persona', $id_persona);
+                })
+                ->when($id_funcionario, function ($query, $id_funcionario) {
+                    return $query->where('at.id_funcionario', $id_funcionario);
+                })
+                ->where('at.id_estado', 1)  // Añadir la condición de que id_estado sea igual a 1
+                ->orderBy('at.created_at', 'desc')
+                ->get();
 
         // Filtramos las atenciones que tienen id_caso y las que no
         $atencionesConCaso = $atenciones->filter(function ($atencion) {

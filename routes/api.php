@@ -35,6 +35,7 @@ use App\Http\Controllers\CpuTipoDiscapacidadController;
 use App\Http\Controllers\CpuTipoSangreController;
 use App\Http\Controllers\CpuIndicadorController;
 use App\Http\Controllers\CpuAtencionesController;
+use App\Http\Controllers\CpuAtencionesTrabajoSocialController;
 use App\Http\Controllers\CpuAtencionTriajeController;
 use App\Http\Controllers\CpuComidaController;
 use App\Http\Controllers\CpuDerivacionController;
@@ -350,7 +351,9 @@ Route::middleware(['auth:sanctum'])->group(function () {
     //guardar atenciones
     Route::post('/atenciones/guardar', [CpuAtencionesController::class, 'guardarAtencion']);
     Route::post('/atenciones/triaje', [CpuAtencionesController::class, 'guardarAtencionConTriaje']);
-    Route::get('/atenciones/{id_persona}/{id_funcionario}', [CpuAtencionesController::class, 'obtenerAtencionesPorPaciente']);
+    // Route::get('/atenciones/{id_persona}/{id_funcionario}', [CpuAtencionesController::class, 'obtenerAtencionesPorPaciente']);
+    Route::get('/atenciones/{id_persona}/{id_funcionario}/{usr_tipo?}', [CpuAtencionesController::class, 'obtenerAtencionesPorPaciente']);
+
     // Cambiar la ruta a PUT en lugar de DELETE
     Route::put('/atencionesEliminar/{atencionId}/{nuevoEstado}', [CpuAtencionesController::class, 'eliminarAtencion']);
     Route::post('/atencion/nutricion', [CpuAtencionesController::class, 'guardarAtencionNutricion']);
@@ -447,6 +450,10 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::post('/datos-sociales', [CpuDatosSocialesController::class, 'store']);
     Route::post('/datos-sociales/{id_persona}', [CpuDatosSocialesController::class, 'updateByPersonaId']);
     Route::get('/datos-sociales/{id_persona}', [CpuDatosSocialesController::class, 'show']);
+
+    // API para guardar atenciones de trabajo social
+    Route::post('/atenciones-trabajo-social', [CpuAtencionesTrabajoSocialController::class, 'store']);
+    Route::post('/atenciones-trabajo-social/upload', [CpuAtencionesTrabajoSocialController::class, 'update']);
 });
 
 // Route::put('/cpu-persona-update/{cedula}', [CpuPersonaController::class, 'update']);

@@ -463,6 +463,7 @@ class CpuPersonaController extends Controller
         'ocupacion' => 'nullable|string',
         'bonoDesarrollo' => 'nullable|string',
         'estadoCivil' => 'nullable|string',
+        'id_tipo_usuario' => 'required|integer',
     ]);
 
     if ($validator->fails()) {
@@ -500,6 +501,7 @@ class CpuPersonaController extends Controller
             'ocupacion' => $validatedData['ocupacion'],
             'bono_desarrollo' => $validatedData['bonoDesarrollo'],
             'estado_civil' => $validatedData['estadoCivil'],
+            'id_tipo_usuario' => $validatedData['id_tipo_usuario'],
         ];
 
         // Solo agregar los campos si están presentes

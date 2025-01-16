@@ -14,7 +14,7 @@ class CpuPersona extends Model
     protected $fillable = [
         'cedula', 'nombres', 'nacionalidad', 'provincia', 'ciudad', 'parroquia', 'direccion', 'sexo', 'fechanaci', 'celular', 'tipoetnia',
         'discapacidad','tipo_discapacidad','porcentaje_discapacidad','codigo_persona','imagen','id_clasificacion_tipo_usuario','ocupacion',
-        'bono_desarrollo','estado_civil'
+        'bono_desarrollo','estado_civil','id_tipo_usuario'
     ];
 
     public function datosEmpleados()
@@ -30,5 +30,10 @@ class CpuPersona extends Model
     public function datosEstudiantes()
     {
         return $this->hasOne(CpuDatosEstudiantes::class, 'id_persona');
+    }
+
+    public function tipoUsuario()
+    {
+        return $this->belongsTo(CpuTipoUsuario::class, 'id_tipo_usuario');
     }
 }

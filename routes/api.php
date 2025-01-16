@@ -150,7 +150,9 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::put('/actualizar-estandar/{id}', [CpuEstandarController::class, 'edit']);
 
     //Elementos Fundamentales
-    Route::get('/consultar-fuente-informacion/{id_sede}/{id_estandar}', [CpuElementoFundamentalController::class, 'consultarFuenteInformacionsede']);
+    // Route::get('/consultar-fuente-informacion/{id_sede}/{id_estandar}', [CpuElementoFundamentalController::class, 'consultarFuenteInformacionsede']);
+    Route::get('/consultar-fuente-informacion/{id_estandar}', [CpuElementoFundamentalController::class, 'consultarFuenteInformacionsede']);
+
     Route::post('/elementos', [CpuElementoFundamentalController::class, 'agregarFuenteInformacione']);
     Route::put('/actualizar-elemento/{id}', [CpuElementoFundamentalController::class, 'modificarFuenteInformacion']);
     Route::delete('/eliminar-fuente-informacion/{id}', [CpuElementoFundamentalController::class, 'eliminarFuenteSInformacion']);

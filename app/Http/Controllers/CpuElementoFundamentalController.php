@@ -20,7 +20,7 @@ class CpuElementoFundamentalController extends Controller
 {
     $validator = Validator::make($request->all(), [
         'id_estandar' => 'required|integer',
-        'id_sede' => 'required|integer',
+        // 'id_sede' => 'required|integer',
         'descripcion' => 'required|string',
     ]);
 
@@ -29,7 +29,7 @@ class CpuElementoFundamentalController extends Controller
     }
 
     $id_estandar = $request->input('id_estandar');
-    $id_sede = $request->input('id_sede');
+    // $id_sede = $request->input('id_sede');
     $descripcion = $request->input('descripcion');
     $usuario = $request->user()->name;
     $ip = $request->ip();
@@ -38,9 +38,10 @@ class CpuElementoFundamentalController extends Controller
 
         $fuenteInformacion = CpuElementoFundamental::create([
             'id_estandar' => $id_estandar,
-            'id_sede' => $id_sede,
+            // 'id_sede' => $id_sede,
             'descripcion' => $descripcion,
         ]);
+
 
         DB::table('cpu_auditoria')->insert([
             'aud_user' => $usuario,
@@ -52,7 +53,7 @@ class CpuElementoFundamentalController extends Controller
             'aud_fecha' => $fecha,
             'aud_ip' => $ip,
             'aud_tipoauditoria' => 1,
-            'aud_descripcion' => "CREACION DE FUENTE DE INFORMACION $id_estandar,$descripcion,$id_sede",
+            'aud_descripcion' => "CREACION DE FUENTE DE INFORMACION $id_estandar,$descripcion",
             'aud_nombreequipo' => $nombreequipo,
             'created_at' =>$fecha,
             'updated_at' =>$fecha,
@@ -66,7 +67,7 @@ public function modificarFuenteInformacion(Request $request, $id)
 {
     $validator = Validator::make($request->all(), [
         'id_estandar' => 'required|integer',
-        'id_sede' => 'required|integer',
+        // 'id_sede' => 'required|integer',
         'descripcion' => 'required|string',
     ]);
 
@@ -75,7 +76,7 @@ public function modificarFuenteInformacion(Request $request, $id)
     }
 
     $id_estandar = $request->input('id_estandar');
-    $id_sede = $request->input('id_sede');
+    // $id_sede = $request->input('id_sede');
     $descripcion = $request->input('descripcion');
     $usuario = $request->user()->name;
     $ip = $request->ip();
@@ -98,7 +99,7 @@ public function modificarFuenteInformacion(Request $request, $id)
             'aud_fecha' => $fecha,
             'aud_ip' => $ip,
             'aud_tipoauditoria' => 2,
-            'aud_descripcion' => "MODIFICACIÓN DE OBJETIVO $id_estandar,$descripcion,$id_sede",
+            'aud_descripcion' => "MODIFICACIÓN DE OBJETIVO $id_estandar,$descripcion",
             'aud_nombreequipo' => $nombreequipo,
             'created_at' =>$fecha,
             'updated_at' =>$fecha,
@@ -139,10 +140,10 @@ public function eliminarFuenteSInformacion(Request $request, $id)
     return response()->json(['success' => true, 'message' => 'Objetivo eliminado correctamente']);
 }
 
-public function consultarFuenteInformacionsede($id_sede, $id_estandar)
+public function consultarFuenteInformacionsede( $id_estandar)
 {
     $objetivos = DB::table('cpu_elemento_fundamental')
-                    ->where('id_sede', $id_sede)
+                    // ->where('id_sede', $id_sede)
                     ->where('id_estandar', $id_estandar)
                     ->get();
     return response()->json($objetivos);

@@ -31,6 +31,7 @@ class CpuEvidenciaController extends Controller
             'evidencia' => 'required|file|mimes:pdf|max:50000', // Max 50MB
             'year' => 'required|integer',
             'id_fuente_informacion' => 'required|integer',
+            'id_sede' => 'required|integer|exists:cpu_sede,id',
         ]);
 
         $fuenteId = $request->input('id_elemento_fundamental');
@@ -38,6 +39,7 @@ class CpuEvidenciaController extends Controller
         $evidenciaFile = $request->file('evidencia');
         $yearId = $request->input('year');
         $fuenteInformacionId = $request->input('id_fuente_informacion');
+        $sedeId = $request->input('id_sede');
 
         // Verificar si la entrada 'year' es válida
         $year = CpuYear::find($yearId);
@@ -81,6 +83,7 @@ class CpuEvidenciaController extends Controller
         $evidencia->descripcion = $descripcion;
         $evidencia->enlace_evidencia = $filePath;
         $evidencia->id_fuente_informacion = $fuenteInformacionId;
+        $evidencia->id_sede = $sedeId;
         $evidencia->save();
 
         return response()->json(['message' => 'Evidencia agregada correctamente']);
@@ -180,11 +183,11 @@ class CpuEvidenciaController extends Controller
     {
         // Obtener los objetivos nacionales que pertenecen al año dado
         $objetivos = CpuObjetivoNacional::where('id_year', $ano)
-        ->with([
-            'estandares.elementosFundamentales.evidencias' => function ($query) {
-                $query->orderBy('id_fuente_informacion', 'asc');
-            },
-        ])
+            ->with([
+                'estandares.elementosFundamentales.evidencias' => function ($query) {
+                    $query->orderBy('id_fuente_informacion', 'asc');
+                },
+            ])
             ->get();
 
         // URL base de la aplicación
@@ -232,7 +235,11 @@ class CpuEvidenciaController extends Controller
                             'fuente_informacion_descripcion' => $fuenteInformacion ? $fuenteInformacion->descripcion : null,
                             'enlace_evidencia' => [
                                 'url_firmada' => $urlFirmada
-                            ]
+                            ],
+                            'sede' => [
+                                'id' => $evidencia->id_sede,
+                                'nombre' => CpuSede::where('id', $evidencia->id_sede)->value('nombre_sede'),
+                            ],
                         ];
                         $evidencias[] = $evidenciaData;
                     }

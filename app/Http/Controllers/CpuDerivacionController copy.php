@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use App\Models\CpuDerivacion;
 use Illuminate\Support\Facades\Auth;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\DB;
 
 class CpuDerivacionController extends Controller
 {
@@ -45,6 +46,16 @@ class CpuDerivacionController extends Controller
         $data['fecha_derivacion'] = Carbon::now();
 
         $derivacion = CpuDerivacion::create($data);
+
+        if ($derivacion) {
+            // Actualizar la tabla de turnos
+            DB::table('cpu_turnos')
+                ->where('id_turnos', $data['id_turno_asignado'])
+                ->update([
+                    'estado' => $data['id_estado_derivacion'],
+                    'id_paciente' => $data['id_paciente']
+                ]);
+        }
 
         return response()->json($derivacion, 201);
     }

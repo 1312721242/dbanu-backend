@@ -16,6 +16,7 @@ use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\DB; // Asegúrate de importar esta clase
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\URL;
 
 class CpuAtencionesController extends Controller
 {
@@ -61,9 +62,6 @@ class CpuAtencionesController extends Controller
     // // Consulta de traer las atenciones de cada usuario en la tabla de la opcion de regitros
     public function obtenerAtencionesPorPaciente($id_persona, $id_funcionario, $usr_tipo = null)
     {
-        // // $usr_tipo = 10;
-        // $id_persona =32;
-        // $id_funcionario =35;
         // Realiza la consulta filtrando por id_persona, id_funcionario e id_estado = 1 y selecciona todas las columnas necesarias
         $atenciones = DB::table('cpu_atenciones as at')
             ->select(
@@ -242,6 +240,15 @@ class CpuAtencionesController extends Controller
 
         // Log de la información
         Log::info('Atenciones obtenidas:', ['atenciones' => $resultado]);
+
+        // Procesar la URL del informe
+        $resultado->transform(function ($atencion) {
+            if (isset($atencion->ts_url_informe)) {
+                $baseUrl = URL::to('/');
+                $atencion->ts_url_informe = $baseUrl . '/Files/' . $atencion->ts_url_informe;
+            }
+            return $atencion;
+        });
 
         // Retorna la respuesta en formato JSON
         return response()->json($resultado);

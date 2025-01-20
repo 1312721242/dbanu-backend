@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\CpuAtencion;
 use App\Models\CpuAtencionesTrabajoSocial;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -105,59 +106,80 @@ class CpuAtencionesTrabajoSocialController extends Controller
      * Update the specified resource in storage.
      */
     public function update(Request $request)
-    {
-        $request->validate([
-            'url_informe' => 'required|file|mimes:pdf|max:50000', // Cambiado a required
-            'id_atenciones' => 'required|integer',
-            'nombre_informe' => 'required|string',
-        ]);
+{
+    $request->validate([
+        'url_informe' => 'required|file|mimes:pdf|max:50000', // Cambiado a required
+        'id_atenciones' => 'required|integer',
+        'nombre_informe' => 'required|string',
+    ]);
 
-        // Verificar si hay un archivo nuevo
-        if ($request->hasFile('url_informe')) {
-            $nombre_informe = $request->file('url_informe')->getClientOriginalName();
-            $segments = explode('_', $nombre_informe);
-            $folderName = $segments[0]; // Obtener el primer segmento del nombre del archivo
+    if ($request->hasFile('url_informe')) {
+        Log::info('Archivo recibido correctamente.');
+        $nombre_informe = $request->input('nombre_informe'); // Usar nombre_informe del request
+        $id_atenciones = $request->input('id_atenciones');
 
-            $folderPath = public_path('Files/informes_ts') . '/' . $folderName;
+        // Obtener el segmento del nombre del archivo
+        $nombre_carpeta = 'informes_ts';
+        $nombre_archivo = pathinfo($nombre_informe, PATHINFO_FILENAME) . '_' . $id_atenciones; // Extraer solo el nombre base sin extensión
 
-            if (!file_exists($folderPath)) {
-                mkdir($folderPath, 0777, true);
-            }
-
-            $fullPath = $folderPath . '/' . $nombre_informe;
-
-            // Si el archivo ya existe, eliminarlo
-            if (file_exists($fullPath)) {
-                unlink($fullPath);
-            }
-
-            // Mover el archivo al directorio de destino
-            $request->file('url_informe')->move($folderPath, $nombre_informe);
-            $filePath = 'informes_ts/' . $folderName . '/' . $nombre_informe;
-
-            // Iniciar una transacción
-            DB::beginTransaction();
-
-            try {
-                // Actualizar la referencia del archivo en la base de datos
-                $atencionTrabajoSocial = CpuAtencionesTrabajoSocial::findOrFail($request->input('id_atenciones'));
-                $atencionTrabajoSocial->url_informe = $filePath;
-                $atencionTrabajoSocial->save();
-
-                // Confirmar la transacción
-                DB::commit();
-
-                return response()->json(['message' => 'Informe actualizado correctamente']);
-            } catch (\Exception $e) {
-                // Deshacer la transacción en caso de error
-                DB::rollBack();
-                Log::error('Error al actualizar el informe:', ['exception' => $e->getMessage()]);
-                return response()->json(['error' => 'Error al actualizar el informe'], 500);
-            }
-        } else {
-            return response()->json(['message' => 'No se ha proporcionado ningún archivo para actualizar'], 400);
+        // Verificar si existe un registro con url_informe en la base de datos
+        $atencionTrabajoSocial = DB::table('cpu_atenciones_trabajo_social')->where('id_atenciones', $request->input('id_atenciones'))->first();
+        if (!$atencionTrabajoSocial) {
+            return response()->json(['error' => 'No se encontró el registro con el id especificado.'], 404);
         }
+
+        // Eliminar el archivo existente si aplica
+        if (!empty($atencionTrabajoSocial->url_informe)) {
+            $rutaArchivoExistente = public_path('Files/' . $atencionTrabajoSocial->url_informe);
+
+            if (file_exists($rutaArchivoExistente)) {
+                Log::info('Archivo existente encontrado. Eliminándolo: ' . $rutaArchivoExistente);
+                unlink($rutaArchivoExistente);
+            }
+        }
+
+        // Crear la ruta completa del directorio dinámico
+        $folderPath = public_path('Files/' . $nombre_carpeta);
+
+        // Verificar si el directorio existe, de lo contrario crearlo
+        if (!file_exists($folderPath)) {
+            Log::info('Directorio no existe. Creándolo: ' . $folderPath);
+            if (!mkdir($folderPath, 0777, true) && !is_dir($folderPath)) {
+                return response()->json(['error' => 'Error al crear el directorio para el archivo.'], 500);
+            }
+        }
+
+        // Ruta completa del archivo nuevo
+        $nombre_archivo_final = $nombre_archivo . '.pdf';
+        $fullPath = $folderPath . '/' . $nombre_archivo_final;
+
+        // Mover el archivo subido al directorio correspondiente
+        $request->file('url_informe')->move($folderPath, $nombre_archivo_final);
+        Log::info('Archivo movido a: ' . $fullPath);
+
+        // Guardar la nueva ruta relativa en la base de datos
+        $filePath = $nombre_carpeta . '/' . $nombre_archivo_final;
+
+        DB::beginTransaction();
+
+        try {
+            DB::table('cpu_atenciones_trabajo_social')->where('id_atenciones', $request->input('id_atenciones'))->update([
+                'url_informe' => $filePath
+            ]);
+
+            DB::commit();
+
+            return response()->json(['message' => 'Informe actualizado correctamente', 'url_informe' => $filePath], 200);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Error al actualizar el informe:', ['exception' => $e->getMessage()]);
+            return response()->json(['error' => 'Error al actualizar el informe'], 500);
+        }
+    } else {
+        Log::info('No se recibió un archivo para procesar.');
+        return response()->json(['message' => 'No se ha proporcionado ningún archivo para actualizar'], 400);
     }
+}
 
     /**
      * Remove the specified resource from storage.

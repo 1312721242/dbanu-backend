@@ -36,7 +36,7 @@ class CpuDerivacionController extends Controller
             'id_doctor_al_que_derivan' => 'required|integer|exists:users,id',
             'id_paciente' => 'required|integer|exists:cpu_personas,id',
             'motivo_derivacion' => 'required|string',
-            // 'detalle_derivacion' => 'required|string',
+            'detalle_derivacion' => 'required|string',
             'id_area' => 'required|integer',
             'fecha_para_atencion' => 'required|date',
             'hora_para_atencion' => 'required|date_format:H:i:s',
@@ -48,6 +48,16 @@ class CpuDerivacionController extends Controller
         $data['fecha_derivacion'] = Carbon::now();
 
         $derivacion = CpuDerivacion::create($data);
+
+        if ($derivacion) {
+            // Actualizar la tabla de turnos
+            DB::table('cpu_turnos')
+                ->where('id_turnos', $data['id_turno_asignado'])
+                ->update([
+                    'estado' => $data['id_estado_derivacion'],
+                    'id_paciente' => $data['id_paciente']
+                ]);
+        }
 
         return response()->json($derivacion, 201);
     }

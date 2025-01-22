@@ -55,7 +55,10 @@ use App\Http\Controllers\CpuClientesTastyController;
 use App\Http\Controllers\CpuDatosMedicosController;
 use App\Http\Controllers\CpuDienteController;
 use App\Http\Controllers\CpuAtencionOdontologiaController;
+use App\Http\Controllers\CpuCargoController;
+use App\Http\Controllers\CpuDirAdminController;
 use App\Http\Controllers\CpuTerapiaLenguajeController;
+use App\Http\Controllers\CpuTramiteController;
 use App\Http\Controllers\ReporteController;
 
 // Autenticación
@@ -457,6 +460,17 @@ Route::middleware(['auth:sanctum'])->group(function () {
     // API para guardar atenciones de trabajo social
     Route::post('/atenciones-trabajo-social', [CpuAtencionesTrabajoSocialController::class, 'store']);
     Route::post('/atenciones-trabajo-social/upload', [CpuAtencionesTrabajoSocialController::class, 'update']);
+
+    // API para obtener cargos
+    Route::get('/cargos', [CpuCargoController::class, 'index']);
+    // API para obtener direcciones administrativas
+    Route::get('/direcciones-administrativas', [CpuDirAdminController::class, 'index']);
+
+    // API para guardar tramites
+    Route::post('/tramites', [CpuTramiteController::class, 'create']);
+    Route::put('/tramites/{id}', [CpuTramiteController::class, 'update']);
+    Route::delete('/tramites/{id}', [CpuTramiteController::class, 'destroy']);
+    Route::get('/tramites', [CpuTramiteController::class, 'show']);
 });
 
 // Route::put('/cpu-persona-update/{cedula}', [CpuPersonaController::class, 'update']);

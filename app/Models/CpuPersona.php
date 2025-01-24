@@ -22,6 +22,11 @@ class CpuPersona extends Model
         return $this->hasOne(CpuDatosEmpleado::class, 'id_persona');
     }
 
+    public function datosExternos()
+    {
+        return $this->hasOne(CpuDatosUsuarioExterno::class, 'id_persona');
+    }
+
     public function datosMedicos()
     {
         return $this->hasOne(CpuDatosMedicos::class, 'id_persona');

@@ -58,6 +58,7 @@ use App\Http\Controllers\CpuAtencionOdontologiaController;
 use App\Http\Controllers\CpuCargoController;
 use App\Http\Controllers\CpuDirAdminController;
 use App\Http\Controllers\CpuTerapiaLenguajeController;
+use App\Http\Controllers\CpuTipoBecaController;
 use App\Http\Controllers\CpuTramiteController;
 use App\Http\Controllers\ReporteController;
 
@@ -447,6 +448,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
     //agregar usuarios externos
     Route::post('/usuarios/externos', [CpuPersonaController::class, 'store']);
+    Route::post('/usuarios/externos/secretaria', [CpuPersonaController::class, 'storeSecretaria']);
     //reporte para obtener valores unicos de cada campo requerido
     Route::get('/valores-unicos', [ReporteController::class, 'getAllUnifiedUniqueValuesForSelects']);
     // API para obtener el total de atenciones por fecha
@@ -471,6 +473,15 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::put('/tramites/{id}', [CpuTramiteController::class, 'update']);
     Route::delete('/tramites/{id}', [CpuTramiteController::class, 'destroy']);
     Route::get('/tramites', [CpuTramiteController::class, 'show']);
+
+    // API para obtener tipos de becas
+    Route::get('/tipos-becas', [CpuTipoBecaController::class, 'index']);
+    Route::get('/tipos-becas/filtrados', [CpuTipoBecaController::class, 'show']);
+    Route::post('/tipos-becas', [CpuTipoBecaController::class, 'create']);
+    Route::put('/tipos-becas/{id}', [CpuTipoBecaController::class, 'update']);
+    Route::delete('/tipos-becas/{id}', [CpuTipoBecaController::class, 'destroy']);
+
+    // API para guardar usuarios externos
 });
 
 // Route::put('/cpu-persona-update/{cedula}', [CpuPersonaController::class, 'update']);

@@ -7,6 +7,7 @@ use App\Models\CpuPersona;
 use App\Models\CpuDatosEmpleado;
 use App\Models\CpuDatosMedicos;
 use App\Models\CpuDatosEstudiantes;
+use App\Models\CpuDatosUsuarioExterno;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -48,7 +49,7 @@ class CpuPersonaController extends Controller
                 'celular' => $data['celular'],
                 'tipoetnia' => $data['tipoetnia'],
                 'discapacidad' => $data['discapacidad'],
-                'id_clasificacion_tipo_usuario'=> 2,
+                'id_clasificacion_tipo_usuario' => 2,
                 'ocupacion' => $data['ocupacion'],
             ]);
 
@@ -73,12 +74,12 @@ class CpuPersonaController extends Controller
         return response()->json(['message' => 'Persona no encontrada'], 404);
     }
 
-   // Aquí para atenciones de bienestar
+    // Aquí para atenciones de bienestar
     public function showBienestar($cedula)
     {
         if (strlen($cedula) <= 9) {
             $personas = CpuPersona::where('cedula', 'like', "{$cedula}%")
-                ->with(['datosEmpleados', 'datosEstudiantes'])
+                ->with(['datosEmpleados', 'datosEstudiantes', 'datosExternos'])
                 ->get();
 
             foreach ($personas as $persona) {
@@ -91,7 +92,7 @@ class CpuPersonaController extends Controller
         }
 
         $persona = CpuPersona::where('cedula', $cedula)
-            ->with(['datosEmpleados', 'datosEstudiantes'])
+            ->with(['datosEmpleados', 'datosEstudiantes', 'datosExternos'])
             ->first();
 
         if ($persona) {
@@ -326,11 +327,32 @@ class CpuPersonaController extends Controller
         }
 
         $persona->update($request->only([
-            'nombres', 'nacionalidad', 'provincia', 'ciudad', 'parroquia', 'direccion', 'sexo', 'fechanaci', 'celular', 'tipoetnia', 'discapacidad','tipo_discapacidad', 'ocupacion'
+            'nombres',
+            'nacionalidad',
+            'provincia',
+            'ciudad',
+            'parroquia',
+            'direccion',
+            'sexo',
+            'fechanaci',
+            'celular',
+            'tipoetnia',
+            'discapacidad',
+            'tipo_discapacidad',
+            'ocupacion'
         ]));
 
         $persona->datosEmpleados()->update($request->only([
-            'emailinstitucional', 'puesto', 'regimen1', 'modalidad', 'unidad', 'carrera', 'idsubproceso', 'escala1', 'estado', 'fechaingre'
+            'emailinstitucional',
+            'puesto',
+            'regimen1',
+            'modalidad',
+            'unidad',
+            'carrera',
+            'idsubproceso',
+            'escala1',
+            'estado',
+            'fechaingre'
         ]));
 
         return response()->json($persona->load(['datosEmpleados', 'datosMedicos', 'datosEstudiantes']));
@@ -366,6 +388,7 @@ class CpuPersonaController extends Controller
             'ocupacion' => 'nullable|string', // Validación para ocupacion
             'bonoDesarrollo' => 'nullable|string', // Validación para bonoDesarrollo
             'estadoCivil' => 'nullable|string', // Validación para estadoCivil
+            'email' => 'nullable|email', // Validación para email
         ]);
 
         if ($validator->fails()) {
@@ -424,6 +447,21 @@ class CpuPersonaController extends Controller
                 $persona->estado_civil = $request->input('estadoCivil');
             }
 
+            // Actualizar el email en la tabla correspondiente
+            if ($request->has('email')) {
+                $email = $request->input('email');
+                $idPersona = $persona->id;
+
+                // Verificar en qué tabla se encuentra el id_persona y actualizar el email
+                if (CpuDatosUsuarioExterno::where('id_persona', $idPersona)->exists()) {
+                    CpuDatosUsuarioExterno::where('id_persona', $idPersona)->update(['email' => $email]);
+                } elseif (CpuDatosEmpleado::where('id_persona', $idPersona)->exists()) {
+                    CpuDatosEmpleado::where('id_persona', $idPersona)->update(['emailinstitucional' => $email]);
+                } elseif (CpuDatosEstudiantes::where('id_persona', $idPersona)->exists()) {
+                    CpuDatosEstudiantes::where('id_persona', $idPersona)->update(['email_personal' => $email]);
+                }
+            }
+
             $persona->save();
 
             // Confirmar transacción
@@ -441,109 +479,235 @@ class CpuPersonaController extends Controller
 
     //FUNCION PARA AGREGAR USUARIOS EXTERNOS
     public function store(Request $request)
-{
-    // Validar los datos enviados desde el formulario
-    $validator = Validator::make($request->all(), [
-        'identificacion' => 'required|string|min:10',
-        'nombres' => 'required|string',
-        'nacionalidad' => 'required|string',
-        'provincia' => 'required|string',
-        'ciudad' => 'required|string',
-        'parroquia' => 'required|string',
-        'direccion' => 'required|string',
-        'sexo' => 'required|string',
-        'fechanaci' => 'required|date',
-        'celular' => 'required|string|max:10',
-        'tipoetnia' => 'required|string',
-        'discapacidad' => 'nullable|string',
-        'imagen' => 'nullable|image|max:2048',
-        'tipoDiscapacidad' => 'nullable|string',
-        'porcentajeDiscapacidad' => 'nullable|numeric',
-        'id_clasificacion_tipo_usuario' => 'required|integer',
-        'ocupacion' => 'nullable|string',
-        'bonoDesarrollo' => 'nullable|string',
-        'estadoCivil' => 'nullable|string',
-        'id_tipo_usuario' => 'required|integer',
-    ]);
+    {
+        // Validar los datos enviados desde el formulario
+        $validator = Validator::make($request->all(), [
+            'identificacion' => 'required|string|min:10',
+            'nombres' => 'required|string',
+            'nacionalidad' => 'required|string',
+            'provincia' => 'required|string',
+            'ciudad' => 'required|string',
+            'parroquia' => 'required|string',
+            'direccion' => 'required|string',
+            'sexo' => 'required|string',
+            'fechanaci' => 'required|date',
+            'celular' => 'required|string|max:10',
+            'tipoetnia' => 'required|string',
+            'discapacidad' => 'nullable|string',
+            'imagen' => 'nullable|image|max:2048',
+            'tipoDiscapacidad' => 'nullable|string',
+            'porcentajeDiscapacidad' => 'nullable|numeric',
+            'id_clasificacion_tipo_usuario' => 'required|integer',
+            'ocupacion' => 'nullable|string',
+            'bonoDesarrollo' => 'nullable|string',
+            'estadoCivil' => 'nullable|string',
+            'id_tipo_usuario' => 'required|integer',
+            // datos de la secretaria
+            'email' => 'required|string',
+            'referencia' => 'nullable|string',
+            'numeroMatricula' => 'nullable|string',
+            'tiposBeca' => 'nullable|string',
+        ]);
 
-    if ($validator->fails()) {
-        return response()->json(['errors' => $validator->errors()], 422);
-    }
-
-    // Obtener los datos validados
-    $validatedData = $validator->validated();
-
-    // Generar el código de persona a partir de la identificación y nombres
-    $codigoPersona = $this->generarCodigoPersona($validatedData['identificacion'], $validatedData['nombres']);
-
-    // Comenzar una transacción
-    DB::beginTransaction();
-
-    try {
-        // Crear la nueva persona, asignando 'tipo_discapacidad' y 'porcentaje_discapacidad' solo si existen
-        $personaData = [
-            'cedula' => $validatedData['identificacion'],
-            'nombres' => $validatedData['nombres'],
-            'nacionalidad' => $validatedData['nacionalidad'],
-            'provincia' => $validatedData['provincia'],
-            'ciudad' => $validatedData['ciudad'],
-            'parroquia' => $validatedData['parroquia'],
-            'direccion' => $validatedData['direccion'],
-            'sexo' => $validatedData['sexo'],
-            'fechanaci' => $validatedData['fechanaci'],
-            'celular' => $validatedData['celular'],
-            'tipoetnia' => $validatedData['tipoetnia'],
-            'discapacidad' => $validatedData['discapacidad'],
-            'codigo_persona' => $codigoPersona,
-            'id_clasificacion_tipo_usuario' => $validatedData['id_clasificacion_tipo_usuario'],
-            'tipo_discapacidad' => $validatedData['tipoDiscapacidad'],
-            'porcentaje_discapacidad' => $validatedData['porcentajeDiscapacidad'],
-            'ocupacion' => $validatedData['ocupacion'],
-            'bono_desarrollo' => $validatedData['bonoDesarrollo'],
-            'estado_civil' => $validatedData['estadoCivil'],
-            'id_tipo_usuario' => $validatedData['id_tipo_usuario'],
-        ];
-
-        // Solo agregar los campos si están presentes
-        // if (!empty($validatedData['tipo_discapacidad'])) {
-        //     $personaData['tipo_discapacidad'] = $validatedData['tipo_discapacidad'];
-        // }
-
-        // if (!empty($validatedData['porcentaje_discapacidad'])) {
-        //     $personaData['porcentaje_discapacidad'] = $validatedData['porcentaje_discapacidad'];
-        // }
-
-        // Crear la nueva persona
-        $persona = CpuPersona::create($personaData);
-
-        // Manejar la imagen de perfil, si existe
-        if ($request->hasFile('imagen')) {
-            $file = $request->file('imagen');
-            if ($file->isValid()) {
-                $extension = $file->getClientOriginalExtension();
-                $newFilename = "{$persona->cedula}.{$extension}";
-                $filePath = $file->move(public_path("Perfiles/"), $newFilename);
-                $persona->imagen = basename($filePath);
-            }
+        if ($validator->fails()) {
+            return response()->json(['errors' => $validator->errors()], 422);
         }
 
-        $persona->save();
+        // Obtener los datos validados
+        $validatedData = $validator->validated();
 
-        // Confirmar la transacción
-        DB::commit();
+        // Generar el código de persona a partir de la identificación y nombres
+        $codigoPersona = $this->generarCodigoPersona($validatedData['identificacion'], $validatedData['nombres']);
 
-        return response()->json($persona, 201);
-    } catch (\Exception $e) {
-        // Revertir la transacción en caso de error
-        DB::rollBack();
-        return response()->json([
-            'error' => 'Error al guardar los datos',
-            'exception' => $e->getMessage(),
-            'trace' => $e->getTraceAsString()
-        ], 500);
+        // Comenzar una transacción
+        DB::beginTransaction();
+
+        try {
+            // Crear la nueva persona, asignando 'tipo_discapacidad' y 'porcentaje_discapacidad' solo si existen
+            $personaData = [
+                'cedula' => $validatedData['identificacion'],
+                'nombres' => $validatedData['nombres'],
+                'nacionalidad' => $validatedData['nacionalidad'],
+                'provincia' => $validatedData['provincia'],
+                'ciudad' => $validatedData['ciudad'],
+                'parroquia' => $validatedData['parroquia'],
+                'direccion' => $validatedData['direccion'],
+                'sexo' => $validatedData['sexo'],
+                'fechanaci' => $validatedData['fechanaci'],
+                'celular' => $validatedData['celular'],
+                'tipoetnia' => $validatedData['tipoetnia'],
+                'discapacidad' => $validatedData['discapacidad'],
+                'codigo_persona' => $codigoPersona,
+                'id_clasificacion_tipo_usuario' => $validatedData['id_clasificacion_tipo_usuario'],
+                'tipo_discapacidad' => $validatedData['tipoDiscapacidad'],
+                'porcentaje_discapacidad' => $validatedData['porcentajeDiscapacidad'],
+                'ocupacion' => $validatedData['ocupacion'],
+                'bono_desarrollo' => $validatedData['bonoDesarrollo'],
+                'estado_civil' => $validatedData['estadoCivil'],
+                'id_tipo_usuario' => $validatedData['id_tipo_usuario'],
+            ];
+
+            // Solo agregar los campos si están presentes
+            // if (!empty($validatedData['tipo_discapacidad'])) {
+            //     $personaData['tipo_discapacidad'] = $validatedData['tipo_discapacidad'];
+            // }
+
+            // if (!empty($validatedData['porcentaje_discapacidad'])) {
+            //     $personaData['porcentaje_discapacidad'] = $validatedData['porcentaje_discapacidad'];
+            // }
+
+            // Crear la nueva persona
+            $persona = CpuPersona::create($personaData);
+
+            // Manejar la imagen de perfil, si existe
+            if ($request->hasFile('imagen')) {
+                $file = $request->file('imagen');
+                if ($file->isValid()) {
+                    $extension = $file->getClientOriginalExtension();
+                    $newFilename = "{$persona->cedula}.{$extension}";
+                    $filePath = $file->move(public_path("Perfiles/"), $newFilename);
+                    $persona->imagen = basename($filePath);
+                }
+            }
+
+            $persona->save();
+
+            // Guardar los datos de usuario externo
+            $usuarioExternoData = [
+                'id_persona' => $persona->id,
+                'email' => $validatedData['email'],
+                'referencia' => $validatedData['referencia'],
+                'numero_matricula' => $validatedData['numeroMatricula'],
+                'tipo_beca' => $validatedData['tiposBeca'],
+            ];
+
+            CpuDatosUsuarioExterno::create($usuarioExternoData);
+
+
+            // Confirmar la transacción
+            DB::commit();
+
+            return response()->json($persona, 201);
+        } catch (\Exception $e) {
+            // Revertir la transacción en caso de error
+            DB::rollBack();
+            return response()->json([
+                'error' => 'Error al guardar los datos',
+                'exception' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ], 500);
+        }
     }
-}
 
+    //FUNCION PARA AGREGAR USUARIOS EXTERNOS
+    public function storeSecretaria(Request $request)
+    {
+        // Validar los datos enviados desde el formulario
+        $validator = Validator::make($request->all(), [
+            'identificacion' => 'required|string|min:10',
+            'nombres' => 'required|string',
+            'email' => 'required|string',
+            'celular' => 'required|string|max:10',
+            'provincia' => 'nullable|string',
+            'ciudad' => 'nullable|string',
+            'parroquia' => 'nullable|string',
+            'direccion' => 'nullable|string',
+            'sexo' => 'nullable|string',
+            'fechanaci' => 'nullable|date',
+            'tipoetnia' => 'nullable|string',
+            'discapacidad' => 'nullable|string',
+            'imagen' => 'nullable|image|max:2048',
+            'tipoDiscapacidad' => 'nullable|string',
+            'porcentajeDiscapacidad' => 'nullable|numeric',
+            'id_clasificacion_tipo_usuario' => 'nullable|integer',
+            'ocupacion' => 'nullable|string',
+            'bonoDesarrollo' => 'nullable|string',
+            'estadoCivil' => 'nullable|string',
+            'id_tipo_usuario' => 'nullable|integer',
+            // datos de la secretaria
+            'email' => 'required|string',
+            'referencia' => 'nullable|string',
+            'numero_matricula' => 'nullable|string',
+            'tipo_beca' => 'nullable|string',
+        ]);
 
+        if ($validator->fails()) {
+            return response()->json(['errors' => $validator->errors()], 422);
+        }
 
+        // Obtener los datos validados
+        $validatedData = $validator->validated();
+
+        // Generar el código de persona a partir de la identificación y nombres
+        $codigoPersona = $this->generarCodigoPersona($validatedData['identificacion'], $validatedData['nombres']);
+
+        // Comenzar una transacción
+        DB::beginTransaction();
+
+        try {
+            // Crear la nueva persona, asignando 'tipo_discapacidad' y 'porcentaje_discapacidad' solo si existen
+            $personaData = [
+                'cedula' => $validatedData['identificacion'],
+                'nombres' => $validatedData['nombres'],
+                'nacionalidad' => $validatedData['nacionalidad'],
+                'provincia' => $validatedData['provincia'],
+                'ciudad' => $validatedData['ciudad'],
+                'parroquia' => $validatedData['parroquia'],
+                'direccion' => $validatedData['direccion'],
+                'sexo' => $validatedData['sexo'],
+                'fechanaci' => $validatedData['fechanaci'],
+                'celular' => $validatedData['celular'],
+                'tipoetnia' => $validatedData['tipoetnia'],
+                'discapacidad' => $validatedData['discapacidad'],
+                'codigo_persona' => $codigoPersona,
+                'id_clasificacion_tipo_usuario' => $validatedData['id_clasificacion_tipo_usuario'],
+                'tipo_discapacidad' => $validatedData['tipoDiscapacidad'],
+                'porcentaje_discapacidad' => $validatedData['porcentajeDiscapacidad'],
+                'ocupacion' => $validatedData['ocupacion'],
+                'bono_desarrollo' => $validatedData['bonoDesarrollo'],
+                'estado_civil' => $validatedData['estadoCivil'],
+                'id_tipo_usuario' => $validatedData['id_tipo_usuario'],
+            ];
+
+            // Crear la nueva persona
+            $persona = CpuPersona::create($personaData);
+
+            // Manejar la imagen de perfil, si existe
+            if ($request->hasFile('imagen')) {
+                $file = $request->file('imagen');
+                if ($file->isValid()) {
+                    $extension = $file->getClientOriginalExtension();
+                    $newFilename = "{$persona->cedula}.{$extension}";
+                    $filePath = $file->move(public_path("Perfiles/"), $newFilename);
+                    $persona->imagen = basename($filePath);
+                }
+            }
+
+            $persona->save();
+
+            // Guardar los datos de usuario externo
+            $usuarioExternoData = [
+                'id_persona' => $persona->id,
+                'email' => $validatedData['email'],
+                'referencia' => $validatedData['referencia'],
+                'numero_matricula' => $validatedData['numero_matricula'],
+                'tipo_beca' => $validatedData['tipo_beca'],
+            ];
+
+            CpuDatosUsuarioExterno::create($usuarioExternoData);
+
+            // Confirmar la transacción
+            DB::commit();
+
+            return response()->json($persona, 201);
+        } catch (\Exception $e) {
+            // Revertir la transacción en caso de error
+            DB::rollBack();
+            return response()->json([
+                'error' => 'Error al guardar los datos',
+                'exception' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ], 500);
+        }
+    }
 }

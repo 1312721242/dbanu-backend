@@ -475,6 +475,13 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::put('/tramites/{id}', [CpuTramiteController::class, 'update']);
     Route::delete('/tramites/{id}', [CpuTramiteController::class, 'destroy']);
     Route::get('/tramites', [CpuTramiteController::class, 'show']);
+
+    // API para obtener tipos de becas filtrados
+    Route::get('/tipos-beca/filtrados', [CpuTipoBecaController::class, 'show']);
+
+    // API para guardar atenciones de tramites
+    Route::post('/atenciones-tramites', [CpuAtencionesController::class, 'guardarAtencionTramites']);
+
 });
 
 // Route::put('/cpu-persona-update/{cedula}', [CpuPersonaController::class, 'update']);

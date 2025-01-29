@@ -131,6 +131,7 @@ class CpuDerivacionController extends Controller
                 'cpu_derivaciones.id as id_derivacion',
                 'cpu_derivaciones.fecha_para_atencion',
                 'cpu_derivaciones.motivo_derivacion',
+                'cpu_derivaciones.id_tramite',
                 'users.name as funcionario_que_deriva',
                 'users.name as funcionario_al_que_deriva',
                 'cpu_userrole.role as area_atencion',
@@ -146,7 +147,8 @@ class CpuDerivacionController extends Controller
             ->leftJoin('cpu_userrole', 'cpu_derivaciones.id_area', '=', 'cpu_userrole.id_userrole')
             ->leftJoin('cpu_datos_estudiantes', 'cpu_personas.id', '=', 'cpu_datos_estudiantes.id_persona')
             ->leftJoin('cpu_datos_empleados', 'cpu_personas.id', '=', 'cpu_datos_empleados.id_persona')
-            ->leftJoin('users as deriva_sede', 'users.usr_sede', '=', 'cpu_derivaciones.id_funcionario_que_derivo');
+            ->leftJoin('users as deriva_sede', 'users.usr_sede', '=', 'cpu_derivaciones.id_funcionario_que_derivo')
+            ->distinct(); // Asegurar que los registros sean únicos
 
         // Agregar las condiciones según el doctor_id
         if ($doctorId == 9) {
@@ -154,10 +156,9 @@ class CpuDerivacionController extends Controller
         } elseif ($doctorId != 1) {
             $query->where('id_doctor_al_que_derivan', $doctorId);
             $query->whereNot('id_estado_derivacion', 2);
-        }elseif ('users.usr_sede' > 2) {
+        } elseif ('users.usr_sede' > 2) {
             $query->where('id_estado_derivacion', 7);
         }
-
 
         // Ordenar los resultados por fecha y hora ascendentemente
         $query->orderBy('fecha_para_atencion', 'asc')
@@ -165,6 +166,21 @@ class CpuDerivacionController extends Controller
 
         // Ejecutar la consulta
         $derivaciones = $query->get();
+
+        // Verificar si hay datos en 'id_tramite' y obtener información adicional si es necesario
+        foreach ($derivaciones as $derivacion) {
+            if (!empty($derivacion->id_tramite)) {
+                $tramite = DB::table('cpu_tramites')
+                    ->select('tra_link_receptado', 'tra_link_enviado')
+                    ->where('id_tramite', $derivacion->id_tramite)
+                    ->first();
+
+                if ($tramite) {
+                    $derivacion->tra_link_receptado = $tramite->tra_link_receptado;
+                    $derivacion->tra_link_enviado = $tramite->tra_link_enviado;
+                }
+            }
+        }
 
         // Devolver las derivaciones como respuesta JSON
         return response()->json($derivaciones);

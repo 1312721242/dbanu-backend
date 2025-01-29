@@ -832,4 +832,89 @@ class CpuAtencionesController extends Controller
         return response()->json($historiaClinica)
             ->header('Access-Control-Allow-Origin', '*');
     }
+
+    // funcion para guardar las atenciones relacionadas a los tramites
+    public function guardarAtencionTramites(Request $request)
+    {
+        // Validar que los campos requeridos estén presentes
+        $request->validate([
+            'id_funcionario' => 'required|integer|exists:users,id',
+            'id_persona' => 'required|integer|exists:cpu_personas,id',
+            'motivo_atencion' => 'required|string',
+            'fecha_hora_atencion' => 'required|date_format:Y-m-d H:i:s',
+            'anio_atencion' => 'required|integer',
+            'detalle_atencion' => 'nullable|string',
+            'id_tipo_usuario' => 'required|integer|exists:cpu_tipo_usuario,id',
+            'tipo_atencion' => 'nullable|string',
+            'id_tramite' => 'nullable|integer|exists:cpu_tramites,id_tramite',
+            'id_doctor_al_que_derivan' => 'nullable|integer|exists:users,id',
+            'id_area' => 'nullable|integer|exists:cpu_userrole,id_userrole',
+            // 'fecha_para_atencion' => 'nullable|date_format:Y-m-d',
+            // 'hora_para_atencion' => 'nullable|date_format:H:i:s',
+            'id_turno_asignado' => 'nullable|integer|exists:cpu_turnos,id_turnos',
+        ]);
+
+        DB::beginTransaction();
+
+        try {
+            // Guardar en cpu_atenciones
+            $atencion = new CpuAtencion();
+            $atencion->id_funcionario = $request->input('id_funcionario');
+            $atencion->id_persona = $request->input('id_persona');
+            $atencion->motivo_atencion = $request->input('motivo_atencion');
+            $atencion->fecha_hora_atencion = $request->input('fecha_hora_atencion');
+            $atencion->anio_atencion = $request->input('anio_atencion');
+            $atencion->detalle_atencion = $request->input('detalle_atencion');
+            $atencion->id_tipo_usuario = $request->input('id_tipo_usuario');
+            $atencion->tipo_atencion = $request->input('tipo_atencion');
+            $atencion->id_estado = 1;
+
+            $atencion->save();
+
+            // Buscar la fecha y hora para atención en la tabla CpuTurno a través del id_turno_asignado
+            $turnoAsignado = CpuTurno::where('id_turnos', $request->input('id_turno_asignado'))->first();
+            $fechaParaAtencion = substr($turnoAsignado->fehca_turno, 0, 10);
+            $horaParaAtencion = $turnoAsignado->hora;
+            // Log::info('Datos de la consulta:', ['hora' => $horaParaAtencion, 'fecha' => $fechaParaAtencion]);
+            // guardar la derivacion
+            if ($fechaParaAtencion) {
+                $derivacion = new CpuDerivacion();
+                $derivacion->ate_id = $atencion->id;
+                $derivacion->id_doctor_al_que_derivan = $request->input('id_doctor_al_que_derivan');
+                $derivacion->id_paciente = $request->input('id_persona');
+                $derivacion->motivo_derivacion = $request->input('motivo_atencion');
+                $derivacion->id_area = $request->input('id_area');
+                $derivacion->fecha_para_atencion = $fechaParaAtencion;
+                $derivacion->hora_para_atencion = $horaParaAtencion;
+                $derivacion->id_estado_derivacion = 7;
+                $derivacion->id_turno_asignado = $request->input('id_turno_asignado');
+                $derivacion->id_funcionario_que_derivo = $request->input('id_funcionario');
+                $derivacion->fecha_derivacion = now();
+                $derivacion->id_tramite = $request->input('id_tramite');
+                $derivacion->save();
+
+                // Actualizar turno
+                $turno = CpuTurno::find($request->input('id_turno_asignado'));
+                $turno->id_paciente = $request->input('id_persona');
+                $turno->estado = 7;
+                $turno->save();
+            }
+
+            // Actualizar la derivación original
+            // if ($request->has('id_derivacion')) {
+            //     $derivacionOriginal = CpuDerivacion::find($request->input('id_derivacion'));
+            //     if ($derivacionOriginal) {
+            //         $derivacionOriginal->id_estado_derivacion = 2;
+            //         $derivacionOriginal->save();
+            //     }
+            // }
+
+            DB::commit();
+            return response()->json(['success' => true, 'atencion_id' => $atencion->id]);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Error al guardar la atención de tramites:', ['exception' => $e->getMessage()]);
+            return response()->json(['error' => 'Error al guardar la atención de tramites', 'details' => $e->getMessage()], 500);
+        }
+    }
 }

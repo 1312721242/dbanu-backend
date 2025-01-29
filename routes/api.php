@@ -406,8 +406,6 @@ Route::middleware(['auth:sanctum'])->group(function () {
     //INSUMOS
 
     Route::get('/cpu-insumos', [CpuInsumoController::class, 'getInsumos']);
-
-
     //apis para busqueda de cie11
     Route::post('/get-token', [ICDController::class, 'getToken']);
     Route::get('/search', [ICDController::class, 'searchICD']);

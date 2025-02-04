@@ -17,6 +17,8 @@ use Illuminate\Support\Facades\DB; // Asegúrate de importar esta clase
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\URL;
+use App\Models\CpuEstado;
+use Mpdf\Tag\B;
 
 class CpuAtencionesController extends Controller
 {
@@ -54,6 +56,9 @@ class CpuAtencionesController extends Controller
         $atencion->recomendacion = $request->input('recomendacion', '');
 
         $atencion->save();
+        // Emite el evento
+        // Broadcast(new TriajeActualizado($atencion))->toOthers();
+
 
         return response()->json(['success' => true, 'id' => $atencion->id]);
     }
@@ -310,6 +315,19 @@ class CpuAtencionesController extends Controller
         }
     }
 
+
+    public function cambiarEstado(Request $request)
+    {
+        $estado = CpuEstado::find($request->id);
+        $estado->activo = !$estado->activo;
+        $estado->save();
+
+        // broadcast(new EstadoCambiado($estado));
+
+        return response()->json(['message' => 'Estado actualizado']);
+    }
+
+
     public function guardarAtencionConTriaje(Request $request)
     {
         $validator = Validator::make($request->all(), [
@@ -365,6 +383,9 @@ class CpuAtencionesController extends Controller
             $triaje->peso_ideal = $request->input('pesoIdeal');
             $triaje->estado_paciente = $request->input('estadoPaciente');
             $triaje->save();
+
+            // 🔥 Emitir evento de WebSockets
+            // broadcast(new NuevaAtencionGuardada($atencion))->toOthers();
 
             // Confirmar la transacción
             DB::commit();
@@ -634,14 +655,17 @@ class CpuAtencionesController extends Controller
             'fecha_hora_atencion' => 'required|date_format:Y-m-d H:i:s',
             'anio_atencion' => 'required|integer',
             'detalle_atencion' => 'required|string',
-            'id_tipo_usuario' => 'required|integer|exists:cpu_tipos_usuario,id',
-            'evolucion_enfermedad' => 'required|string',
-            'diagnostico' => 'required|string',
-            'prescripcion' => 'required|string',
-            'recomendacion' => 'required|string',
+            'id_tipo_usuario' => 'required|integer|exists:cpu_tipo_usuario,id',
+            'evolucion_enfermedad' => 'nullable|string',
+            "diagnostico" => "nullable|json",
+            'prescripcion' => 'nullable|string',
+            'recomendacion' => 'nullable|string',
             'tipo_atencion' => 'required|string',
-            'id_cie10' => 'required|integer|exists:cpu_cie10,id',
+            'id_cie10' => 'nullable|integer|exists:cpu_cie10,id',
+            'derivado' => 'nullable|boolean',
         ]);
+
+        $derivado = $request->input('derivado');
 
         DB::beginTransaction();
 
@@ -666,6 +690,8 @@ class CpuAtencionesController extends Controller
             $atencion->tipo_atencion = $request->input('tipo_atencion');
             $atencion->id_estado = 1;
             $atencion->save();
+
+            $id_atencion = $atencion->id;
 
             // Guardar en cpu_atenciones_medicina_general
             $medicinaGeneral = new CpuAtencionMedicinaGeneral();
@@ -751,6 +777,14 @@ class CpuAtencionesController extends Controller
             }
 
             DB::commit();
+
+            // // Llamar a la función enviarCorreoAtencionPaciente del controlador CpuCorreoEnviadoController
+            // $correoController = new CpuCorreoEnviadoController();
+            // $correoController->enviarCorreoAtencionPaciente($request->all(), $derivado, $id_atencion);
+            // // if ($derivado) {
+            //     $correoController->enviarCorreoDerivacionPaciente($request->all());
+            // // }
+
             return response()->json(['success' => true, 'atencion_id' => $atencion->id]);
         } catch (\Exception $e) {
             DB::rollBack();
@@ -766,7 +800,7 @@ class CpuAtencionesController extends Controller
             ->leftJoin('cpu_personas as per', 'per.id', '=', 'der.id_paciente')
             ->leftJoin('cpu_atenciones as ate', 'ate.id', '=', 'der.ate_id')
             ->leftJoin('cpu_userrole as rol', 'rol.id_userrole', '=', 'der.id_area')
-            ->leftJoin('cpu_atenciones_triaje as tri', 'tri.id_derivacion', '=', 'der.id')
+            ->leftJoin('cpu_atenciones_triaje as tri', 'tri.id_atencion', '=', 'der.id')
             ->select(
                 'der.ate_id',
                 'der.id_doctor_al_que_derivan',
@@ -797,8 +831,9 @@ class CpuAtencionesController extends Controller
                 'tri.imc'
             )
             ->where('der.id_paciente', $id_paciente)
-            ->whereIn('der.id_area', [7, 8, 9, 10, 11, 13, 14, 15])
+            ->whereIn('der.id_area', [7, 8, 9, 11, 13, 14, 15, 16, 17, 18])
             ->where('der.id_estado_derivacion', 2)
+            ->orderBy('ate.fecha_hora_atencion', 'desc')
             ->get();
 
         // Procesar los resultados para formatear el diagnóstico y la URL de la imagen

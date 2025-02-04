@@ -6,7 +6,6 @@
     "license": "MIT",
     "require": {
         "php": "^8.1",
-        "beyondcode/laravel-websockets": "^1.14",
         "dompdf/dompdf": "^2.0",
         "endroid/qr-code": "^5.0",
         "guzzlehttp/guzzle": "^7.2",

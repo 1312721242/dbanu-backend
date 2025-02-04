@@ -1,5 +1,6 @@
 <?php
 
+// use App\Events\TriajeActualizado;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
@@ -57,6 +58,7 @@ use App\Http\Controllers\CpuDatosMedicosController;
 use App\Http\Controllers\CpuDienteController;
 use App\Http\Controllers\CpuAtencionOdontologiaController;
 use App\Http\Controllers\CpuCargoController;
+use App\Http\Controllers\CpuCorreoEnviadoController;
 use App\Http\Controllers\CpuDirAdminController;
 use App\Http\Controllers\CpuTerapiaLenguajeController;
 use App\Http\Controllers\CpuTipoBecaController;
@@ -367,7 +369,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::post('/atencion/nutricion', [CpuAtencionesController::class, 'guardarAtencionNutricion']);
 
     //atenciones Triaje
-    Route::get('/triaje/talla-peso', [CpuAtencionTriajeController::class, 'obtenerTallaPesoPaciente']);
+    Route::get('/triaje/talla-peso/{id_persona}', [CpuAtencionTriajeController::class, 'obtenerTallaPesoPaciente']);
     Route::get('/triaje/datos', [CpuAtencionTriajeController::class, 'obtenerDatosTriajePorDerivacion']);
 
     //agregar derivación
@@ -482,6 +484,12 @@ Route::middleware(['auth:sanctum'])->group(function () {
     // API para guardar atenciones de tramites
     Route::post('/atenciones-tramites', [CpuAtencionesController::class, 'guardarAtencionTramites']);
 
+    // Enviar correo de atención de admisión de salud
+    Route::post('/enviar-correo-admision-salud', [CpuCorreoEnviadoController::class, 'enviarCorreoAtencionAdmisionSalud']);
+    Route::post('/enviar-correo-derivacion-funcionario', [CpuCorreoEnviadoController::class, 'enviarCorreoDerivacionAreaSaludFuncionario']);
+    Route::post('/enviar-correo-derivacion-paciente', [CpuCorreoEnviadoController::class, 'enviarCorreoDerivacionAreaSaludPaciente']);
+    Route::post('/enviar-correo-atencion-paciente', [CpuCorreoEnviadoController::class, 'enviarCorreoAtencionAreaSaludPaciente']);
+
 });
 
 // Route::put('/cpu-persona-update/{cedula}', [CpuPersonaController::class, 'update']);
@@ -490,3 +498,24 @@ Route::middleware(['auth:sanctum'])->group(function () {
 Route::post('/terapia-lenguaje', [CpuTerapiaLenguajeController::class, 'guardarConsultaTerapia']);
 
 Route::get('/datos-medicos', [CpuDatosMedicosController::class, 'index']);
+
+// Route::post('/broadcast-event', function (Request $request) {
+//     $atencionData = $request->input('atencion');
+
+//     // Validar que el ID esté presente en los datos
+//     if (isset($atencionData['id'])) {
+//         // Buscar el objeto CpuAtencion a partir del ID
+//         $atencion = \App\Models\CpuAtencion::find($atencionData['id']);
+//         if ($atencion) {
+//             // Emitir el evento con el objeto CpuAtencion
+//             // event(new \App\Events\TriajeActualizado($atencion));
+//             return response()->json(['success' => true]);
+//         } else {
+//             return response()->json(['error' => 'Atención no encontrada'], 404);
+//         }
+//     }
+
+//     return response()->json(['error' => 'Datos inválidos'], 400);
+// });
+
+

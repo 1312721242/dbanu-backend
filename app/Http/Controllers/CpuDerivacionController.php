@@ -36,7 +36,7 @@ class CpuDerivacionController extends Controller
             'id_doctor_al_que_derivan' => 'required|integer|exists:users,id',
             'id_paciente' => 'required|integer|exists:cpu_personas,id',
             'motivo_derivacion' => 'required|string',
-            'detalle_derivacion' => 'required|string',
+            // 'detalle_derivacion' => 'required|string',
             'id_area' => 'required|integer',
             'fecha_para_atencion' => 'required|date',
             'hora_para_atencion' => 'required|date_format:H:i:s',

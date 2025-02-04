@@ -8,21 +8,21 @@ use App\Models\CpuDerivacion;
 
 class CpuAtencionTriajeController extends Controller
 {
-    public function obtenerTallaPesoPaciente(Request $request)
+    public function obtenerTallaPesoPaciente($id_persona)
     {
         // Validar los parámetros de entrada
-        $request->validate([
-            'id_paciente' => 'required|integer|exists:cpu_derivaciones,id_paciente'
-        ]);
+        // $request->validate([
+        //     'id_paciente' => 'required|integer|exists:cpu_derivaciones,id_paciente'
+        // ]);
 
         // Obtener el id_paciente de la solicitud
-        $idPaciente = $request->input('id_paciente');
+        $idPaciente = $id_persona;
 
         // Obtener la derivación más reciente del paciente
         $derivacion = CpuDerivacion::where('id_paciente', $idPaciente)->pluck('id');
 
         if ($derivacion->isEmpty()) {
-            return response()->json(['error' => 'Derivación no encontrada para el paciente'], 404);
+            return response()->json(['mensaje' => 'No hay registros de derivación para el paciente'], 204);
         }
 
         // Obtener los datos de triaje más recientes correspondientes a la derivación
@@ -31,7 +31,7 @@ class CpuAtencionTriajeController extends Controller
             ->first();
 
         if (!$triaje) {
-            return response()->json(['error' => 'Datos de triaje no encontrados para la derivación'], 404);
+            return response()->json(['mensaje' => 'No hay registros de datos de triaje para la derivación'], 204);
         }
 
         // Devolver los datos de talla y peso como respuesta JSON

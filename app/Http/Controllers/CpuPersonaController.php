@@ -32,7 +32,42 @@ class CpuPersonaController extends Controller
             return response()->json($persona);
         }
 
-        $response = Http::get("https://apps2.uleam.edu.ec/DATHApi/api/personal/{$cedula}/bienestar");
+        // $response = Http::get("https://apps2.uleam.edu.ec/DATHApi/api/personal/{$cedula}/bienestar");
+        //Second API call if first API doesn't provide any data
+        try {
+            $response = Http::asForm()->post('https://login.microsoftonline.com/31a17900-7589-4cfc-b11a-f4e83c27b8ed/oauth2/v2.0/token', [
+                'grant_type' => 'client_credentials',
+                'client_id' => '1111b1c0-8b4f-4f50-96ea-ea4cc2df1c6d',
+                'client_secret' => 'iZH8Q~TRpKFW5PCG4OlBw-R1SDDnpT-611myKasT',
+                'scope' => 'https://service.flow.microsoft.com//.default'
+            ]);
+
+            if ($response->failed()) {
+                Log::error('Error al obtener el token de acceso: ' . $response->status() . ' ' . $response->body());
+                return response()->json(['error' => 'Error al obtener el token de acceso'], 500);
+            }
+
+            $access_token = $response->json()['access_token'];
+            $identificacion = $cedula;
+
+            $response = Http::withHeaders([
+                'Authorization' => 'Bearer ' . $access_token,
+                'Content-Type' => 'application/json'
+            ])->post('https://prod-160.westus.logic.azure.com/workflows/79256a92249b4f85bc6c0737d8d17d10/triggers/manual/paths/invoke/cedula/{identificacion}?api-version=2016-06-01', [
+                'identificacion' => $identificacion
+            ]);
+
+            if ($response->failed()) {
+                Log::error('Error al enviar la solicitud a Azure Logic Apps: ' . $response->status() . ' ' . $response->body());
+                return response()->json(['error' => 'Error al enviar la solicitud a Azure Logic Apps'], 500);
+            }
+
+            // return response()->json($response->json());
+        } catch (\Exception $e) {
+            Log::error('Error al obtener el token de acceso: ' . $e->getMessage());
+            return response()->json(['error' => 'Error al obtener el token de acceso'], 500);
+        }
+        dd($response->json());
         if ($response->successful()) {
             $data = $response->json();
 

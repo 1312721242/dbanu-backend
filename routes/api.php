@@ -57,8 +57,10 @@ use App\Http\Controllers\CpuDatosMedicosController;
 use App\Http\Controllers\CpuDienteController;
 use App\Http\Controllers\CpuAtencionOdontologiaController;
 use App\Http\Controllers\CpuCargoController;
+use App\Http\Controllers\CpuCorreoEnviadoController;
 use App\Http\Controllers\CpuDirAdminController;
 use App\Http\Controllers\CpuTerapiaLenguajeController;
+use App\Http\Controllers\CpuTipoBecaController;
 use App\Http\Controllers\CpuTramiteController;
 use App\Http\Controllers\ReporteController;
 use App\Models\CpuAtencionFisioterapia;
@@ -488,6 +490,9 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
     Route::get('/ultima-consulta-fisioterapia/{area_atencion}/{usr_tipo}/{id_persona}/{id_caso}', [CpuAtencionesFisioterapiaContoller::class, 'obtenerUltimaConsultaFisioterapia']);
 
+    //API para guardar atenciones fisioterapia
+    Route::post('/atencion/fisioterapia', [CpuAtencionesFisioterapiaContoller::class, 'guardarAtencionFisioterapia']);
+    Route::get('/ultima-consulta-fisioterapia/{area_atencion}/{usr_tipo}/{id_persona}/{id_caso}', [CpuAtencionesFisioterapiaContoller::class, 'obtenerUltimaConsultaFisioterapia']);
 });
 
 // Route::put('/cpu-persona-update/{cedula}', [CpuPersonaController::class, 'update']);

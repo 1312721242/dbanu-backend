@@ -10,7 +10,7 @@ use Illuminate\Support\Facades\Log;
 
 class CpuAtencionTriajeController extends Controller
 {
-    public function obtenerTallaPesoPaciente($id_persona)
+    public function obtenerTallaPesoPaciente(Request $request)
     {
         // Validar los parámetros de entrada
         $request->validate([
@@ -20,7 +20,7 @@ class CpuAtencionTriajeController extends Controller
         Log::info('id_paciente recibido:', $request->all());
 
         // Obtener el id_paciente de la solicitud
-        $idPaciente = $id_persona;
+        $idPaciente = $request->input('id_paciente');
 
         // Buscar todas las atenciones del paciente ordenadas de forma descendente por ID
         $atenciones = CpuAtencion::where('id_persona', $idPaciente)

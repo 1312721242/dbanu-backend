@@ -474,8 +474,18 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::delete('/tramites/{id}', [CpuTramiteController::class, 'destroy']);
     Route::get('/tramites', [CpuTramiteController::class, 'show']);
 
-    //API para guardar atenciones fisioterapia
-    Route::post('/atencion/fisioterapia', [CpuAtencionesFisioterapiaContoller::class, 'guardarAtencionFisioterapia']);
+    // API para obtener tipos de becas filtrados
+    Route::get('/tipos-beca/filtrados', [CpuTipoBecaController::class, 'show']);
+
+    // API para guardar atenciones de tramites
+    Route::post('/atenciones-tramites', [CpuAtencionesController::class, 'guardarAtencionTramites']);
+
+    // Enviar correo de atención de admisión de salud
+    Route::post('/enviar-correo-admision-salud', [CpuCorreoEnviadoController::class, 'enviarCorreoAtencionAdmisionSalud']);
+    Route::post('/enviar-correo-derivacion-funcionario', [CpuCorreoEnviadoController::class, 'enviarCorreoDerivacionAreaSaludFuncionario']);
+    Route::post('/enviar-correo-derivacion-paciente', [CpuCorreoEnviadoController::class, 'enviarCorreoDerivacionAreaSaludPaciente']);
+    Route::post('/enviar-correo-atencion-paciente', [CpuCorreoEnviadoController::class, 'enviarCorreoAtencionAreaSaludPaciente']);
+
     Route::get('/ultima-consulta-fisioterapia/{area_atencion}/{usr_tipo}/{id_persona}/{id_caso}', [CpuAtencionesFisioterapiaContoller::class, 'obtenerUltimaConsultaFisioterapia']);
 
 });

@@ -31,4 +31,6 @@ class CpuAtencion extends Model
         'id_cie10',
         'id_estado'
     ];
+
+
 }

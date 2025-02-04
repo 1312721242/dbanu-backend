@@ -23,6 +23,10 @@ class CpuAtencionesFisioterapiaContoller extends Controller
             'id_funcionario' => 'required|integer',
             'id_paciente' => 'required|integer',
             'id_derivacion' => 'required|integer|exists:cpu_derivaciones,id',
+            'numero_comprobante' => 'nullable|string',
+            'valor_cancelado' => 'nullable|numeric|min:0',
+            'total_sesiones' => 'nullable|integer',
+            'numero_sesion' => 'nullable|integer',
             'partes' => 'required|string',
             'subpartes' => 'required|string',
             'eva' => 'required|integer',
@@ -130,13 +134,17 @@ class CpuAtencionesFisioterapiaContoller extends Controller
             $atencion->motivo_atencion = $request->input('motivo');
             $atencion->id_tipo_usuario = $request->input('id_tipo_usuario');
             $atencion->diagnostico = is_array($request->diagnostico) ? json_encode($request->diagnostico) : $request->diagnostico;
-            $atencion->detalle_atencion = 'Atención Nutrición';
+            $atencion->detalle_atencion = 'ATENCIÓN FISIOTERAPIA';
             $atencion->fecha_hora_atencion = Carbon::now();
             $atencion->anio_atencion = Carbon::now()->year;
             // $atencion->recomendacion = $request->input('recomendaciones');
             $atencion->tipo_atencion = $request->input('tipo_atencion');
             $atencion->id_caso = $idCaso;
             $atencion->save();
+
+            // Extraer ID de la atención
+            $idAtencion = $atencion->id;
+            Log::info("📌 ID de la atención guardada: " . $idAtencion);
 
             $triaje = CpuAtencionTriaje::where('id_derivacion', $request->input('id_derivacion'))->first();
             $updateData = [
@@ -160,21 +168,6 @@ class CpuAtencionesFisioterapiaContoller extends Controller
                 CpuAtencionTriaje::create($updateData);
             }
 
-            // Guardar la atención fisioterapia
-            Log::info('ID_DERIVACION:', ['id_derivacion' => $request->input('id_derivacion')]);
-            $fisioterapia = new CpuAtencionFisioterapia();
-            $fisioterapia->id_derivacion = $request->id_derivacion;
-            $fisioterapia->partes = $request->input('partes');
-            $fisioterapia->subpartes = $request->input('subpartes');
-            $fisioterapia->eva = $request->input('eva');
-            $fisioterapia->test_goniometrico = json_decode($request->input('test_goniometrico'), true);
-            $fisioterapia->test_circunferencial = json_decode($request->input('test_circunferencial'), true);
-            $fisioterapia->test_longitudinal = json_decode($request->input('test_longitudinal'), true);
-            $fisioterapia->valoracion_fisioterapeutica = $request->input('valoracion_fisioterapeutica');
-            $fisioterapia->diagnostico_fisioterapeutico = $request->input('diagnostico_fisioterapeutico');
-            $fisioterapia->aplicaciones_terapeuticas = json_decode($request->input('aplicaciones_terapeuticas'), true);
-            $fisioterapia->save();
-
             // Verificar si se envía el `id_turno_asignado`
             if ($request->filled('id_turno_asignado')) {
                 Log::info('Valor de id_turno_asignado:', ['id_turno_asignado' => $request->input('id_turno_asignado')]);
@@ -197,6 +190,28 @@ class CpuAtencionesFisioterapiaContoller extends Controller
                     $derivacionData['id_funcionario_que_derivo'] = $request->input('id_funcionario');
                     $derivacionData['fecha_derivacion'] = Carbon::now();
                     $derivacion = CpuDerivacion::create($derivacionData);
+
+                    // ⚠️ Aquí ya tenemos el nuevo id de la derivación recién creada
+                    $nuevoIdDerivacion = $derivacion->id;
+
+                    // Guardar la atención fisioterapia
+                    Log::info('ID_DERIVACION:', ['id_derivacion' => $request->input('id_derivacion')]);
+                    $fisioterapia = new CpuAtencionFisioterapia();
+                    $fisioterapia->id_atencion = $idAtencion;
+                    $fisioterapia->partes = $request->input('partes');
+                    $fisioterapia->subpartes = $request->input('subpartes');
+                    $fisioterapia->eva = $request->input('eva');
+                    $fisioterapia->test_goniometrico = json_decode($request->input('test_goniometrico'), true);
+                    $fisioterapia->test_circunferencial = json_decode($request->input('test_circunferencial'), true);
+                    $fisioterapia->test_longitudinal = json_decode($request->input('test_longitudinal'), true);
+                    $fisioterapia->valoracion_fisioterapeutica = $request->input('valoracion_fisioterapeutica');
+                    $fisioterapia->diagnostico_fisioterapeutico = $request->input('diagnostico_fisioterapeutico');
+                    $fisioterapia->aplicaciones_terapeuticas = json_decode($request->input('aplicaciones_terapeuticas'), true);
+                    $fisioterapia->numero_comprobante = $request->input('numero_comprobante');
+                    $fisioterapia->valor_cancelado = $request->input('valor_cancelado');
+                    $fisioterapia->total_sesiones = $request->input('total_sesiones');
+                    $fisioterapia->numero_sesion = $request->input('numero_sesion');
+                    $fisioterapia->save();
 
                     // Actualizar el estado del turno relacionado
                     // $turno = CpuTurno::findOrFail($derivacionData['id_turno_asignado']);
@@ -223,6 +238,87 @@ class CpuAtencionesFisioterapiaContoller extends Controller
             DB::rollBack();
             Log::error('Error al guardar la atención fisioterapia:', ['exception' => $e->getMessage()]);
             return response()->json(['error' => 'Error al guardar la atención fisioterapia'], 500);
+        }
+    }
+
+    public function obtenerUltimaConsultaFisioterapia($area_atencion, $usr_tipo, $id_persona, $id_caso)
+    {
+        try {
+            // Registrar en logs el área de atención
+            Log::info('Área de atención: ' . $area_atencion);
+
+            // Buscar la última atención del paciente
+            $ultimaConsulta = CpuAtencion::where('id_persona', $id_persona)
+                ->where('id_funcionario', $usr_tipo)
+                ->where('id_caso', $id_caso)
+                ->orderBy('fecha_hora_atencion', 'desc')
+                ->first();
+
+            if (!$ultimaConsulta) {
+                return response()->json(['mensaje' => 'No se encontraron consultas para el paciente con el caso especificado'], 404);
+            }
+
+            // Formatear la fecha
+            $ultimaConsulta->fecha_hora_atencion = Carbon::parse($ultimaConsulta->fecha_hora_atencion)->translatedFormat('l, d F Y');
+
+            // Incluir el diagnóstico
+            $ultimaConsulta->diagnostico = $ultimaConsulta->diagnostico ?? 'Sin diagnóstico';
+
+            // Obtener el id_derivacion
+            Log::info('ID de la última consulta: ' . $ultimaConsulta->id);
+            $derivacion = CpuDerivacion::where('ate_id', $ultimaConsulta->id)->first();
+            $ultimaConsulta->id_derivacion = $derivacion ? $derivacion->id : null;
+
+            // Convertir a array
+            $respuesta = $ultimaConsulta->toArray();
+
+            // Si el área de atención es fisioterapia, traer los datos adicionales
+            if (strtoupper($area_atencion) === "FISIOTERAPIA") {
+                Log::info("🔍 Buscando datos de fisioterapia en `cpu_atenciones_fisioterapia` con ID_DERIVACION: " . $ultimaConsulta->id_derivacion);
+
+                $atencionFisioterapia = CpuAtencionFisioterapia::where('id_atencion', $ultimaConsulta->id)->first();
+
+                if ($atencionFisioterapia) {
+                    Log::info("✅ Datos de fisioterapia encontrados.", $atencionFisioterapia->toArray());
+
+                    // No usar json_decode() porque Laravel ya maneja JSONB como arrays
+                    $respuesta['datos_fisioterapia'] = [
+                        'id' => $atencionFisioterapia->id,
+                        'id_atencion' => $atencionFisioterapia->id_atencion,
+                        'numero_comprobante' => $atencionFisioterapia->numero_comprobante,
+                        'valor_cancelado' => $atencionFisioterapia->valor_cancelado,
+                        'total_sesiones' => $atencionFisioterapia->total_sesiones,
+                        'numero_sesion' => $atencionFisioterapia->numero_sesion + 1,
+                        'partes' => $atencionFisioterapia->partes ?? '',
+                        'subpartes' => $atencionFisioterapia->subpartes ?? '',
+                        'eva' => $atencionFisioterapia->eva ?? 0,
+                        'test_goniometrico' => is_string($atencionFisioterapia->test_goniometrico)
+                            ? json_decode($atencionFisioterapia->test_goniometrico, true)
+                            : ($atencionFisioterapia->test_goniometrico ?? []),
+                        'test_circunferencial' => is_string($atencionFisioterapia->test_circunferencial)
+                            ? json_decode($atencionFisioterapia->test_circunferencial, true)
+                            : ($atencionFisioterapia->test_circunferencial ?? []),
+                        'test_longitudinal' => is_string($atencionFisioterapia->test_longitudinal)
+                            ? json_decode($atencionFisioterapia->test_longitudinal, true)
+                            : ($atencionFisioterapia->test_longitudinal ?? []),
+                        'valoracion_fisioterapeutica' => $atencionFisioterapia->valoracion_fisioterapeutica ?? '',
+                        'diagnostico_fisioterapeutico' => $atencionFisioterapia->diagnostico_fisioterapeutico ?? '',
+                        'aplicaciones_terapeuticas' => is_string($atencionFisioterapia->aplicaciones_terapeuticas)
+                            ? json_decode($atencionFisioterapia->aplicaciones_terapeuticas, true)
+                            : ($atencionFisioterapia->aplicaciones_terapeuticas ?? []),
+                        'created_at' => $atencionFisioterapia->created_at,
+                        'updated_at' => $atencionFisioterapia->updated_at
+                    ];
+                } else {
+                    Log::warning("⚠️ No se encontraron datos de fisioterapia.");
+                    $respuesta['datos_fisioterapia'] = null;
+                }
+            }
+
+            return response()->json($respuesta, 200);
+        } catch (\Exception $e) {
+            Log::error('Error al obtener la última consulta de fisioterapia: ' . $e->getMessage());
+            return response()->json(['error' => 'Error al obtener la última consulta de fisioterapia: ' . $e->getMessage()], 500);
         }
     }
 }

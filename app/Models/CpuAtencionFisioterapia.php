@@ -9,7 +9,7 @@ class CpuAtencionFisioterapia extends Model
     protected $table = 'cpu_atenciones_fisioterapia';
 
     protected $fillable = [
-        'id_derivacion',
+        'id_atencion',
         'partes',
         'subpartes',
         'eva',
@@ -19,6 +19,11 @@ class CpuAtencionFisioterapia extends Model
         'valoracion_fisioterapeutica',
         'diagnostico_fisioterapeutico',
         'aplicaciones_terapeuticas',
+        'numero_comprobante',
+        'valor_cancelado',
+        'total_sesiones',
+        'numero_sesion',
+
     ];
 
     protected $casts = [

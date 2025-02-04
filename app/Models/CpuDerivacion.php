@@ -18,6 +18,7 @@ class CpuDerivacion extends Model
         'id_paciente',
         'fecha_derivacion',
         'motivo_derivacion',
+        'diagnostico',
         'detalle_derivacion',
         'id_area',
         'id_estado_derivacion',

@@ -131,6 +131,7 @@ class CpuDerivacionController extends Controller
                 'cpu_derivaciones.id as id_derivacion',
                 'cpu_derivaciones.fecha_para_atencion',
                 'cpu_derivaciones.motivo_derivacion',
+                'cpu_atenciones.diagnostico',
                 'users.name as funcionario_que_deriva',
                 'users.name as funcionario_al_que_deriva',
                 'cpu_userrole.role as area_atencion',
@@ -146,7 +147,8 @@ class CpuDerivacionController extends Controller
             ->leftJoin('cpu_userrole', 'cpu_derivaciones.id_area', '=', 'cpu_userrole.id_userrole')
             ->leftJoin('cpu_datos_estudiantes', 'cpu_personas.id', '=', 'cpu_datos_estudiantes.id_persona')
             ->leftJoin('cpu_datos_empleados', 'cpu_personas.id', '=', 'cpu_datos_empleados.id_persona')
-            ->leftJoin('users as deriva_sede', 'users.usr_sede', '=', 'cpu_derivaciones.id_funcionario_que_derivo');
+            ->leftJoin('users as deriva_sede', 'users.usr_sede', '=', 'cpu_derivaciones.id_funcionario_que_derivo')
+            ->leftJoin('cpu_atenciones', 'cpu_atenciones.id', '=', 'cpu_derivaciones.ate_id');
 
         // Agregar las condiciones según el doctor_id
         if ($doctorId == 9) {

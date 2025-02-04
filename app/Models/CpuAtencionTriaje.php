@@ -12,7 +12,7 @@ class CpuAtencionTriaje extends Model
     protected $table = 'cpu_atenciones_triaje';
 
     protected $fillable = [
-        'id_derivacion',
+        'id_atencion',
         'talla',
         'peso',
         'temperatura',

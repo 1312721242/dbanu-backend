@@ -118,23 +118,23 @@ class CpuAtencionesController extends Controller
                 'ts.observaciones as ts_observaciones',
                 'ts.url_informe as ts_url_informe',
                 'ts.periodo as ts_periodo'
-                )
-                ->leftJoin('cpu_atenciones_trabajo_social as ts', function ($join) use ($usr_tipo) {
-                    $join->on('at.id', '=', 'ts.id_atenciones');
-                    if ($usr_tipo !== null && $usr_tipo == 10) {
-                        $join->whereNotNull('ts.id'); // Solo incluye los registros si usr_tipo es 10
-                    }
-                })
-                ->leftJoin('cpu_atenciones_psicologia as ap', 'at.id', '=', 'ap.id_cpu_atencion')  // Hacer el join con cpu_atenciones_psicologia
-                ->when($id_persona, function ($query, $id_persona) {
-                    return $query->where('at.id_persona', $id_persona);
-                })
-                ->when($id_funcionario, function ($query, $id_funcionario) {
-                    return $query->where('at.id_funcionario', $id_funcionario);
-                })
-                ->where('at.id_estado', 1)  // Añadir la condición de que id_estado sea igual a 1
-                ->orderBy('at.created_at', 'desc')
-                ->get();
+            )
+            ->leftJoin('cpu_atenciones_trabajo_social as ts', function ($join) use ($usr_tipo) {
+                $join->on('at.id', '=', 'ts.id_atenciones');
+                if ($usr_tipo !== null && $usr_tipo == 10) {
+                    $join->whereNotNull('ts.id'); // Solo incluye los registros si usr_tipo es 10
+                }
+            })
+            ->leftJoin('cpu_atenciones_psicologia as ap', 'at.id', '=', 'ap.id_cpu_atencion')  // Hacer el join con cpu_atenciones_psicologia
+            ->when($id_persona, function ($query, $id_persona) {
+                return $query->where('at.id_persona', $id_persona);
+            })
+            ->when($id_funcionario, function ($query, $id_funcionario) {
+                return $query->where('at.id_funcionario', $id_funcionario);
+            })
+            ->where('at.id_estado', 1)  // Añadir la condición de que id_estado sea igual a 1
+            ->orderBy('at.created_at', 'desc')
+            ->get();
 
         // Filtramos las atenciones que tienen id_caso y las que no
         $atencionesConCaso = $atenciones->filter(function ($atencion) {
@@ -295,13 +295,27 @@ class CpuAtencionesController extends Controller
 
             $respuesta = $ultimaConsulta->toArray();
 
-            if (strtoupper($area_atencion) === "NUTRICIÓN") {
-                $atencionNutricion = CpuAtencionNutricion::where('ate_id', $ultimaConsulta->id)->first();
+            // if (strtoupper($area_atencion) === "NUTRICIÓN") {
+            //     $atencionNutricion = CpuAtencionNutricion::where('id_derivacion', $ultimaConsulta->id)->first();
 
-                if ($atencionNutricion) {
-                    $respuesta['datos_nutricion'] = $atencionNutricion->toArray();
-                }
+            //     Log::info("Datos de CpuAtencionNutricion: ", $atencionNutricion ? $atencionNutricion->toArray() : ['Sin datos']);
+
+            //     if ($atencionNutricion) {
+            //         $respuesta['datos_nutricion'] = $atencionNutricion->toArray();
+            //     }
+            // }
+
+            // Ahora buscar en `cpu_atencion_nutricion` por `id_atencion`, NO por `id_derivacion`
+        if (strtoupper($area_atencion) === "NUTRICIÓN") {
+            $atencionNutricion = CpuAtencionNutricion::where('id_atencion', $ultimaConsulta->id)->first();
+
+            // 🔍 Agregar LOG para ver lo que devuelve CpuAtencionNutricion
+            Log::info("Datos de CpuAtencionNutricion: ", $atencionNutricion ? $atencionNutricion->toArray() : ['Sin datos']);
+
+            if ($atencionNutricion) {
+                $respuesta['datos_nutricion'] = $atencionNutricion->toArray();
             }
+        }
 
             return response()->json($respuesta, 200);
         } catch (\Exception $e) {
@@ -315,7 +329,7 @@ class CpuAtencionesController extends Controller
         $validator = Validator::make($request->all(), [
             'id_funcionario' => 'required|integer',
             'id_paciente' => 'required|integer',
-            'id_derivacion' => 'required|integer|exists:cpu_derivaciones,id',
+            'id_atencion' => 'required|integer|exists:cpu_atenciones,id',
             'id_estado_derivacion' => 'required|integer|exists:cpu_derivaciones,id_estado_derivacion',
             'talla' => 'required|integer',
             'peso' => 'required|numeric',
@@ -354,7 +368,7 @@ class CpuAtencionesController extends Controller
 
             // Guardar el triaje
             $triaje = new CpuAtencionTriaje();
-            $triaje->id_derivacion = $request->input('id_derivacion');
+            $triaje->id_atencion = $request->input('id_atencion');
             $triaje->talla = $request->input('talla');
             $triaje->peso = $request->input('peso');
             $triaje->temperatura = $request->input('temperatura');
@@ -508,14 +522,6 @@ class CpuAtencionesController extends Controller
                 $caso->save();
             }
 
-            // if ($request->has('id_estado')) {
-            //     $caso = new CpuCasosMedicos();
-            //     $caso->nombre_caso = $request->input('nombre_caso');
-            //     $caso->id_estado = $request->input('id_estado');
-            //     $caso->save();
-            //     $idCaso = $caso->id;
-            // }
-
             // Guardar la atención
             $atencion = new CpuAtencion();
             $atencion->id_funcionario = $request->input('id_funcionario');
@@ -531,6 +537,10 @@ class CpuAtencionesController extends Controller
             $atencion->tipo_atencion = $request->input('tipo_atencion');
             $atencion->id_caso = $idCaso;
             $atencion->save();
+
+            // Extraer ID de la atención
+            $idAtencion = $atencion->id;
+            Log::info("📌 ID de la atención guardada: " . $idAtencion);
 
             $triaje = CpuAtencionTriaje::where('id_derivacion', $request->input('id_derivacion'))->first();
             $updateData = [
@@ -557,7 +567,7 @@ class CpuAtencionesController extends Controller
             // Guardar la atención nutricional
             Log::info('ID_DERIVACION:', ['id_derivacion' => $request->input('id_derivacion')]);
             $nutricion = new CpuAtencionNutricion();
-            $nutricion->ate_id = $atencion->id;
+            $nutricion->id_atencion = $idAtencion;
             $nutricion->imc = $request->input('imc');
             $nutricion->peso_ideal = $request->input('peso_ideal');
             $nutricion->estado_paciente = $request->input('estado_paciente');

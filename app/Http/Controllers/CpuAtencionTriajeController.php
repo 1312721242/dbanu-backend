@@ -28,7 +28,7 @@ class CpuAtencionTriajeController extends Controller
             ->pluck('id'); // Obtenemos solo los IDs de las atenciones
 
         if ($atenciones->isEmpty()) {
-            return response()->json(['error' => 'No se encontraron atenciones para el paciente'], 404);
+            return response()->json(['error' => 'No se encontraron atenciones para el paciente'], 204);
         }
 
         // Iterar sobre los id_atencion en orden descendente y buscar el primer triaje disponible
@@ -52,7 +52,7 @@ class CpuAtencionTriajeController extends Controller
         }
 
         // Si no se encontró ningún triaje, devolver error
-        return response()->json(['error' => 'No se encontraron datos de triaje para las atenciones registradas'], 404);
+        return response()->json(['error' => 'No se encontraron datos de triaje para las atenciones registradas'], 204);
     }
 
 
@@ -72,12 +72,12 @@ class CpuAtencionTriajeController extends Controller
         $triaje = CpuAtencionTriaje::where('id_atencion', $idAtencion)->first();
 
         if (!$triaje) {
-            return response()->json(['error' => 'Datos de triaje no encontrados para la derivación'], 404);
+            return response()->json(['error' => 'Datos de triaje no encontrados para la derivación'], 204);
         }
 
         // Devolver los datos de triaje como respuesta JSON
         return response()->json([
-            'id_derivacion' => $triaje->id_derivacion,
+            'id_atencion' => $triaje->id_derivacion,
             'talla' => $triaje->talla,
             'peso' => $triaje->peso,
             'temperatura' => $triaje->temperatura,

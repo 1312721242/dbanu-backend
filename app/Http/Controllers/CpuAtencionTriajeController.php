@@ -10,20 +10,20 @@ use Illuminate\Support\Facades\Log;
 
 class CpuAtencionTriajeController extends Controller
 {
-    public function obtenerTallaPesoPaciente(Request $request)
+    public function obtenerTallaPesoPaciente($id_paciente)
     {
         // Validar los parámetros de entrada
-        $request->validate([
-            'id_paciente' => 'required|integer|exists:cpu_derivaciones,id_paciente'
-        ]);
+        // $request->validate([
+        //     'id_paciente' => 'required|integer|exists:cpu_derivaciones,id_paciente'
+        // ]);
 
-        Log::info('id_paciente recibido:', $request->all());
+        // Log::info('id_paciente recibido:', $request->all());
 
         // Obtener el id_paciente de la solicitud
-        $idPaciente = $request->input('id_paciente');
+        // $idPaciente = $request->input('id_paciente');
 
         // Buscar todas las atenciones del paciente ordenadas de forma descendente por ID
-        $atenciones = CpuAtencion::where('id_persona', $idPaciente)
+        $atenciones = CpuAtencion::where('id_persona', $id_paciente)
             ->orderBy('id', 'desc') // Ordenamos por ID en orden descendente (últimos registros primero)
             ->pluck('id'); // Obtenemos solo los IDs de las atenciones
 
@@ -77,7 +77,7 @@ class CpuAtencionTriajeController extends Controller
 
         // Devolver los datos de triaje como respuesta JSON
         return response()->json([
-            'id_atencion' => $triaje->id_derivacion,
+            'id_derivacion' => $triaje->id_atencion,
             'talla' => $triaje->talla,
             'peso' => $triaje->peso,
             'temperatura' => $triaje->temperatura,

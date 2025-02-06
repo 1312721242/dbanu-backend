@@ -45,6 +45,8 @@ class CpuAtencionesFisioterapiaContoller extends Controller
 
         // Log::info('Diagnóstico antes de insertar:', ['diagnostico' => $request->input('diagnostico')]);
 
+        $fisioterapia = null;
+
         DB::beginTransaction();
 
         try {
@@ -146,7 +148,7 @@ class CpuAtencionesFisioterapiaContoller extends Controller
             $idAtencion = $atencion->id;
             Log::info("📌 ID de la atención guardada: " . $idAtencion);
 
-            $triaje = CpuAtencionTriaje::where('id_derivacion', $request->input('id_derivacion'))->first();
+            $triaje = CpuAtencionTriaje::where('id_atencion', $idAtencion)->first();
             $updateData = [
                 'talla' => $request->input('talla'),
                 'peso' => $request->input('peso'),
@@ -158,13 +160,13 @@ class CpuAtencionesFisioterapiaContoller extends Controller
 
             if ($triaje) {
                 foreach ($updateData as $key => $value) {
-                    if ($triaje[$key] != $value) {
-                        $triaje[$key] = $value;
+                    if ($triaje->$key != $value) {
+                        $triaje->$key = $value;
                     }
                 }
                 $triaje->save();
             } else {
-                $updateData['id_derivacion'] = $request->input('id_derivacion');
+                $updateData['id_atencion'] = $idAtencion;
                 CpuAtencionTriaje::create($updateData);
             }
 
@@ -233,10 +235,21 @@ class CpuAtencionesFisioterapiaContoller extends Controller
 
             DB::commit();
 
-            return response()->json(['success' => true, 'nutricion_id' => $fisioterapia->id]);
+            // return response()->json(['success' => true, 'nutricion_id' => $fisioterapia->id]);
+            return response()->json([
+                'success' => true,
+                'nutricion_id' => $fisioterapia ? $fisioterapia->id : null // Evita error si es null
+            ]);
         } catch (\Exception $e) {
             DB::rollBack();
-            Log::error('Error al guardar la atención fisioterapia:', ['exception' => $e->getMessage()]);
+            // Registrar el error con más detalles en el log
+            Log::error('Error al guardar la atención fisioterapia:', [
+                'message' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'trace' => $e->getTraceAsString(),
+                'request_data' => $request->all(), // Verifica los datos recibidos
+            ]);
             return response()->json(['error' => 'Error al guardar la atención fisioterapia'], 500);
         }
     }
@@ -255,7 +268,7 @@ class CpuAtencionesFisioterapiaContoller extends Controller
                 ->first();
 
             if (!$ultimaConsulta) {
-                return response()->json(['mensaje' => 'No se encontraron consultas para el paciente con el caso especificado'], 404);
+                return response()->json(['mensaje' => 'No se encontraron consultas para el paciente con el caso especificado'], 204);
             }
 
             // Formatear la fecha

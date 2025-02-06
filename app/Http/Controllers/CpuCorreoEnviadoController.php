@@ -107,8 +107,9 @@ class CpuCorreoEnviadoController extends Controller
         $hora_de_derivacion = $request->input('hora_para_atencion');
         $motivo_derivacion = $request->input('motivo_derivacion');
         $id_atencion = base64_encode($request->input('id_atencion'));
+        $id_clasificacion_usuario = base64_encode($request->input('id_clasificacion_usuario'));
         // url de la encuesta de satisfaccion
-        $url_encuesta_satisfaccion = "https://servicesdbanu.uleam.edu.ec/valoracion/valorar/" . $id_atencion;
+        $url_encuesta_satisfaccion = "https://servicesdbanu.uleam.edu.ec/valoracion/valorar/" . $id_atencion . "/" . $id_clasificacion_usuario;
 
         // Ajustar el asunto y el cuerpo del correo según el tipo
         $asunto = "Registro de atención en el área de $area_atencion";

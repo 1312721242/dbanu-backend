@@ -563,7 +563,7 @@ class CpuAtencionesController extends Controller
             $idAtencion = $atencion->id;
             Log::info("📌 ID de la atención guardada: " . $idAtencion);
 
-            $triaje = CpuAtencionTriaje::where('id_derivacion', $request->input('id_derivacion'))->first();
+            $triaje = CpuAtencionTriaje::where('id_atencion', $idAtencion)->first();
             $updateData = [
                 'talla' => $request->input('talla'),
                 'peso' => $request->input('peso'),
@@ -575,13 +575,13 @@ class CpuAtencionesController extends Controller
 
             if ($triaje) {
                 foreach ($updateData as $key => $value) {
-                    if ($triaje[$key] != $value) {
-                        $triaje[$key] = $value;
+                    if ($triaje->$key != $value) {
+                        $triaje->$key = $value;
                     }
                 }
                 $triaje->save();
             } else {
-                $updateData['id_derivacion'] = $request->input('id_derivacion');
+                $updateData['id_atencion'] = $idAtencion;
                 CpuAtencionTriaje::create($updateData);
             }
 

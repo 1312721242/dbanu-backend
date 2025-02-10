@@ -63,4 +63,10 @@ class CpuDerivacion extends Model
     {
         return $this->belongsTo(CpuTurno::class, 'id_turno_asignado');
     }
+
+    // Relación con la tabla cpu_tramites
+    public function tramite()
+    {
+        return $this->belongsTo(CpuTramite::class, 'id_tramite');
+    }
 }

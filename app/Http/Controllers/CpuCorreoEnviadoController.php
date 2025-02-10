@@ -174,6 +174,7 @@ class CpuCorreoEnviadoController extends Controller
     {
         // Obtener los datos necesarios desde el array validado
         $email_paciente = 'junior.zamora@uleam.edu.ec';
+        
         $paciente = DB::table('cpu_personas')
             ->where('id', $request->input('id_paciente'))
             ->first();
@@ -182,6 +183,7 @@ class CpuCorreoEnviadoController extends Controller
         $funcionario_atendio = DB::table('users')
             ->where('id', $request->input('id_funcionario'))
             ->value('name') ?? null;
+        $email_funcionario = 'junior.zamora@uleam.edu.ec';
         $area_atencion = DB::table('cpu_userrole')
             ->where('id_userrole', $request->input('id_area_atencion'))
             ->value('role');
@@ -214,7 +216,34 @@ class CpuCorreoEnviadoController extends Controller
                         <br>&emsp;5. Gel diclofenaco (de cualquier marca)
                         <br><br> <i><strong>Nota:</strong> el Fisioterapeuta podrá indicar otros implementos necesarios para su atención durante la primera sesión.</i>
                         <br><br>Saludos cordiales.</p>";
-        }else{
+        }
+        else if ($area_derivada == "TRABAJO SOCIAL") {
+            $cuerpo = "<p>Estimado(a) <strong>$paciente->nombres</strong>,</p>
+        
+                       <p>Reciba un cordial saludo de parte del Área de Trabajo Social de la Dirección de Bienestar, Admisión y Nivelación Universitaria (Dbanu) de la Universidad Laica Eloy Alfaro de Manabí (ULEAM).</p>
+        
+                       <p>Le notificamos que, el <strong>$fecha_de_atencion</strong>, la Dbanu registró su derivación por motivo de <strong>$motivo_derivacion</strong> al área de <strong>$area_derivada</strong>. 
+                       La entrevista ha sido programada con el/la funcionario(a) <strong>$funcionario_derivado</strong> a continuación se detallan los datos de la cita:</p>
+        
+                       <p><strong>📅 Fecha:</strong> $fecha_de_derivacion<br>
+                       <strong>⏰ Hora:</strong> $hora_de_derivacion<br>
+                       <strong>📍 Lugar:</strong> Universidad Laica Eloy Alfaro de Manabí<br>
+                       <strong>📌 Dirección:</strong> Bienestar Universitario, Área de Trabajo Social.</p>
+        
+                       <p>Le solicitamos presentarse <strong>15 minutos antes de la hora de la cita</strong>.</p>
+        
+                       <p>En caso de no poder asistir en la fecha y hora programadas, le pedimos que lo comunique oportunamente al correo <strong>$email_funcionario</strong>.</p>
+        
+                       <p>Agradecemos su atención y quedamos atentos a cualquier inquietud.</p>
+        
+                       <p>Atentamente,</p>
+                       
+
+
+                       Secretaría<br>
+                       Dirección de Bienestar, Admisión y Nivelación Universitaria</p>";
+        }
+        else{
             $cuerpo = "<p>Estimado(a) <strong>$paciente->nombres</strong>; el <strong>$fecha_de_atencion</strong>, La Dirección de Bienestar, Admisión y 
                        Nivelación Universitaria, registró la derivación por motivo de <strong>$motivo_derivacion</strong> en el área de <strong>$area_derivada</strong>
                         con el/la funcionario(a) <strong>$funcionario_derivado</strong> para el día <strong>$fecha_de_derivacion</strong> a las <strong>$hora_de_derivacion</strong>.

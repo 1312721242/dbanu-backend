@@ -169,7 +169,8 @@ class CpuCorreoEnviadoController extends Controller
     {
         // Obtener los datos necesarios desde el array validado
         $email_paciente = 'junior.zamora@uleam.edu.ec';
-        $nombres_paciente = DB::table('cpu_personas')
+
+        $paciente = DB::table('cpu_personas')
             ->where('id', $request->input('id_paciente'))
             ->value('nombres');
         $fecha_de_atencion = $request->input('fecha_hora_atencion');
@@ -177,6 +178,7 @@ class CpuCorreoEnviadoController extends Controller
         $funcionario_atendio = DB::table('users')
             ->where('id', $request->input('id_funcionario'))
             ->value('name') ?? null;
+        $email_funcionario = 'junior.zamora@uleam.edu.ec';
         $area_atencion = DB::table('cpu_userrole')
             ->where('id_userrole', $request->input('id_area_atencion'))
             ->value('role');
@@ -195,7 +197,55 @@ class CpuCorreoEnviadoController extends Controller
 
         // Ajustar el asunto y el cuerpo del correo según el tipo
         $asunto = "Registro de agendamiento de cita en el área de $area_derivada";
-        $cuerpo = "<p>Estimado(a) ciudadano(a) $nombres_paciente; El $fecha_de_atencion, La Dirección de Bienestar, Admisión y Nivelación Universitaria, registró la derivación por motivo de $motivo_derivacion en el área de $area_derivada con el funcionario $funcionario_derivado para el día $fecha_de_derivacion a las $hora_de_derivacion. Por favor asistir 15 minutos antes de la hora de la cita, acerquese al área de TRIAJE antes de asistir al área de $area_derivada.<br><br>Saludos cordiales.</p>";
+
+        if($area_derivada == "FISIOTERAPIA" && $paciente->id_clasificacion_tipo_usuario != 1){
+            $cuerpo = "<p>Estimado(a) <strong>$paciente->nombres</strong>; el $fecha_de_atencion, la Dirección de Bienestar, Admisión y Nivelación Universitaria,
+                        registró la <strong>derivación</strong> por motivo de $motivo_derivacion en el área de <strong>$area_derivada</strong> con el/la funcionario(a)
+                        <strong>$funcionario_derivado</strong> para el día <strong>$fecha_de_derivacion</strong> a las <strong>$hora_de_derivacion</strong>.
+                        <br><br>Es importante asistir 15 minutos antes de la hora de la cita, acercándose previamente al área de <strong>TRIAJE</strong>.
+                        <br><br> <strong>Para la atención de la cita en el área de FISIOTERAPIA, es necesario llevar los siguientes implementos:</strong>
+                        <br>&emsp;1. Documento de identidad
+                        <br>&emsp;2. Carnet de la Universidad
+                        <br>&emsp;3. Comprobante de pago de las sesiones (habitualmente se pagan 5 sesiones)
+                        <br>&emsp;4. 1 Toalla grande de baño
+                        <br>&emsp;5. Gel diclofenaco (de cualquier marca)
+                        <br><br> <i><strong>Nota:</strong> el Fisioterapeuta podrá indicar otros implementos necesarios para su atención durante la primera sesión.</i>
+                        <br><br>Saludos cordiales.</p>";
+        }
+        else if ($area_derivada == "TRABAJO SOCIAL") {
+            $cuerpo = "<p>Estimado(a) <strong>$paciente->nombres</strong>,</p>
+
+                       <p>Reciba un cordial saludo de parte del Área de Trabajo Social de la Dirección de Bienestar, Admisión y Nivelación Universitaria (Dbanu) de la Universidad Laica Eloy Alfaro de Manabí (ULEAM).</p>
+
+                       <p>Le notificamos que, el <strong>$fecha_de_atencion</strong>, la Dbanu registró su derivación por motivo de <strong>$motivo_derivacion</strong> al área de <strong>$area_derivada</strong>.
+                       La entrevista ha sido programada con el/la funcionario(a) <strong>$funcionario_derivado</strong> a continuación se detallan los datos de la cita:</p>
+
+                       <p><strong>📅 Fecha:</strong> $fecha_de_derivacion<br>
+                       <strong>⏰ Hora:</strong> $hora_de_derivacion<br>
+                       <strong>📍 Lugar:</strong> Universidad Laica Eloy Alfaro de Manabí<br>
+                       <strong>📌 Dirección:</strong> Bienestar Universitario, Área de Trabajo Social.</p>
+
+                       <p>Le solicitamos presentarse <strong>15 minutos antes de la hora de la cita</strong>.</p>
+
+                       <p>En caso de no poder asistir en la fecha y hora programadas, le pedimos que lo comunique oportunamente al correo <strong>$email_funcionario</strong>.</p>
+
+                       <p>Agradecemos su atención y quedamos atentos a cualquier inquietud.</p>
+
+                       <p>Atentamente,</p>
+
+
+
+                       Secretaría<br>
+                       Dirección de Bienestar, Admisión y Nivelación Universitaria</p>";
+        }
+        else{
+            $cuerpo = "<p>Estimado(a) <strong>$paciente->nombres</strong>; el <strong>$fecha_de_atencion</strong>, La Dirección de Bienestar, Admisión y
+                       Nivelación Universitaria, registró la derivación por motivo de <strong>$motivo_derivacion</strong> en el área de <strong>$area_derivada</strong>
+                        con el/la funcionario(a) <strong>$funcionario_derivado</strong> para el día <strong>$fecha_de_derivacion</strong> a las <strong>$hora_de_derivacion</strong>.
+                       <br><br>Es importante asistir <strong>15 minutos antes de la hora de la cita</strong>, acercándose previamente al área de
+                       <strong>TRIAJE</strong> antes de dirigirse al área de <strong>$area_derivada</strong>.
+                       <br><br>Saludos cordiales.</p>";
+        }
 
         $persona = [
             "destinatarios" => $email_paciente,

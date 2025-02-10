@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Models\CpuAtencion;
+use App\Models\CpuAtencionFisioterapia;
 use App\Models\CpuAtencionMedicinaGeneral;
 use App\Models\CpuAtencionNutricion;
 use App\Models\CpuAtencionTriaje;
@@ -319,6 +320,17 @@ class CpuAtencionesController extends Controller
 
             if ($atencionNutricion) {
                 $respuesta['datos_nutricion'] = $atencionNutricion->toArray();
+            }
+        }
+
+        if (strtoupper($area_atencion) === "FISIOTERAPIA") {
+            $atencionFisioterapia = CpuAtencionFisioterapia::where('id_atencion', $ultimaConsulta->id)->first();
+
+            // 🔍 Agregar LOG para ver lo que devuelve CpuAtencionNutricion
+            Log::info("Datos de CpuAtencionFisioterapia: ", $atencionFisioterapia ? $atencionFisioterapia->toArray() : ['Sin datos']);
+
+            if ($atencionFisioterapia) {
+                $respuesta['datos_fisioterapia'] = $atencionFisioterapia->toArray();
             }
         }
 

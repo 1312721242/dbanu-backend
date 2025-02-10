@@ -131,27 +131,12 @@ class CpuAtencionPsicologiaController extends Controller
                         $informesPrevios = [$nuevoInforme];
                     }
 
-                    // // Si ya existe un informe_final, decodificarlo; de lo contrario, inicializar como array vacío
-                    // $informeFinalArray = $casoActual->informe_final ? json_decode($casoActual->informe_final, true) : [];
-
-                    // // Crear un nuevo elemento para agregar al array
-                    // $nuevoElemento = [
-                    //     'fecha' => Carbon::now()->format('Y-m-d H:i:s'),  // Fecha actual
-                    //     'descripcionfinal' => $request->descripcionfinal  // La descripción se toma directamente del request
-                    // ];
-
-                    // // Agregar el nuevo elemento al array existente
-                    // $informeFinalArray[] = $nuevoElemento;
-
                     // Actualizar el campo informe_final con el nuevo array
                     CpuCasosMedicos::where('id', $request->id_caso)->update([
                         'id_estado' => 20,
                         'informe_final' => json_encode($informesPrevios)  // Utilizar JSON_UNESCAPED_UNICODE para evitar el escape de caracteres
                     ]);
                 }
-
-
-
                 if ($request->tipo_atencion == 'REAPERTURA') {
                     CpuCasosMedicos::where('id', $request->id_caso)->update(['id_estado' => 8]);
                 }
@@ -212,7 +197,7 @@ class CpuAtencionPsicologiaController extends Controller
 
                 // Guardar el triaje siempre después de la derivación
                 $triaje = new CpuAtencionTriaje();
-                $triaje->id_derivacion = $derivacion->id; // Usar el ID de la derivación recién creada
+                $triaje->id_atencion = $cpuAtencion->id; // Usar el ID de la derivación recién creada
                 $triaje->talla = $request->input('talla');
                 $triaje->peso = $request->input('peso');
                 $triaje->temperatura = $request->input('temperatura');
@@ -224,7 +209,8 @@ class CpuAtencionPsicologiaController extends Controller
             // Confirmar la transacción
             DB::commit();
 
-            return response()->json($atencionPsicologia, 201);
+            // return response()->json($atencionPsicologia, 201);
+            return response()->json(['success' => true, 'atencion_id' => $cpuAtencion->id]);
 
         } catch (\Exception $e) {
             // Revertir la transacción en caso de error

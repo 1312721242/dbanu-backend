@@ -20,7 +20,7 @@ class CpuDienteController extends Controller
                 'adulto' => [],
                 'infantil' => []
             ]
-        ], 404);
+        ], 204);
     }
     $arcada = $diente->arcada; // Eloquent ya lo convierte a array, no uses json_decode
 
@@ -43,7 +43,7 @@ public function actualizarDiente(Request $request, $id_diente)
     $diente = CpuDiente::find($id_diente);
 
     if (!$diente) {
-        return response()->json(['message' => 'Diente no encontrado'], 404);
+        return response()->json(['message' => 'Diente no encontrado'], 204);
     }
 
     // Aquí ya no necesitas json_encode, porque se guardará como un array en la columna jsonb

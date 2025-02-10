@@ -29,7 +29,9 @@ class CpuCorreoEnviadoController extends Controller
 
         // Ajustar el asunto y el cuerpo del correo según el tipo
         $asunto = "Registro de atención en el área de Admisión de Salud";
-        $cuerpo = "<p>Estimado(a) ciudadano(a) $nombres_paciente; El $fecha_de_atencion, La Dirección de Bienestar, Admisión y Nivelación Universitaria, le informa que se registró el agendamiento en el área de $area_derivada con el funcionario $funcionario_derivado para el día $fecha_de_derivacion a las $hora_de_derivacion. Por favor asistir 15 minutos antes de la hora de la cita, acerquese al área de TRIAJE antes de asistir al área de $area_derivada.<br><br>Saludos cordiales.</p>";
+        $cuerpo = "<p>Estimado(a) <strong>$nombres_paciente</strong>; el <strong>$fecha_de_atencion</strong>, La Dirección de Bienestar, Admisión y Nivelación Universitaria, le informa que se registró el agendamiento en el área de <strong>$area_derivada</strong> con el funcionario <strong>$funcionario_derivado</strong> para el día <strong>$fecha_de_derivacion</strong> a las <strong>$hora_de_derivacion</strong>. 
+                  <br><br>Es importante asistir 15 minutos antes de la hora de la cita, acercándose previamente al área de <strong>TRIAJE</strong>.
+                  <br><br>Saludos cordiales.</p>";
 
         $persona = [
             "destinatarios" => $email_paciente,
@@ -113,7 +115,9 @@ class CpuCorreoEnviadoController extends Controller
 
         // Ajustar el asunto y el cuerpo del correo según el tipo
         $asunto = "Registro de atención en el área de $area_atencion";
-        $cuerpo = "<p>Estimado(a) ciudadano(a) $nombres_paciente; El $fecha_de_atencion, La Dirección de Bienestar, Admisión y Nivelación Universitaria, registró la atención por motivo de $motivo_atencion en el área de $area_atencion con el funcionario $funcionario_atendio a las $fecha_de_atencion. Por favor califique la atención en la siguiente <a href='$url_encuesta_satisfaccion'>Encuesta de satisfacción del servicio recibido</a>.<br><br>Saludos cordiales.</p>";
+        $cuerpo = "<p>Estimado(a) <strong>$nombres_paciente<strong>, el $fecha_de_atencion, la Dirección de Bienestar, Admisión y Nivelación Universitaria, registró la atención por <strong>motivo de $motivo_atencion</strong> en el área de <strong>$area_atencion</strong> con el funcionario <strong>$funcionario_atendio</strong> a las $fecha_de_atencion. 
+                  <br><br>Por favor, indique su opinión sobre la atención recibida en la siguiente <a href='$url_encuesta_satisfaccion'><strong>Encuesta de satisfacción del servicio recibido</strong></a>.
+                  <br><br>Saludos cordiales.</p>";
 
         $persona = [
             "destinatarios" => $email_paciente,
@@ -170,9 +174,9 @@ class CpuCorreoEnviadoController extends Controller
     {
         // Obtener los datos necesarios desde el array validado
         $email_paciente = 'junior.zamora@uleam.edu.ec';
-        $nombres_paciente = DB::table('cpu_personas')
+        $paciente = DB::table('cpu_personas')
             ->where('id', $request->input('id_paciente'))
-            ->value('nombres');
+            ->first();
         $fecha_de_atencion = $request->input('fecha_hora_atencion');
         $motivo_atencion = $request->input('motivo_atencion');
         $funcionario_atendio = DB::table('users')
@@ -196,7 +200,28 @@ class CpuCorreoEnviadoController extends Controller
 
         // Ajustar el asunto y el cuerpo del correo según el tipo
         $asunto = "Registro de agendamiento de cita en el área de $area_derivada";
-        $cuerpo = "<p>Estimado(a) ciudadano(a) $nombres_paciente; El $fecha_de_atencion, La Dirección de Bienestar, Admisión y Nivelación Universitaria, registró la derivación por motivo de $motivo_derivacion en el área de $area_derivada con el funcionario $funcionario_derivado para el día $fecha_de_derivacion a las $hora_de_derivacion. Por favor asistir 15 minutos antes de la hora de la cita, acerquese al área de TRIAJE antes de asistir al área de $area_derivada.<br><br>Saludos cordiales.</p>";
+
+        if($area_derivada == "FISIOTERAPIA" && $paciente->id_clasificacion_tipo_usuario != 1){
+            $cuerpo = "<p>Estimado(a) <strong>$paciente->nombres</strong>; el $fecha_de_atencion, la Dirección de Bienestar, Admisión y Nivelación Universitaria, 
+                        registró la <strong>derivación</strong> por motivo de $motivo_derivacion en el área de <strong>$area_derivada</strong> con el/la funcionario(a) 
+                        <strong>$funcionario_derivado</strong> para el día <strong>$fecha_de_derivacion</strong> a las <strong>$hora_de_derivacion</strong>. 
+                        <br><br>Es importante asistir 15 minutos antes de la hora de la cita, acercándose previamente al área de <strong>TRIAJE</strong>.
+                        <br><br> <strong>Para la atención de la cita en el área de FISIOTERAPIA, es necesario llevar los siguientes implementos:</strong>
+                        <br>&emsp;1. Documento de identidad
+                        <br>&emsp;2. Carnet de la Universidad
+                        <br>&emsp;3. Comprobante de pago de las sesiones (habitualmente se pagan 5 sesiones)
+                        <br>&emsp;4. 1 Toalla grande de baño
+                        <br>&emsp;5. Gel diclofenaco (de cualquier marca)
+                        <br><br> <i><strong>Nota:</strong> el Fisioterapeuta podrá indicar otros implementos necesarios para su atención durante la primera sesión.</i>
+                        <br><br>Saludos cordiales.</p>";
+        }else{
+            $cuerpo = "<p>Estimado(a) <strong>$paciente->nombres</strong>; el <strong>$fecha_de_atencion</strong>, La Dirección de Bienestar, Admisión y 
+                       Nivelación Universitaria, registró la derivación por motivo de <strong>$motivo_derivacion</strong> en el área de <strong>$area_derivada</strong>
+                        con el/la funcionario(a) <strong>$funcionario_derivado</strong> para el día <strong>$fecha_de_derivacion</strong> a las <strong>$hora_de_derivacion</strong>.
+                       <br><br>Es importante asistir <strong>15 minutos antes de la hora de la cita</strong>, acercándose previamente al área de 
+                       <strong>TRIAJE</strong> antes de dirigirse al área de <strong>$area_derivada</strong>.
+                       <br><br>Saludos cordiales.</p>";
+        }
 
         $persona = [
             "destinatarios" => $email_paciente,
@@ -279,7 +304,7 @@ class CpuCorreoEnviadoController extends Controller
 
         // Ajustar el asunto y el cuerpo del correo según el tipo
         $asunto = "Registro de agendamiento de cita en el área de $area_derivada";
-        $cuerpo = "<p>Estimado(a) funcionario(a) $nombres_funcionario; El $fecha_de_atencion, La Dirección de Bienestar, Admisión y Nivelación Universitaria, registró la derivación desde el área de $area_atencion por motivo de $motivo_derivacion con el paciente $nombres_paciente para el día $fecha_de_derivacion a las $hora_de_derivacion. Por favor revise la cita en el sistema en la sección de Derivaciones>Atender.<br><br>Saludos cordiales.</p>";
+        $cuerpo = "<p>Estimado(a) funcionario(a) <strong>$nombres_funcionario</strong>; el <strong>$fecha_de_atencion</strong>, La Dirección de Bienestar, Admisión y Nivelación Universitaria, registró la derivación desde el área de <strong>$area_atencion</strong> por motivo de <strong>$motivo_derivacion</strong> con el paciente <strong>$nombres_paciente</strong> para el día <strong>$fecha_de_derivacion</strong> a las <strong>$hora_de_derivacion</strong>. Por favor revise la cita en el <a href='https://dbanu.uleam.edu.ec/bienestar/'><strong>sistema</strong></a> en la sección de Derivaciones>Atender.<br><br>Saludos cordiales.</p>";
 
         $persona = [
             "destinatarios" => $email_funcionario,

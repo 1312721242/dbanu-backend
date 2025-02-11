@@ -127,9 +127,8 @@ class CpuCorreoEnviadoController extends Controller
         $hora_de_derivacion = $request->input('hora_para_atencion');
         $motivo_derivacion = $request->input('motivo_derivacion');
         $id_atencion = base64_encode($request->input('id_atencion'));
-        $id_clasificacion_usuario = base64_encode($request->input('id_clasificacion_usuario'));
         // url de la encuesta de satisfaccion
-        $url_encuesta_satisfaccion = "https://servicesdbanu.uleam.edu.ec/valoracion/valorar/" . $id_atencion . "/" . $id_clasificacion_usuario;
+        $url_encuesta_satisfaccion = "https://servicesdbanu.uleam.edu.ec/valoracion/valorar/" . $id_atencion;
 
         // Ajustar el asunto y el cuerpo del correo según el tipo
         $asunto = "Registro de atención en el área de $area_atencion";
@@ -207,10 +206,10 @@ class CpuCorreoEnviadoController extends Controller
     {
         // Obtener los datos necesarios desde el array validado
         $email_paciente = 'junior.zamora@uleam.edu.ec';
-        
+
         $paciente = DB::table('cpu_personas')
             ->where('id', $request->input('id_paciente'))
-            ->first();
+            ->value('nombres');
         $fecha_de_atencion = $request->input('fecha_hora_atencion');
         $motivo_atencion = $request->input('motivo_atencion');
         $funcionario_atendio = DB::table('users')
@@ -300,25 +299,25 @@ class CpuCorreoEnviadoController extends Controller
         }
         else if ($area_derivada == "TRABAJO SOCIAL") {
             $cuerpo = "<p>Estimado(a) <strong>$paciente->nombres</strong>,</p>
-        
+
                        <p>Reciba un cordial saludo de parte del Área de Trabajo Social de la Dirección de Bienestar, Admisión y Nivelación Universitaria (Dbanu) de la Universidad Laica Eloy Alfaro de Manabí (ULEAM).</p>
-        
-                       <p>Le notificamos que, el <strong>$fecha_de_atencion</strong>, la Dbanu registró su derivación por motivo de <strong>$motivo_derivacion</strong> al área de <strong>$area_derivada</strong>. 
+
+                       <p>Le notificamos que, el <strong>$fecha_de_atencion</strong>, la Dbanu registró su derivación por motivo de <strong>$motivo_derivacion</strong> al área de <strong>$area_derivada</strong>.
                        La entrevista ha sido programada con el/la funcionario(a) <strong>$funcionario_derivado</strong> a continuación se detallan los datos de la cita:</p>
-        
+
                        <p><strong>📅 Fecha:</strong> $fecha_de_derivacion<br>
                        <strong>⏰ Hora:</strong> $hora_de_derivacion<br>
                        <strong>📍 Lugar:</strong> Universidad Laica Eloy Alfaro de Manabí<br>
                        <strong>📌 Dirección:</strong> Bienestar Universitario, Área de Trabajo Social.</p>
-        
+
                        <p>Le solicitamos presentarse <strong>15 minutos antes de la hora de la cita</strong>.</p>
-        
+
                        <p>En caso de no poder asistir en la fecha y hora programadas, le pedimos que lo comunique oportunamente al correo <strong>$email_funcionario</strong>.</p>
-        
+
                        <p>Agradecemos su atención y quedamos atentos a cualquier inquietud.</p>
-        
+
                        <p>Atentamente,</p>
-                       
+
 
 
                        Secretaría<br>

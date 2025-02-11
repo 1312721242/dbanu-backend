@@ -29,9 +29,27 @@ class CpuCorreoEnviadoController extends Controller
 
         // Ajustar el asunto y el cuerpo del correo según el tipo
         $asunto = "Registro de atención en el área de Admisión de Salud";
-        $cuerpo = "<p>Estimado(a) <strong>$nombres_paciente</strong>; el <strong>$fecha_de_atencion</strong>, La Dirección de Bienestar, Admisión y Nivelación Universitaria, le informa que se registró el agendamiento en el área de <strong>$area_derivada</strong> con el funcionario <strong>$funcionario_derivado</strong> para el día <strong>$fecha_de_derivacion</strong> a las <strong>$hora_de_derivacion</strong>. 
-                  <br><br>Es importante asistir 15 minutos antes de la hora de la cita, acercándose previamente al área de <strong>TRIAJE</strong>.
-                  <br><br>Saludos cordiales.</p>";
+        // $cuerpo = "<p>Estimado(a) <strong>$nombres_paciente</strong>; el <strong>$fecha_de_atencion</strong>, La Dirección de Bienestar, Admisión y Nivelación Universitaria, le informa que se registró el agendamiento en el área de <strong>$area_derivada</strong> con el funcionario <strong>$funcionario_derivado</strong> para el día <strong>$fecha_de_derivacion</strong> a las <strong>$hora_de_derivacion</strong>. 
+        //           <br><br>Es importante asistir 15 minutos antes de la hora de la cita, acercándose previamente al área de <strong>TRIAJE</strong>.
+        //           <br><br>Saludos cordiales.</p>";
+
+         // Cuerpo del mensaje
+    $cuerpo = "<p>Estimado(a) <strong>$nombres_paciente</strong>,</p>
+
+                <p>Le informamos que el <strong>$fecha_de_atencion</strong>, la Dirección de Bienestar, Admisión y Nivelación Universitaria (DBANU) registró el agendamiento en el área de <strong>$area_derivada</strong>. La cita ha sido programada con el/la funcionario(a) <strong>$funcionario_derivado</strong>. A continuación, los detalles de su cita:</p>
+
+                <p><strong>📅 Fecha:</strong> $fecha_de_derivacion<br>
+                <strong>⏰ Hora:</strong> $hora_de_derivacion<br>
+                <strong>📍 Lugar:</strong> Universidad Laica Eloy Alfaro de Manabí<br>
+                <strong>📌 Dirección:</strong> Bienestar Universitario, Área de $area_derivada</p>
+
+                <p>Le solicitamos presentarse <strong>15 minutos antes de la hora de la cita</strong> y acercarse previamente al área de <strong>TRIAJE</strong>.</p>
+
+                <p>Agradecemos su atención y quedamos atentos a cualquier inquietud.</p>
+
+                <p>Atentamente,</p>
+                <p><strong>Área de Admisión de Salud</strong><br>
+                Dirección de Bienestar, Admisión y Nivelación Universitaria</p>";
 
         $persona = [
             "destinatarios" => $email_paciente,
@@ -115,9 +133,24 @@ class CpuCorreoEnviadoController extends Controller
 
         // Ajustar el asunto y el cuerpo del correo según el tipo
         $asunto = "Registro de atención en el área de $area_atencion";
-        $cuerpo = "<p>Estimado(a) <strong>$nombres_paciente<strong>, el $fecha_de_atencion, la Dirección de Bienestar, Admisión y Nivelación Universitaria, registró la atención por <strong>motivo de $motivo_atencion</strong> en el área de <strong>$area_atencion</strong> con el funcionario <strong>$funcionario_atendio</strong> a las $fecha_de_atencion. 
-                  <br><br>Por favor, indique su opinión sobre la atención recibida en la siguiente <a href='$url_encuesta_satisfaccion'><strong>Encuesta de satisfacción del servicio recibido</strong></a>.
-                  <br><br>Saludos cordiales.</p>";
+        // $cuerpo = "<p>Estimado(a) <strong>$nombres_paciente<strong>, el $fecha_de_atencion, la Dirección de Bienestar, Admisión y Nivelación Universitaria, registró la atención por <strong>motivo de $motivo_atencion</strong> en el área de <strong>$area_atencion</strong> con el funcionario <strong>$funcionario_atendio</strong> a las $fecha_de_atencion. 
+        //           <br><br>Por favor, indique su opinión sobre la atención recibida en la siguiente <a href='$url_encuesta_satisfaccion'><strong>Encuesta de satisfacción del servicio recibido</strong></a>.
+        //           <br><br>Saludos cordiales.</p>";
+        // Cuerpo del mensaje
+    $cuerpo = "<p>Estimado(a) <strong>$nombres_paciente</strong>,</p>
+
+                <p>Le informamos que el <strong>$fecha_de_atencion</strong>, la Dirección de Bienestar, Admisión y Nivelación Universitaria (DBANU) registró su atención en el área de <strong>$area_atencion</strong> con el/la funcionario(a) <strong>$funcionario_atendio</strong>. A continuación, los detalles de la atención:</p>
+
+                <p><strong>📅 Fecha:</strong> $fecha_de_atencion<br>
+                <strong>📌 Motivo:</strong> $motivo_atencion</p>
+
+                <p>Le invitamos a compartir su opinión sobre la atención recibida completando la siguiente <a href='$url_encuesta_satisfaccion' target='_blank'><strong>🌐 Encuesta de satisfacción del servicio</strong></a>.</p>
+
+                <p>Agradecemos su atención y quedamos atentos a cualquier inquietud.</p>
+
+                <p>Atentamente,</p>
+                <p><strong>Área de $area_atencion</strong><br>
+                Dirección de Bienestar, Admisión y Nivelación Universitaria</p>";
 
         $persona = [
             "destinatarios" => $email_paciente,
@@ -190,6 +223,7 @@ class CpuCorreoEnviadoController extends Controller
         $funcionario_derivado = DB::table('users')
             ->where('id', $request->input('id_doctor_al_que_derivan'))
             ->value('name') ?? null;
+        $email_funcionario_derivado = 'junior.zamora@uleam.edu.ec';
         $area_derivada = DB::table('cpu_userrole')
             ->where('id_userrole', $request->input('id_area_derivada'))
             ->value('role');
@@ -204,18 +238,65 @@ class CpuCorreoEnviadoController extends Controller
         $asunto = "Registro de agendamiento de cita en el área de $area_derivada";
 
         if($area_derivada == "FISIOTERAPIA" && $paciente->id_clasificacion_tipo_usuario != 1){
-            $cuerpo = "<p>Estimado(a) <strong>$paciente->nombres</strong>; el $fecha_de_atencion, la Dirección de Bienestar, Admisión y Nivelación Universitaria, 
-                        registró la <strong>derivación</strong> por motivo de $motivo_derivacion en el área de <strong>$area_derivada</strong> con el/la funcionario(a) 
-                        <strong>$funcionario_derivado</strong> para el día <strong>$fecha_de_derivacion</strong> a las <strong>$hora_de_derivacion</strong>. 
-                        <br><br>Es importante asistir 15 minutos antes de la hora de la cita, acercándose previamente al área de <strong>TRIAJE</strong>.
-                        <br><br> <strong>Para la atención de la cita en el área de FISIOTERAPIA, es necesario llevar los siguientes implementos:</strong>
-                        <br>&emsp;1. Documento de identidad
-                        <br>&emsp;2. Carnet de la Universidad
-                        <br>&emsp;3. Comprobante de pago de las sesiones (habitualmente se pagan 5 sesiones)
-                        <br>&emsp;4. 1 Toalla grande de baño
-                        <br>&emsp;5. Gel diclofenaco (de cualquier marca)
-                        <br><br> <i><strong>Nota:</strong> el Fisioterapeuta podrá indicar otros implementos necesarios para su atención durante la primera sesión.</i>
-                        <br><br>Saludos cordiales.</p>";
+            $cuerpo = "<p>Estimado(a) <strong>$paciente->nombres</strong>,</p>
+
+                        <p>Le informamos que el <strong>$fecha_de_atencion</strong>, la Dirección de Bienestar, Admisión y Nivelación Universitaria (DBANU) registró su derivación por motivo de <strong>$motivo_derivacion</strong> al área de <strong>$area_derivada</strong>. Su cita ha sido programada con el/la funcionario(a) <strong>$funcionario_derivado</strong>. A continuación, los detalles de su cita:</p>
+
+                        <p><strong>📅 Fecha:</strong> $fecha_de_derivacion<br>
+                        <strong>⏰ Hora:</strong> $hora_de_derivacion<br>
+                        <strong>📍 Lugar:</strong> Universidad Laica Eloy Alfaro de Manabí<br>
+                        <strong>📌 Dirección:</strong> Bienestar Universitario, Área de Fisioterapia</p>
+
+                        <p>Le solicitamos presentarse <strong>15 minutos antes de la hora de la cita</strong> y acudir previamente al área de <strong>TRIAJE</strong>.</p>
+
+                        <p><strong>Para la atención en el área de Fisioterapia, es necesario llevar los siguientes implementos:</strong></p>
+                        <ul>
+                            <li>Documento de identidad</li>
+                            <li>Carnet de la Universidad</li>
+                            <li>Comprobante de pago de las sesiones (habitualmente se pagan 5 sesiones)</li>
+                            <li>1 toalla grande de baño</li>
+                            <li>Gel diclofenaco (de cualquier marca)</li>
+                        </ul>
+
+                        <p><i><strong>Nota:</strong> Durante la primera sesión, el fisioterapeuta podrá solicitar otros implementos adicionales según sea necesario.</i></p>
+
+                        <p>En caso de no poder asistir en la fecha y hora programadas, le pedimos que lo comunique oportunamente al correo <strong>$email_funcionario_derivado</strong>.</p>
+
+                        <p>Agradecemos su atención y quedamos atentos a cualquier inquietud.</p>
+
+                        <p>Atentamente,</p>
+                        <p>$area_atencion<br>
+                        Dirección de Bienestar, Admisión y Nivelación Universitaria</p>";
+        }
+        else if($area_derivada == "FISIOTERAPIA" && $paciente->id_clasificacion_tipo_usuario != 1){
+            $cuerpo = "<p>Estimado(a) <strong>$paciente->nombres</strong>,</p>
+
+                        <p>Le informamos que el <strong>$fecha_de_atencion</strong>, la Dirección de Bienestar, Admisión y Nivelación Universitaria (DBANU) registró su derivación por motivo de <strong>$motivo_derivacion</strong> al área de <strong>$area_derivada</strong>. Su cita ha sido programada con el/la funcionario(a) <strong>$funcionario_derivado</strong>. A continuación, los detalles de su cita:</p>
+
+                        <p><strong>📅 Fecha:</strong> $fecha_de_derivacion<br>
+                        <strong>⏰ Hora:</strong> $hora_de_derivacion<br>
+                        <strong>📍 Lugar:</strong> Universidad Laica Eloy Alfaro de Manabí<br>
+                        <strong>📌 Dirección:</strong> Bienestar Universitario, Área de Fisioterapia</p>
+
+                        <p>Le solicitamos presentarse <strong>15 minutos antes de la hora de la cita</strong> y acudir previamente al área de <strong>TRIAJE</strong>.</p>
+
+                        <p><strong>Para la atención en el área de Fisioterapia, es necesario llevar los siguientes implementos:</strong></p>
+                        <ul>
+                            <li>Documento de identidad</li>
+                            <li>Carnet de la Universidad</li>
+                            <li>1 toalla grande de baño</li>
+                            <li>Gel diclofenaco (de cualquier marca)</li>
+                        </ul>
+
+                        <p><i><strong>Nota:</strong> Durante la primera sesión, el fisioterapeuta podrá solicitar otros implementos adicionales según sea necesario.</i></p>
+
+                        <p>En caso de no poder asistir en la fecha y hora programadas, le pedimos que lo comunique oportunamente al correo <strong>$email_funcionario_derivado</strong>.</p>
+
+                        <p>Agradecemos su atención y quedamos atentos a cualquier inquietud.</p>
+
+                        <p>Atentamente,</p>
+                        <p>$area_atencion<br>
+                        Dirección de Bienestar, Admisión y Nivelación Universitaria</p>";
         }
         else if ($area_derivada == "TRABAJO SOCIAL") {
             $cuerpo = "<p>Estimado(a) <strong>$paciente->nombres</strong>,</p>
@@ -244,12 +325,31 @@ class CpuCorreoEnviadoController extends Controller
                        Dirección de Bienestar, Admisión y Nivelación Universitaria</p>";
         }
         else{
-            $cuerpo = "<p>Estimado(a) <strong>$paciente->nombres</strong>; el <strong>$fecha_de_atencion</strong>, La Dirección de Bienestar, Admisión y 
-                       Nivelación Universitaria, registró la derivación por motivo de <strong>$motivo_derivacion</strong> en el área de <strong>$area_derivada</strong>
-                        con el/la funcionario(a) <strong>$funcionario_derivado</strong> para el día <strong>$fecha_de_derivacion</strong> a las <strong>$hora_de_derivacion</strong>.
-                       <br><br>Es importante asistir <strong>15 minutos antes de la hora de la cita</strong>, acercándose previamente al área de 
-                       <strong>TRIAJE</strong> antes de dirigirse al área de <strong>$area_derivada</strong>.
-                       <br><br>Saludos cordiales.</p>";
+            // $cuerpo = "<p>Estimado(a) <strong>$paciente->nombres</strong>; el <strong>$fecha_de_atencion</strong>, La Dirección de Bienestar, Admisión y 
+            //            Nivelación Universitaria, registró la derivación por motivo de <strong>$motivo_derivacion</strong> en el área de <strong>$area_derivada</strong>
+            //             con el/la funcionario(a) <strong>$funcionario_derivado</strong> para el día <strong>$fecha_de_derivacion</strong> a las <strong>$hora_de_derivacion</strong>.
+            //            <br><br>Es importante asistir <strong>15 minutos antes de la hora de la cita</strong>, acercándose previamente al área de 
+            //            <strong>TRIAJE</strong> antes de dirigirse al área de <strong>$area_derivada</strong>.
+            //            <br><br>Saludos cordiales.</p>";
+
+            $cuerpo = "<p>Estimado(a) <strong>$paciente->nombres</strong>,</p>
+
+                       <p>Le informamos que el <strong>$fecha_de_atencion</strong>, la Dirección de Bienestar, Admisión y Nivelación Universitaria (DBANU) registró su derivación por motivo de <strong>$motivo_derivacion</strong> al área de <strong>$area_derivada</strong>. Su cita ha sido programada con el/la funcionario(a) <strong>$funcionario_derivado</strong>. A continuación, los detalles de su cita:</p>
+    
+                       <p><strong>📅 Fecha:</strong> $fecha_de_derivacion<br>
+                       <strong>⏰ Hora:</strong> $hora_de_derivacion<br>
+                       <strong>📍 Lugar:</strong> Universidad Laica Eloy Alfaro de Manabí<br>
+                       <strong>📌 Dirección:</strong> Área de $area_derivada</p>
+    
+                       <p>Le solicitamos presentarse <strong>15 minutos antes de la hora de la cita</strong> y acudir previamente al área de <strong>TRIAJE</strong>.</p>
+    
+                       <p>En caso de no poder asistir en la fecha y hora programadas, le pedimos que lo comunique oportunamente al correo <strong>$email_funcionario_derivado</strong>.</p>
+    
+                       <p>Agradecemos su atención y quedamos atentos a cualquier inquietud.</p>
+    
+                       <p>Atentamente,</p>
+                       <p>$area_atencion<br>
+                       Dirección de Bienestar, Admisión y Nivelación Universitaria</p>";
         }
 
         $persona = [
@@ -333,7 +433,7 @@ class CpuCorreoEnviadoController extends Controller
 
         // Ajustar el asunto y el cuerpo del correo según el tipo
         $asunto = "Registro de agendamiento de cita en el área de $area_derivada";
-        $cuerpo = "<p>Estimado(a) funcionario(a) <strong>$nombres_funcionario</strong>; el <strong>$fecha_de_atencion</strong>, La Dirección de Bienestar, Admisión y Nivelación Universitaria, registró la derivación desde el área de <strong>$area_atencion</strong> por motivo de <strong>$motivo_derivacion</strong> con el paciente <strong>$nombres_paciente</strong> para el día <strong>$fecha_de_derivacion</strong> a las <strong>$hora_de_derivacion</strong>. Por favor revise la cita en el <a href='https://dbanu.uleam.edu.ec/bienestar/'><strong>sistema</strong></a> en la sección de Derivaciones>Atender.<br><br>Saludos cordiales.</p>";
+        $cuerpo = "<p>Estimado(a) funcionario(a) <strong>$nombres_funcionario</strong>; el <strong>$fecha_de_atencion</strong>, La Dirección de Bienestar, Admisión y Nivelación Universitaria, registró la derivación desde el área de <strong>$area_atencion</strong> por motivo de <strong>$motivo_derivacion</strong> con el/la ciudadano(a) <strong>$nombres_paciente</strong> para el día <strong>$fecha_de_derivacion</strong> a las <strong>$hora_de_derivacion</strong>. Por favor revise la cita en el <a href='https://dbanu.uleam.edu.ec/bienestar/'><strong>sistema</strong></a> en la sección de Derivaciones>Atender.<br><br>Saludos cordiales.</p>";
 
         $persona = [
             "destinatarios" => $email_funcionario,

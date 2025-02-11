@@ -216,34 +216,66 @@ class CpuAtencionesFisioterapiaContoller extends Controller
                     // ⚠️ Aquí ya tenemos el nuevo id de la derivación recién creada
                     $nuevoIdDerivacion = $derivacion->id;
 
-                    // // Guardar la atención fisioterapia
-                    // Log::info('ID_DERIVACION:', ['id_derivacion' => $request->input('id_derivacion')]);
-                    // $fisioterapia = new CpuAtencionFisioterapia();
-                    // $fisioterapia->id_atencion = $idAtencion;
-                    // $fisioterapia->partes = $request->input('partes');
-                    // $fisioterapia->subpartes = $request->input('subpartes');
-                    // $fisioterapia->eva = $request->input('eva');
-                    // $fisioterapia->test_goniometrico = json_decode($request->input('test_goniometrico'), true);
-                    // $fisioterapia->test_circunferencial = json_decode($request->input('test_circunferencial'), true);
-                    // $fisioterapia->test_longitudinal = json_decode($request->input('test_longitudinal'), true);
-                    // $fisioterapia->valoracion_fisioterapeutica = $request->input('valoracion_fisioterapeutica');
-                    // $fisioterapia->diagnostico_fisioterapeutico = $request->input('diagnostico_fisioterapeutico');
-                    // $fisioterapia->aplicaciones_terapeuticas = json_decode($request->input('aplicaciones_terapeuticas'), true);
-                    // $fisioterapia->numero_comprobante = $request->input('numero_comprobante');
-                    // $fisioterapia->valor_cancelado = $request->input('valor_cancelado');
-                    // $fisioterapia->total_sesiones = $request->input('total_sesiones');
-                    // $fisioterapia->numero_sesion = $request->input('numero_sesion');
-                    // $fisioterapia->save();
-
                     // Actualizar el estado del turno relacionado
                     $turno = CpuTurno::findOrFail($derivacionData['id_turno_asignado']);
                     $turno->estado = 2; // Actualiza el estado del turno a 2
                     $turno->save();
-                    // if ($request->filled('id_turno_asignado')) {
-                    //     $turno = CpuTurno::findOrFail($request->input('id_turno_asignado'));
-                    //     $turno->estado = 2; // Actualiza el estado del turno
-                    //     $turno->save();
-                    // }
+
+                    // ✅ Enviar correo de atención al paciente
+                    $correoController = new CpuCorreoEnviadoController();
+                    $correoResponse = $correoController->enviarCorreoAtencionAreaSaludPaciente(new Request([
+                        'id_atencion' => $idAtencion,
+                        'id_area_atencion' => $request->input('id_area'),
+                        'fecha_hora_atencion' => Carbon::now()->format("Y-m-d H:i:s"),
+                        'motivo_atencion' => $request->input('motivo_derivacion'),
+                        'id_paciente' => $request->input('id_paciente'),
+                        'id_funcionario' => $request->input('id_funcionario'),
+                    ]));
+
+                    if (!$correoResponse->isSuccessful()) {
+                        // ❌ Si falla el correo, eliminar la atención guardada
+                        $atencion->delete();
+                        $fisioterapia->delete();
+                        DB::rollBack();
+                        return response()->json(['error' => 'Error al enviar el correo de atención, la atención no fue guardada'], 500);
+                    }
+
+                    // 📌 Si hay derivación, enviar correos de derivación
+                    if ($request->filled('id_doctor_al_que_derivan')) {
+                        $correoDerivacionPaciente = $correoController->enviarCorreoDerivacionAreaSaludPaciente(new Request([
+                            'id_atencion' => $idAtencion,
+                            'id_area_atencion' => $request->input('id_area'),
+                            'motivo_atencion' => $request->input('motivo_derivacion'),
+                            'id_paciente' => $request->input('id_paciente'),
+                            'id_funcionario' => $request->input('id_funcionario'),
+                            'id_doctor_al_que_derivan' => $request->input('id_doctor_al_que_derivan'),
+                            'id_area_derivada' => $request->input('id_area'),
+                        ]));
+
+                        if (!$correoDerivacionPaciente->isSuccessful()) {
+                            $atencion->delete();
+                            $fisioterapia->delete();
+                            DB::rollBack();
+                            return response()->json(['error' => 'Error al enviar el correo de derivación al paciente, la atención no fue guardada'], 500);
+                        }
+
+                        $correoDerivacionFuncionario = $correoController->enviarCorreoDerivacionAreaSaludFuncionario(new Request([
+                            'id_atencion' => $idAtencion,
+                            'id_area_atencion' => $request->input('id_area'),
+                            'motivo_atencion' => $request->input('motivo_derivacion'),
+                            'id_paciente' => $request->input('id_paciente'),
+                            'id_funcionario' => $request->input('id_funcionario'),
+                            'id_doctor_al_que_derivan' => $request->input('id_doctor_al_que_derivan'),
+                            'id_area_derivada' => $request->input('id_area'),
+                        ]));
+
+                        if (!$correoDerivacionFuncionario->isSuccessful()) {
+                            $atencion->delete();
+                            $fisioterapia->delete();
+                            DB::rollBack();
+                            return response()->json(['error' => 'Error al enviar el correo de derivación al funcionario, la atención no fue guardada'], 500);
+                        }
+                    }
                 } catch (\Illuminate\Validation\ValidationException $e) {
                     // Capturar los errores de validación y devolver una respuesta JSON
                     return response()->json([

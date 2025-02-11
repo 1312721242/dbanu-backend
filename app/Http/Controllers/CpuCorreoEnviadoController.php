@@ -90,8 +90,18 @@ class CpuCorreoEnviadoController extends Controller
         // Procesar la respuesta
         if ($codigoRespuesta === 200) {
             $respuestaDecodificada = json_decode($resultado);
-            return response()->json(['message' => 'Correo enviado correctamente', 'respuesta' => $respuestaDecodificada], 200);
-
+           
+            // Registrar el correo enviado en la base de datos
+            $this->registrarCorreoEnviado(
+                $email_paciente,
+                "",
+                $asunto,
+                $cuerpo,
+                $request->input('id_paciente'),
+                $request->input('id_doctor_al_que_derivan'),
+                $request->input('id_funcionario')
+            );
+        
         } else {
             // Manejar errores
             return response()->json(['error' => "Error consultando. Código de respuesta: $codigoRespuesta"], $codigoRespuesta);
@@ -190,8 +200,18 @@ class CpuCorreoEnviadoController extends Controller
         // Procesar la respuesta
         if ($codigoRespuesta === 200) {
             $respuestaDecodificada = json_decode($resultado);
-            return response()->json(['message' => 'Correo enviado correctamente', 'respuesta' => $respuestaDecodificada], 200);
-
+           
+            // Registrar el correo enviado en la base de datos
+            $this->registrarCorreoEnviado(
+                $email_paciente,
+                "",
+                $asunto,
+                $cuerpo,
+                $request->input('id_paciente'),
+                $request->input('id_doctor_al_que_derivan'),
+                $request->input('id_funcionario')
+            );
+        
         } else {
             // Manejar errores
             return response()->json(['error' => "Error consultando. Código de respuesta: $codigoRespuesta"], $codigoRespuesta);
@@ -209,7 +229,8 @@ class CpuCorreoEnviadoController extends Controller
 
         $paciente = DB::table('cpu_personas')
             ->where('id', $request->input('id_paciente'))
-            ->value('nombres');
+            ->first();
+        // $email_paciente = $paciente->email;
         $fecha_de_atencion = $request->input('fecha_hora_atencion');
         $motivo_atencion = $request->input('motivo_atencion');
         $funcionario_atendio = DB::table('users')
@@ -390,8 +411,18 @@ class CpuCorreoEnviadoController extends Controller
         // Procesar la respuesta
         if ($codigoRespuesta === 200) {
             $respuestaDecodificada = json_decode($resultado);
-            return response()->json(['message' => 'Correo enviado correctamente', 'respuesta' => $respuestaDecodificada], 200);
-
+           
+            // Registrar el correo enviado en la base de datos
+            $this->registrarCorreoEnviado(
+                $email_paciente,
+                "",
+                $asunto,
+                $cuerpo,
+                $request->input('id_paciente'),
+                $request->input('id_doctor_al_que_derivan'),
+                $request->input('id_funcionario')
+            );
+        
         } else {
             // Manejar errores
             return response()->json(['error' => "Error consultando. Código de respuesta: $codigoRespuesta"], $codigoRespuesta);
@@ -473,8 +504,18 @@ class CpuCorreoEnviadoController extends Controller
         // Procesar la respuesta
         if ($codigoRespuesta === 200) {
             $respuestaDecodificada = json_decode($resultado);
-            return response()->json(['message' => 'Correo enviado correctamente', 'respuesta' => $respuestaDecodificada], 200);
-
+           
+            // Registrar el correo enviado en la base de datos
+            $this->registrarCorreoEnviado(
+                $email_funcionario,
+                "",
+                $asunto,
+                $cuerpo,
+                $request->input('id_paciente'),
+                $request->input('id_doctor_al_que_derivan'),
+                $request->input('id_funcionario')
+            );
+        
         } else {
             // Manejar errores
             return response()->json(['error' => "Error consultando. Código de respuesta: $codigoRespuesta"], $codigoRespuesta);

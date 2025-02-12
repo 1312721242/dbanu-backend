@@ -145,15 +145,69 @@ class CpuPersonaController extends Controller
         }
 
         // First API call
-        $response = Http::get("https://apps2.uleam.edu.ec/DATHApi/api/personal/{$cedula}/bienestar");
-        if ($response->successful()) {
+        // $response = Http::get("https://apps2.uleam.edu.ec/DATHApi/api/personal/{$cedula}/bienestar");
+        try {
+            $response = Http::asForm()->post('https://login.microsoftonline.com/31a17900-7589-4cfc-b11a-f4e83c27b8ed/oauth2/v2.0/token', [
+                'grant_type' => 'client_credentials',
+                'client_id' => '1111b1c0-8b4f-4f50-96ea-ea4cc2df1c6d',
+                'client_secret' => 'iZH8Q~TRpKFW5PCG4OlBw-R1SDDnpT-611myKasT',
+                'scope' => 'https://service.flow.microsoft.com//.default'
+            ]);
+
+            if ($response->failed()) {
+                Log::error('Error al obtener el token de acceso: ' . $response->status() . ' ' . $response->body());
+                return response()->json(['error' => 'Error al obtener el token de acceso'], 500);
+            }
+
+            $access_token = $response->json()['access_token'];
+
+            Log::info("TOKEN OBTENIDO: " . $access_token);
+            $identificacion = $cedula;
+
+            // Construcción de la URL con el identificador
+            $url = "https://prod-160.westus.logic.azure.com/workflows/79256a92249b4f85bc6c0737d8d17d10/triggers/manual/paths/invoke/cedula/{$identificacion}";
+
+            // Llamar a Azure Logic Apps con el token correcto y el identificador
+            $response = Http::withHeaders([
+                'Authorization' => 'Bearer ' . $access_token,
+                'Content-Type' => 'application/json'
+            ])->get($url, [
+                'api-version' => '2016-06-01'
+            ]);
+
+            if ($response->failed()) {
+                Log::error('Error al enviar la solicitud a Azure Logic Apps: ' . $response->status() . ' ' . $response->body());
+                // return response()->json(['error' => 'Error al enviar la solicitud a Azure Logic Apps'], 500);
+            }
+
+            // return response()->json($response->json());
+        } catch (\Exception $e) {
+            Log::error('Error al obtener el token de acceso: ' . $e->getMessage());
+            return response()->json(['error' => 'Error al obtener el token de acceso'], 500);
+        }
+        if (isset($response) && $response->successful()) {
             $data = $response->json();
 
-            // Check if the data returned is essentially empty
-            $isEmptyData = empty($data['cedula']) && empty($data['nombres']) && empty($data['nacionalidad']) &&
-                empty($data['provincia']) && empty($data['ciudad']) && empty($data['parroquia']) &&
-                empty($data['direccion']) && empty($data['sexo']) && empty($data['fechanaci']) &&
-                empty($data['celular']) && empty($data['tipoetnia']);
+            // Verificar si está vacío o no
+            $isEmptyData = empty($data['cedula'])
+                && empty($data['nombres'])
+                && empty($data['nacionalidad'])
+                && empty($data['provincia'])
+                && empty($data['ciudad'])
+                && empty($data['parroquia'])
+                && empty($data['direccion'])
+                && empty($data['sexo'])
+                && empty($data['fechanaci'])
+                && empty($data['celular'])
+                && empty($data['tipoetnia']);
+
+            // Si NO está vacío, creamos persona y retornamos
+
+            // // Check if the data returned is essentially empty
+            // $isEmptyData = empty($data['cedula']) && empty($data['nombres']) && empty($data['nacionalidad']) &&
+            //     empty($data['provincia']) && empty($data['ciudad']) && empty($data['parroquia']) &&
+            //     empty($data['direccion']) && empty($data['sexo']) && empty($data['fechanaci']) &&
+            //     empty($data['celular']) && empty($data['tipoetnia']);
 
             if (!$isEmptyData) {
                 // Generar el código de persona
@@ -203,7 +257,9 @@ class CpuPersonaController extends Controller
         }
 
         //Second API call if first API doesn't provide any data
+        Log::info('ENTRADO API ESTUDIANTES');
         try {
+            Log::info('DENTRO API ESTUDIANTES');
             $response = Http::asForm()->post('https://login.microsoftonline.com/31a17900-7589-4cfc-b11a-f4e83c27b8ed/oauth2/v2.0/token', [
                 'grant_type' => 'client_credentials',
                 'client_id' => '13e24fa4-9c64-4653-a96c-20964510b52a',
@@ -218,6 +274,7 @@ class CpuPersonaController extends Controller
 
             $access_token = $response->json()['access_token'];
             $identificacion = $cedula;
+
 
             $response = Http::withHeaders([
                 'Authorization' => 'Bearer ' . $access_token,
@@ -256,13 +313,17 @@ class CpuPersonaController extends Controller
             if (empty($segmentacionPersona) || $segmentacionPersona === 'SIN INFORMACIÓN') {
                 $segmentacionData = DB::table('public.cpu_legalizacion_matricula')
                     ->where('cedula', $cedula)
-                    ->first(['segmento_persona']);
+                    ->select('segmento_persona AS segmento') // <--- ALIAS
+                    ->first();
                 if (!$segmentacionData) {
                     $segmentacionData = DB::table('public.cpu_mtn_2018_2022')
-                        ->where('cedula', $cedula)
-                        ->first(['segmento']);
+                        ->select('segmento') // <-- ya trae 'segmento'
+                        ->first();
                 }
-                $segmentacionPersona = $segmentacionData ? $segmentacionData->segmento : $segmentacionPersona;
+                // Ahora las dos tablas devuelven la propiedad "segmento"
+                $segmentacionPersona = $segmentacionData
+                    ? $segmentacionData->segmento
+                    : $segmentacionPersona;
             }
 
             $etnia = $data['etnia'];

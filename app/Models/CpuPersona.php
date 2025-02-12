@@ -41,4 +41,9 @@ class CpuPersona extends Model
     {
         return $this->belongsTo(CpuTipoUsuario::class, 'id_tipo_usuario');
     }
+
+    public function tipoUsuarioClasificacion()
+    {
+        return $this->belongsTo(CpuTipoUsuario::class, 'id_clasificacion_tipo_usuario','clasificacion');
+    }
 }

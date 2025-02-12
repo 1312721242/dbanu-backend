@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Models\CpuAtencion;
+use App\Models\CpuAtencionFisioterapia;
 use App\Models\CpuAtencionMedicinaGeneral;
 use App\Models\CpuAtencionNutricion;
 use App\Models\CpuAtencionTriaje;
@@ -319,6 +320,17 @@ class CpuAtencionesController extends Controller
 
             if ($atencionNutricion) {
                 $respuesta['datos_nutricion'] = $atencionNutricion->toArray();
+            }
+        }
+
+        if (strtoupper($area_atencion) === "FISIOTERAPIA") {
+            $atencionFisioterapia = CpuAtencionFisioterapia::where('id_atencion', $ultimaConsulta->id)->first();
+
+            // 🔍 Agregar LOG para ver lo que devuelve CpuAtencionNutricion
+            Log::info("Datos de CpuAtencionFisioterapia: ", $atencionFisioterapia ? $atencionFisioterapia->toArray() : ['Sin datos']);
+
+            if ($atencionFisioterapia) {
+                $respuesta['datos_fisioterapia'] = $atencionFisioterapia->toArray();
             }
         }
 
@@ -667,7 +679,7 @@ class CpuAtencionesController extends Controller
             'detalle_atencion' => 'required|string',
             'id_tipo_usuario' => 'required|integer|exists:cpu_tipo_usuario,id',
             'evolucion_enfermedad' => 'nullable|string',
-            "diagnostico" => "nullable|json",
+            'diagnostico' => 'nullable|array|min:0',
             'prescripcion' => 'nullable|string',
             'recomendacion' => 'nullable|string',
             'tipo_atencion' => 'required|string',
@@ -692,7 +704,7 @@ class CpuAtencionesController extends Controller
             $atencion->id_caso = $request->input('id_caso');
             $atencion->id_tipo_usuario = $request->input('id_tipo_usuario');
             $atencion->evolucion_enfermedad = $request->input('enfermedad_actual');
-            $atencion->diagnostico = $request->input('diagnostico');
+            $atencion->diagnostico = !empty($request->diagnostico) ? json_encode($request->diagnostico) : null;
             $atencion->prescripcion = $request->input('planes_tratamiento');
             $atencion->recomendacion = $request->input('recomendacion');
             $atencion->tipo_atencion = $request->input('tipo_atencion');

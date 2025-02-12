@@ -35,10 +35,10 @@ class CpuAtencionOdontologiaController extends Controller
                 'planes.quimica_sanguinea' => 'nullable|array',
                 'planes.rayos_x' => 'nullable|array',
                 'planes.otros' => 'nullable|array',
-            
+
             ]);
-            
-            
+
+
             // Validación de fallos
             if ($validator->fails()) {
                 return response()->json([
@@ -69,7 +69,7 @@ class CpuAtencionOdontologiaController extends Controller
                 // Si ya existe, actualizar el registro
                 $cpuDiente->update([
                     'arcada' => $arcada, // Guardar la estructura de arcada como un array
-                    
+
                 ]);
             } else {
                 // Si no existe, crear un nuevo registro de dientes
@@ -101,19 +101,20 @@ class CpuAtencionOdontologiaController extends Controller
                     'id_estado_derivacion' => 'integer|exists:cpu_estados,id',
                     'id_turno_asignado' => 'required|integer|exists:cpu_turnos,id_turnos',
                 ])->validate();
-            
+
                 $derivacionData['ate_id'] = $atencion->id; // Aquí usas $atencion correctamente
                 $derivacionData['id_funcionario_que_derivo'] = Auth::id();
                 $derivacionData['fecha_derivacion'] = Carbon::now();
                 $derivacion = CpuDerivacion::create($derivacionData);
-            
+
                 // Actualizar el estado del turno si la derivación es exitosa
                 CpuTurno::where('id_turnos', $derivacionData['id_turno_asignado'])
                     ->update(['estado' => 7]);
             }
-            
+
             DB::commit();
-            return response()->json(['message' => 'Atención guardada con éxito'], 201);
+            // return response()->json(['message' => 'Atención guardada con éxito'], 201);
+            return response()->json(['success' => true, 'atencion_id' => $atencion->id]);
 
         } catch (\Exception $e) {
             DB::rollBack();

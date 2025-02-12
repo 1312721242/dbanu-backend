@@ -180,7 +180,8 @@ class CpuEvidenciaController extends Controller
 
 
     public function obtenerInformacionPorAno($ano)
-    {
+{
+    try {
         // Obtener los objetivos nacionales que pertenecen al año dado
         $objetivos = CpuObjetivoNacional::where('id_year', $ano)
             ->with([
@@ -189,6 +190,10 @@ class CpuEvidenciaController extends Controller
                 },
             ])
             ->get();
+
+        if ($objetivos->isEmpty()) {
+            return response()->json(['mensaje' => 'No se encontraron objetivos nacionales para el año proporcionado'], 404);
+        }
 
         // URL base de la aplicación
         $baseUrl = URL::to('/');
@@ -202,6 +207,12 @@ class CpuEvidenciaController extends Controller
                 foreach ($estandar->elementosFundamentales as $elemento) {
                     // Obtener la sede basada en el campo id_sede
                     $sede = CpuSede::find($elemento->id_sede);
+
+                    // Validar si la sede existe antes de acceder a sus propiedades
+                    $sedeData = $sede ? [
+                        'id' => $sede->id,
+                        'nombre' => $sede->nombre_sede
+                    ] : ['id' => null, 'nombre' => 'Sede no especificada'];
 
                     $evidencias = [];
                     foreach ($elemento->evidencias as $evidencia) {
@@ -232,13 +243,13 @@ class CpuEvidenciaController extends Controller
                             'id' => $evidencia->id,
                             'descripcion' => $evidencia->descripcion,
                             'id_fuente_informacion' => $evidencia->id_fuente_informacion,
-                            'fuente_informacion_descripcion' => $fuenteInformacion ? $fuenteInformacion->descripcion : null,
+                            'fuente_informacion_descripcion' => $fuenteInformacion ? $fuenteInformacion->descripcion : 'Fuente no especificada',
                             'enlace_evidencia' => [
                                 'url_firmada' => $urlFirmada
                             ],
                             'sede' => [
                                 'id' => $evidencia->id_sede,
-                                'nombre' => CpuSede::where('id', $evidencia->id_sede)->value('nombre_sede'),
+                                'nombre' => CpuSede::where('id', $evidencia->id_sede)->value('nombre_sede') ?? 'Sede no especificada',
                             ],
                         ];
                         $evidencias[] = $evidenciaData;
@@ -247,10 +258,7 @@ class CpuEvidenciaController extends Controller
                     $elementoFundamentalData = [
                         'id' => $elemento->id,
                         'descripcion' => $elemento->descripcion,
-                        'sede' => [
-                            'id' => $sede->id,
-                            'nombre' => $sede->nombre_sede,
-                        ],
+                        'sede' => $sedeData,
                         'evidencias' => $evidencias
                     ];
                     $elementosFundamentales[] = $elementoFundamentalData;
@@ -271,7 +279,13 @@ class CpuEvidenciaController extends Controller
         }
 
         return response()->json(['ano' => $ano, 'objetivos_nacionales' => $response]);
+
+    } catch (\Exception $e) {
+        Log::error('Error en obtenerInformacionPorAno: ' . $e->getMessage());
+        return response()->json(['error' => 'Error al obtener la información.'], 500);
     }
+}
+
 
 
     public function descargarArchivo($ano, $archivo)

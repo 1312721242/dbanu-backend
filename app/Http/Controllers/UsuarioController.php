@@ -157,6 +157,11 @@ class UsuarioController extends Controller
                 return response()->json(['error' => 'Usuario no encontrado'], 404);
             }
 
+            // Verificar si el usuario ha realizado demasiadas solicitudes
+            // if ($usuario->hasTooManyRequests()) {
+            //     return response()->json(['error' => 'Demasiadas solicitudes. Por favor, espere un momento antes de intentar nuevamente.'], 429);
+            // }
+
             // Solo actualiza los campos que están presentes en la solicitud
             $updateData = array_filter($request->only([
                 'name',

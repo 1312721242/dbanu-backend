@@ -112,6 +112,7 @@ class CpuPersonaController extends Controller
     // Aquí para atenciones de bienestar
     public function showBienestar($cedula)
     {
+        Log::info("CEDULA RECIBIDA:  '$cedula'");
         if (strlen($cedula) <= 9) {
             $personas = CpuPersona::where('cedula', 'like', "{$cedula}%")
                 ->with(['datosEmpleados', 'datosEstudiantes', 'datosExternos'])
@@ -147,7 +148,7 @@ class CpuPersonaController extends Controller
         // First API call
         // $response = Http::get("https://apps2.uleam.edu.ec/DATHApi/api/personal/{$cedula}/bienestar");
         try {
-            $response = Http::asForm()->post('https://login.microsoftonline.com/31a17900-7589-4cfc-b11a-f4e83c27b8ed/oauth2/v2.0/token', [
+            $response = Http::withOptions(['verify' => false])->asForm()->post('https://login.microsoftonline.com/31a17900-7589-4cfc-b11a-f4e83c27b8ed/oauth2/v2.0/token', [
                 'grant_type' => 'client_credentials',
                 'client_id' => '1111b1c0-8b4f-4f50-96ea-ea4cc2df1c6d',
                 'client_secret' => 'iZH8Q~TRpKFW5PCG4OlBw-R1SDDnpT-611myKasT',
@@ -165,20 +166,21 @@ class CpuPersonaController extends Controller
             $identificacion = $cedula;
 
             // Construcción de la URL con el identificador
-            $url = "https://prod-160.westus.logic.azure.com/workflows/79256a92249b4f85bc6c0737d8d17d10/triggers/manual/paths/invoke/cedula/{$identificacion}";
+            $url = "https://prod-160.westus.logic.azure.com/workflows/79256a92249b4f85bc6c0737d8d17d10/triggers/manual/paths/invoke/cedula/{$identificacion}?api-version=2016-06-01";
 
             // Llamar a Azure Logic Apps con el token correcto y el identificador
-            $response = Http::withHeaders([
+            $response = Http::withOptions(['verify' => false])->withHeaders([
                 'Authorization' => 'Bearer ' . $access_token,
                 'Content-Type' => 'application/json'
-            ])->get($url, [
-                'api-version' => '2016-06-01'
-            ]);
+            ])->get($url);
 
             if ($response->failed()) {
                 Log::error('Error al enviar la solicitud a Azure Logic Apps: ' . $response->status() . ' ' . $response->body());
-                // return response()->json(['error' => 'Error al enviar la solicitud a Azure Logic Apps'], 500);
+                return response()->json(['error' => 'Error al enviar la solicitud a Azure Logic Apps'], 500);
             }
+
+            $data = $response->json();
+            Log::info('RESPUESTA API (empleados): ' . json_encode($data));
 
             // return response()->json($response->json());
         } catch (\Exception $e) {
@@ -189,17 +191,17 @@ class CpuPersonaController extends Controller
             $data = $response->json();
 
             // Verificar si está vacío o no
-            $isEmptyData = empty($data['cedula'])
-                && empty($data['nombres'])
-                && empty($data['nacionalidad'])
-                && empty($data['provincia'])
-                && empty($data['ciudad'])
-                && empty($data['parroquia'])
-                && empty($data['direccion'])
-                && empty($data['sexo'])
-                && empty($data['fechanaci'])
-                && empty($data['celular'])
-                && empty($data['tipoetnia']);
+            $isEmptyData = empty($data['Cedula'])
+                && empty($data['Nombres'])
+                && empty($data['PaisNacimiento'])
+                && empty($data['ProvinciaDomicilio'])
+                && empty($data['CantonDomicilio'])
+                && empty($data['ParroquiaDomicilio'])
+                && empty($data['Direccion'])
+                && empty($data['Sexo'])
+                && empty($data['FechaNacimiento'])
+                && empty($data['TelefonoMovil'])
+                && empty($data['TipoEtnia']);
 
             // Si NO está vacío, creamos persona y retornamos
 
@@ -211,44 +213,62 @@ class CpuPersonaController extends Controller
 
             if (!$isEmptyData) {
                 // Generar el código de persona
-                $codigoPersona = $this->generarCodigoPersona($data['cedula'], $data['nombres']);
+                $codigoPersona = $this->generarCodigoPersona($data['Cedula'], $data['Nombres']);
 
-                $persona = CpuPersona::create([
-                    'cedula' => $data['cedula'] ?? '',
-                    'nombres' => $data['nombres'] ?? 'SIN INFORMACIÓN',
-                    'nacionalidad' => $data['nacionalidad'] ?? 'SIN INFORMACIÓN',
-                    'provincia' => $data['provincia'] ?? 'SIN INFORMACIÓN',
-                    'ciudad' => $data['ciudad'] ?? 'SIN INFORMACIÓN',
-                    'parroquia' => $data['parroquia'] ?? 'SIN INFORMACIÓN',
-                    'direccion' => $data['direccion'] ?? 'SIN INFORMACIÓN',
-                    'sexo' => $data['sexo'] ?? 'SIN INFORMACIÓN',
-                    'fechanaci' => $data['fechanaci'] ?? '1900-01-01',
-                    'celular' => $data['celular'] ?? 'SIN INFORMACIÓN',
-                    'tipoetnia' => $data['tipoetnia'] ?? 'SIN INFORMACIÓN',
-                    'discapacidad' => $data['discapacidad'] ?? 'SIN INFORMACIÓN',
-                    'tipo_discapacidad' => $data['tipo_discapacidad'] ?? null,
-                    'porcentaje_discapacidad' => $data['porcentaje_discapacidad'] ?? null,
+                $personaData = [
+                    'cedula' => $data['Cedula'] ?? '',
+                    'nombres' => $data['Nombres'] ?? 'SIN INFORMACIÓN',
+                    'nacionalidad' => $data['PaisNacimiento'] ?? 'SIN INFORMACIÓN',
+                    'provincia' => $data['ProvinciaDomicilio'] ?? 'SIN INFORMACIÓN',
+                    'ciudad' => $data['CantonDomicilio'] ?? 'SIN INFORMACIÓN',
+                    'parroquia' => $data['ParroquiaDomicilio'] ?? 'SIN INFORMACIÓN',
+                    'direccion' => $data['Direccion'] ?? 'SIN INFORMACIÓN',
+                    'sexo' => $data['Sexo'] ?? 'SIN INFORMACIÓN',
+                    'fechanaci' => $data['FechaNacimiento'] ?? '1900-01-01',
+                    'celular' => $data['TelefonoMovil'] ?? 'SIN INFORMACIÓN',
+                    'tipoetnia' => $data['TipoEtnia'] ?? 'SIN INFORMACIÓN',
+                    'discapacidad' => $data['TieneDiscapacidad'] ?? 'SIN INFORMACIÓN',
+                    'porcentaje_discapacidad' => (
+                        !empty($data['PorcentajeDiscapacidad'])
+                        && is_numeric($data['PorcentajeDiscapacidad'])
+                    ) ? (float)$data['PorcentajeDiscapacidad'] : 0,
                     'codigo_persona' => $codigoPersona,
                     'imagen' => $data['imagen'] ?? null,
-                    'email' => $data['email'] ?? '',
+                    'email' => $data['CorreoInstitucional'] ?? '',
                     'id_clasificacion_tipo_usuario' => 2,
-                    'ocupacion' => $data['ocupacion'],
-                    'estado_civil' => $data['estado_civil'] ?? 'SIN INFORMACIÓN',
+                    'ocupacion' => $data['ocupacion'] ?? null,
+                    'estado_civil' => $data['EstadCcivil'] ?? 'SIN INFORMACIÓN',
                     'bono_desarrollo' => $data['bono_desarrollo'] ?? 'SIN INFORMACIÓN',
-                ]);
+                ];
+
+                // 2. Busca, si existe, la descripción en la tabla `cpu_tipos_discapacidad`
+                if (!empty($data['TipoDiscapacidad'])) {
+                    $tipoDiscapacidad = DB::table('cpu_tipos_discapacidad')
+                        ->where('descripcion', $data['TipoDiscapacidad'])
+                        ->value('id'); // Devuelve el id, o null si no lo encuentra
+
+                    // 3. Si la descripción existe, asigna el ID
+                    if ($tipoDiscapacidad) {
+                        $personaData['tipo_discapacidad'] = $tipoDiscapacidad;
+                    }
+                    // De lo contrario, no se asigna nada, evitando la violación de FK
+                }
+
+                // 4. Finalmente, creas la persona
+                $persona = CpuPersona::create($personaData);
 
                 CpuDatosEmpleado::create([
                     'id_persona' => $persona->id,
-                    'emailinstitucional' => $data['emailinstitucional'] ?? 'SIN INFORMACIÓN',
-                    'puesto' => $data['puesto'] ?? 'SIN INFORMACIÓN',
-                    'regimen1' => $data['regimen1'] ?? 'SIN INFORMACIÓN',
-                    'modalidad' => $data['modalidad'] ?? 'SIN INFORMACIÓN',
-                    'unidad' => $data['unidad'] ?? 'SIN INFORMACIÓN',
-                    'carrera' => $data['carrera'] ?? 'SIN INFORMACIÓN',
+                    'emailinstitucional' => $data['CorreoInstitucional'] ?? 'SIN INFORMACIÓN',
+                    'puesto' => $data['Cargo'] ?? 'SIN INFORMACIÓN',
+                    'regimen1' => $data['Regimen'] ?? 'SIN INFORMACIÓN',
+                    // 'modalidad' => $data['modalidad'] ?? 'SIN INFORMACIÓN',
+                    'unidad' => $data['Unidad'] ?? 'SIN INFORMACIÓN',
+                    // 'carrera' => $data['carrera'] ?? 'SIN INFORMACIÓN',
                     'idsubproceso' => $data['idSubProceso'] ?? null,
-                    'escala1' => $data['escala1'] ?? 'SIN INFORMACIÓN',
-                    'estado' => $data['estado'] ?? 'SIN INFORMACIÓN',
-                    'fechaingre' => $data['fechaIngre'] ?? '1900-01-01',
+                    // 'escala1' => $data['escala1'] ?? 'SIN INFORMACIÓN',
+                    // 'estado' => $data['estado'] ?? 'SIN INFORMACIÓN',
+                    'fechaingre' => $data['FechaIngreso'] ?? '1900-01-01',
                 ]);
 
                 $persona->load(['datosEmpleados', 'datosEstudiantes']); // Load datosEstudiantes if available
@@ -602,7 +622,7 @@ class CpuPersonaController extends Controller
             'email' => 'required|string',
             'referencia' => 'nullable|string',
             'numeroMatricula' => 'nullable|string',
-            'tiposBeca' => 'nullable|string',
+            'tipoBeca' => 'nullable|string',
         ]);
 
         if ($validator->fails()) {
@@ -674,7 +694,7 @@ class CpuPersonaController extends Controller
                 'email' => $validatedData['email'],
                 'referencia' => $validatedData['referencia'],
                 'numero_matricula' => $validatedData['numeroMatricula'],
-                'tipo_beca' => $validatedData['tiposBeca'],
+                'tipo_beca' => $validatedData['tipoBeca'],
             ];
 
             CpuDatosUsuarioExterno::create($usuarioExternoData);

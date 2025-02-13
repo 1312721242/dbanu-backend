@@ -510,7 +510,8 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::post('/atenciones-fisioterapia', [CpuAtencionesFisioterapiaContoller::class, 'guardarAtencionFisioterapia']);
     Route::get('/ultima-consulta-fisioterapia/{area_atencion}/{usr_tipo}/{id_persona}/{id_caso}', [CpuAtencionesFisioterapiaContoller::class, 'obtenerUltimaConsultaFisioterapia']);
 
-    //API  - SISTEMA CAI JJZM
+    //API  - secretaria de direccion
+    Route::post('/usuarios/externos/secretaria', [CpuPersonaController::class, 'store']);
 
 });
 

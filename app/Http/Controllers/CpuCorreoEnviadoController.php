@@ -29,7 +29,7 @@ class CpuCorreoEnviadoController extends Controller
 
         // Ajustar el asunto y el cuerpo del correo según el tipo
         $asunto = "Registro de atención en el área de Admisión de Salud";
-        // $cuerpo = "<p>Estimado(a) <strong>$nombres_paciente</strong>; el <strong>$fecha_de_atencion</strong>, La Dirección de Bienestar, Admisión y Nivelación Universitaria, le informa que se registró el agendamiento en el área de <strong>$area_derivada</strong> con el funcionario <strong>$funcionario_derivado</strong> para el día <strong>$fecha_de_derivacion</strong> a las <strong>$hora_de_derivacion</strong>. 
+        // $cuerpo = "<p>Estimado(a) <strong>$nombres_paciente</strong>; el <strong>$fecha_de_atencion</strong>, La Dirección de Bienestar, Admisión y Nivelación Universitaria, le informa que se registró el agendamiento en el área de <strong>$area_derivada</strong> con el funcionario <strong>$funcionario_derivado</strong> para el día <strong>$fecha_de_derivacion</strong> a las <strong>$hora_de_derivacion</strong>.
         //           <br><br>Es importante asistir 15 minutos antes de la hora de la cita, acercándose previamente al área de <strong>TRIAJE</strong>.
         //           <br><br>Saludos cordiales.</p>";
 
@@ -90,7 +90,7 @@ class CpuCorreoEnviadoController extends Controller
         // Procesar la respuesta
         if ($codigoRespuesta === 200) {
             $respuestaDecodificada = json_decode($resultado);
-           
+
             // Registrar el correo enviado en la base de datos
             $this->registrarCorreoEnviado(
                 $email_paciente,
@@ -101,7 +101,7 @@ class CpuCorreoEnviadoController extends Controller
                 $request->input('id_doctor_al_que_derivan'),
                 $request->input('id_funcionario')
             );
-        
+
         } else {
             // Manejar errores
             return response()->json(['error' => "Error consultando. Código de respuesta: $codigoRespuesta"], $codigoRespuesta);
@@ -116,9 +116,10 @@ class CpuCorreoEnviadoController extends Controller
     {
         // Obtener los datos necesarios desde el array validado
         $email_paciente = 'junior.zamora@uleam.edu.ec';
-        $nombres_paciente = DB::table('cpu_personas')
+
+        $paciente = DB::table('cpu_personas')
             ->where('id', $request->input('id_paciente'))
-            ->value('nombres');
+            ->first();
         $fecha_de_atencion = $request->input('fecha_hora_atencion');
         $motivo_atencion = $request->input('motivo_atencion');
         $funcionario_atendio = DB::table('users')
@@ -138,15 +139,15 @@ class CpuCorreoEnviadoController extends Controller
         $motivo_derivacion = $request->input('motivo_derivacion');
         $id_atencion = base64_encode($request->input('id_atencion'));
         // url de la encuesta de satisfaccion
-        $url_encuesta_satisfaccion = "https://servicesdbanu.uleam.edu.ec/valoracion/valorar/" . $id_atencion;
+        $url_encuesta_satisfaccion = "https://servicesdbanu.uleam.edu.ec/valoracion/valorar/" . $id_atencion . "/" . $paciente->id_clasificacion_tipo_usuario;
 
         // Ajustar el asunto y el cuerpo del correo según el tipo
         $asunto = "Registro de atención en el área de $area_atencion";
-        // $cuerpo = "<p>Estimado(a) <strong>$nombres_paciente<strong>, el $fecha_de_atencion, la Dirección de Bienestar, Admisión y Nivelación Universitaria, registró la atención por <strong>motivo de $motivo_atencion</strong> en el área de <strong>$area_atencion</strong> con el funcionario <strong>$funcionario_atendio</strong> a las $fecha_de_atencion. 
+        // $cuerpo = "<p>Estimado(a) <strong>$nombres_paciente<strong>, el $fecha_de_atencion, la Dirección de Bienestar, Admisión y Nivelación Universitaria, registró la atención por <strong>motivo de $motivo_atencion</strong> en el área de <strong>$area_atencion</strong> con el funcionario <strong>$funcionario_atendio</strong> a las $fecha_de_atencion.
         //           <br><br>Por favor, indique su opinión sobre la atención recibida en la siguiente <a href='$url_encuesta_satisfaccion'><strong>Encuesta de satisfacción del servicio recibido</strong></a>.
         //           <br><br>Saludos cordiales.</p>";
         // Cuerpo del mensaje
-    $cuerpo = "<p>Estimado(a) <strong>$nombres_paciente</strong>,</p>
+    $cuerpo = "<p>Estimado(a) <strong>$paciente->nombres</strong>,</p>
 
                 <p>Le informamos que el <strong>$fecha_de_atencion</strong>, la Dirección de Bienestar, Admisión y Nivelación Universitaria (DBANU) registró su atención en el área de <strong>$area_atencion</strong> con el/la funcionario(a) <strong>$funcionario_atendio</strong>. A continuación, los detalles de la atención:</p>
 
@@ -200,7 +201,7 @@ class CpuCorreoEnviadoController extends Controller
         // Procesar la respuesta
         if ($codigoRespuesta === 200) {
             $respuestaDecodificada = json_decode($resultado);
-           
+
             // Registrar el correo enviado en la base de datos
             $this->registrarCorreoEnviado(
                 $email_paciente,
@@ -211,7 +212,7 @@ class CpuCorreoEnviadoController extends Controller
                 $request->input('id_doctor_al_que_derivan'),
                 $request->input('id_funcionario')
             );
-        
+
         } else {
             // Manejar errores
             return response()->json(['error' => "Error consultando. Código de respuesta: $codigoRespuesta"], $codigoRespuesta);
@@ -252,7 +253,7 @@ class CpuCorreoEnviadoController extends Controller
         $motivo_derivacion = $request->input('motivo_derivacion');
         $id_atencion = base64_encode($request->input('id_atencion'));
         // url de la encuesta de satisfaccion
-        $url_encuesta_satisfaccion = "https://servicesdbanu.uleam.edu.ec/valoracion/valorar/" . $id_atencion;
+        $url_encuesta_satisfaccion = "https://servicesdbanu.uleam.edu.ec/valoracion/valorar/" . $id_atencion . "/" . $paciente->id_clasificacion_tipo_usuario;
 
         // Ajustar el asunto y el cuerpo del correo según el tipo
         $asunto = "Registro de agendamiento de cita en el área de $area_derivada";
@@ -345,28 +346,28 @@ class CpuCorreoEnviadoController extends Controller
                        Dirección de Bienestar, Admisión y Nivelación Universitaria</p>";
         }
         else{
-            // $cuerpo = "<p>Estimado(a) <strong>$paciente->nombres</strong>; el <strong>$fecha_de_atencion</strong>, La Dirección de Bienestar, Admisión y 
+            // $cuerpo = "<p>Estimado(a) <strong>$paciente->nombres</strong>; el <strong>$fecha_de_atencion</strong>, La Dirección de Bienestar, Admisión y
             //            Nivelación Universitaria, registró la derivación por motivo de <strong>$motivo_derivacion</strong> en el área de <strong>$area_derivada</strong>
             //             con el/la funcionario(a) <strong>$funcionario_derivado</strong> para el día <strong>$fecha_de_derivacion</strong> a las <strong>$hora_de_derivacion</strong>.
-            //            <br><br>Es importante asistir <strong>15 minutos antes de la hora de la cita</strong>, acercándose previamente al área de 
+            //            <br><br>Es importante asistir <strong>15 minutos antes de la hora de la cita</strong>, acercándose previamente al área de
             //            <strong>TRIAJE</strong> antes de dirigirse al área de <strong>$area_derivada</strong>.
             //            <br><br>Saludos cordiales.</p>";
 
             $cuerpo = "<p>Estimado(a) <strong>$paciente->nombres</strong>,</p>
 
                        <p>Le informamos que el <strong>$fecha_de_atencion</strong>, la Dirección de Bienestar, Admisión y Nivelación Universitaria (DBANU) registró su derivación por motivo de <strong>$motivo_derivacion</strong> al área de <strong>$area_derivada</strong>. Su cita ha sido programada con el/la funcionario(a) <strong>$funcionario_derivado</strong>. A continuación, los detalles de su cita:</p>
-    
+
                        <p><strong>📅 Fecha:</strong> $fecha_de_derivacion<br>
                        <strong>⏰ Hora:</strong> $hora_de_derivacion<br>
                        <strong>📍 Lugar:</strong> Universidad Laica Eloy Alfaro de Manabí<br>
                        <strong>📌 Dirección:</strong> Área de $area_derivada</p>
-    
+
                        <p>Le solicitamos presentarse <strong>15 minutos antes de la hora de la cita</strong> y acudir previamente al área de <strong>TRIAJE</strong>.</p>
-    
+
                        <p>En caso de no poder asistir en la fecha y hora programadas, le pedimos que lo comunique oportunamente al correo <strong>$email_funcionario_derivado</strong>.</p>
-    
+
                        <p>Agradecemos su atención y quedamos atentos a cualquier inquietud.</p>
-    
+
                        <p>Atentamente,</p>
                        <p>$area_atencion<br>
                        Dirección de Bienestar, Admisión y Nivelación Universitaria</p>";
@@ -411,7 +412,7 @@ class CpuCorreoEnviadoController extends Controller
         // Procesar la respuesta
         if ($codigoRespuesta === 200) {
             $respuestaDecodificada = json_decode($resultado);
-           
+
             // Registrar el correo enviado en la base de datos
             $this->registrarCorreoEnviado(
                 $email_paciente,
@@ -422,7 +423,7 @@ class CpuCorreoEnviadoController extends Controller
                 $request->input('id_doctor_al_que_derivan'),
                 $request->input('id_funcionario')
             );
-        
+
         } else {
             // Manejar errores
             return response()->json(['error' => "Error consultando. Código de respuesta: $codigoRespuesta"], $codigoRespuesta);
@@ -504,7 +505,7 @@ class CpuCorreoEnviadoController extends Controller
         // Procesar la respuesta
         if ($codigoRespuesta === 200) {
             $respuestaDecodificada = json_decode($resultado);
-           
+
             // Registrar el correo enviado en la base de datos
             $this->registrarCorreoEnviado(
                 $email_funcionario,
@@ -515,7 +516,7 @@ class CpuCorreoEnviadoController extends Controller
                 $request->input('id_doctor_al_que_derivan'),
                 $request->input('id_funcionario')
             );
-        
+
         } else {
             // Manejar errores
             return response()->json(['error' => "Error consultando. Código de respuesta: $codigoRespuesta"], $codigoRespuesta);

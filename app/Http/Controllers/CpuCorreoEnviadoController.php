@@ -116,9 +116,10 @@ class CpuCorreoEnviadoController extends Controller
     {
         // Obtener los datos necesarios desde el array validado
         $email_paciente = 'junior.zamora@uleam.edu.ec';
-        $nombres_paciente = DB::table('cpu_personas')
+
+        $paciente = DB::table('cpu_personas')
             ->where('id', $request->input('id_paciente'))
-            ->value('nombres');
+            ->first();
         $fecha_de_atencion = $request->input('fecha_hora_atencion');
         $motivo_atencion = $request->input('motivo_atencion');
         $funcionario_atendio = DB::table('users')
@@ -138,7 +139,7 @@ class CpuCorreoEnviadoController extends Controller
         $motivo_derivacion = $request->input('motivo_derivacion');
         $id_atencion = base64_encode($request->input('id_atencion'));
         // url de la encuesta de satisfaccion
-        $url_encuesta_satisfaccion = "https://servicesdbanu.uleam.edu.ec/valoracion/valorar/" . $id_atencion;
+        $url_encuesta_satisfaccion = "https://servicesdbanu.uleam.edu.ec/valoracion/valorar/" . $id_atencion . "/" . $paciente->id_clasificacion_tipo_usuario;
 
         // Ajustar el asunto y el cuerpo del correo según el tipo
         $asunto = "Registro de atención en el área de $area_atencion";
@@ -146,7 +147,7 @@ class CpuCorreoEnviadoController extends Controller
         //           <br><br>Por favor, indique su opinión sobre la atención recibida en la siguiente <a href='$url_encuesta_satisfaccion'><strong>Encuesta de satisfacción del servicio recibido</strong></a>.
         //           <br><br>Saludos cordiales.</p>";
         // Cuerpo del mensaje
-    $cuerpo = "<p>Estimado(a) <strong>$nombres_paciente</strong>,</p>
+    $cuerpo = "<p>Estimado(a) <strong>$paciente->nombres</strong>,</p>
 
                 <p>Le informamos que el <strong>$fecha_de_atencion</strong>, la Dirección de Bienestar, Admisión y Nivelación Universitaria (DBANU) registró su atención en el área de <strong>$area_atencion</strong> con el/la funcionario(a) <strong>$funcionario_atendio</strong>. A continuación, los detalles de la atención:</p>
 
@@ -252,7 +253,7 @@ class CpuCorreoEnviadoController extends Controller
         $motivo_derivacion = $request->input('motivo_derivacion');
         $id_atencion = base64_encode($request->input('id_atencion'));
         // url de la encuesta de satisfaccion
-        $url_encuesta_satisfaccion = "https://servicesdbanu.uleam.edu.ec/valoracion/valorar/" . $id_atencion;
+        $url_encuesta_satisfaccion = "https://servicesdbanu.uleam.edu.ec/valoracion/valorar/" . $id_atencion . "/" . $paciente->id_clasificacion_tipo_usuario;
 
         // Ajustar el asunto y el cuerpo del correo según el tipo
         $asunto = "Registro de agendamiento de cita en el área de $area_derivada";

@@ -136,6 +136,38 @@ class CpuUserrolefunctionController extends Controller
         return response()->json($funciones);
     }
 
+    // public function obtenerFuncionesConAsignadas(Request $request)
+    // {
+    //     $usuarioId = $request->input('usuario_id');
+
+    //     if (!$usuarioId) {
+    //         return response()->json(['error' => 'Usuario ID is required'], 400);
+    //     }
+
+    //     // Obtener todas las funciones disponibles en el sistema desde la tabla cpu_userrolefunction
+    //     $funciones = DB::table('cpu_userrolefunction')
+    //         ->select('nombre', 'id_usermenu', 'accion', 'id_menu')
+    //         ->distinct()
+    //         ->orderBy('nombre', 'asc')
+    //         ->get();
+
+    //     // Obtener las funciones específicas asignadas al usuario desde la tabla cpu_userfunction
+    //     $funcionesAsignadas = DB::table('cpu_userfunction')
+    //         ->select('id_usermenu')
+    //         ->where('id_users', $usuarioId)
+    //         ->distinct()
+    //         ->pluck('id_usermenu')
+    //         ->toArray();
+
+    //     // Marcar solo las funciones que están asignadas al usuario
+    //     $funciones = $funciones->map(function ($funcion) use ($funcionesAsignadas) {
+    //         $funcion->asignada = in_array($funcion->id_usermenu, $funcionesAsignadas);
+    //         return $funcion;
+    //     });
+
+    //     return response()->json($funciones);
+    // }
+
     public function obtenerFuncionesConAsignadas(Request $request)
     {
         $usuarioId = $request->input('usuario_id');
@@ -144,13 +176,6 @@ class CpuUserrolefunctionController extends Controller
             return response()->json(['error' => 'Usuario ID is required'], 400);
         }
 
-        // Obtener todas las funciones disponibles en el sistema desde la tabla cpu_userrolefunction
-        $funciones = DB::table('cpu_userrolefunction')
-            ->select('nombre', 'id_usermenu', 'accion', 'id_menu')
-            ->distinct()
-            ->orderBy('nombre', 'asc')
-            ->get();
-
         // Obtener las funciones específicas asignadas al usuario desde la tabla cpu_userfunction
         $funcionesAsignadas = DB::table('cpu_userfunction')
             ->select('id_usermenu')
@@ -158,6 +183,14 @@ class CpuUserrolefunctionController extends Controller
             ->distinct()
             ->pluck('id_usermenu')
             ->toArray();
+
+        // Obtener todas las funciones disponibles en el sistema desde la tabla cpu_userrolefunction
+        $funciones = DB::table('cpu_userrolefunction')
+            ->select('nombre', 'id_usermenu', 'accion', 'id_menu')
+            ->distinct()
+            ->orderBy('nombre', 'asc')
+            ->get();
+
 
         // Marcar solo las funciones que están asignadas al usuario
         $funciones = $funciones->map(function ($funcion) use ($funcionesAsignadas) {

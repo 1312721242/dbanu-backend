@@ -16,7 +16,7 @@ use Illuminate\Support\Facades\Hash;
 
 class AuthController extends Controller
 {
-    
+
     public function login(Request $request)
 {
     $credentials = $request->validate([
@@ -44,6 +44,7 @@ class AuthController extends Controller
         'token' => $token,
         'name' => $user->name,
         'usr_tipo' => $user->tipoUsuario->role,
+        'foto_perfil' => url('Perfiles/' . $user->foto_perfil), // Generar URL completa
     ];
 
     if ($user->sede) {

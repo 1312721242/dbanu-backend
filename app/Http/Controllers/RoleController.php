@@ -136,4 +136,15 @@ class RoleController extends Controller
 
         return response()->json($roles);
     }
+    public function consultarRol($id)
+    {
+        $rol = DB::table('cpu_userrole')->where('id_userrole', $id)->first();
+
+        if (!$rol) {
+            return response()->json(['error' => 'Rol no encontrado'], 404);
+        }
+
+        return response()->json($rol);
+    }
+
 }

@@ -73,6 +73,8 @@ Route::post('/loginapp', [AuthController::class, 'loginApp']);
 Route::post('/logout', [AuthController::class, 'logout'])->middleware('auth:sanctum');
 Route::get('/me', [AuthController::class, 'me'])->middleware('auth:sanctum');
 
+
+
 // Route::get('legalizacion-matricula/export-template', [LegalizacionMatriculaSecretariaController::class, 'exportTemplate']);
 Route::middleware(['auth:sanctum'])->group(function () {
     // Route::middleware(['api'])->group(function () {
@@ -82,8 +84,23 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('/menuaspirantes', [MenuController::class, 'menuaspirantes']);
     Route::get('/all-menu-items', [MenuController::class, 'getAllMenuItems']);
     // Usuario
+    // Route::get('/user', function (Request $request) {
+    //     return $request->user();
+    // });
     Route::get('/user', function (Request $request) {
-        return $request->user();
+        $user = $request->user();
+
+        if (!$user) {
+            return response()->json(['error' => 'Usuario no autenticado'], 401);
+        }
+
+        // Convertir la respuesta a un array
+        $userData = $user->toArray();
+
+        // Modificar el campo `foto_perfil` para devolver la URL completa
+        $userData['foto_perfil'] = $user->foto_perfil ? url('Perfiles/' . $user->foto_perfil) : null;
+
+        return response()->json($userData);
     });
 
 
@@ -503,3 +520,4 @@ Route::middleware(['auth:sanctum'])->group(function () {
 Route::post('/terapia-lenguaje', [CpuTerapiaLenguajeController::class, 'guardarConsultaTerapia']);
 
 Route::get('/datos-medicos', [CpuDatosMedicosController::class, 'index']);
+Route::get('/roles/{id}', [RoleController::class, 'consultarRol']);

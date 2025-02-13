@@ -21,6 +21,8 @@ class User extends Authenticatable
         'usr_facultad',
         'api_token',
         'usr_estado',
+        'foto_perfil',
+        'id_user_update'
     ];
 
     protected $hidden = [

@@ -204,7 +204,7 @@ class UsuarioController extends Controller
                 }
 
                 $usr_tipo = $request->input('usr_tipo');
-                $users = User::with(['tipoUsuario', 'profesion','sede']) 
+                $users = User::with(['tipoUsuario', 'profesion','sede'])
                             ->where('usr_tipo', $usr_tipo)
                             ->where('usr_estado', 8)
                             ->get();
@@ -247,6 +247,48 @@ class UsuarioController extends Controller
                 return response()->json(['error' => 'Error interno del servidor'], 500);
             }
         }
+        /////CAMBIO DE CONTRASEÑA
+        public function cambiarContrasena(Request $request)
+        {
+            // Validar los datos recibidos
+            $validator = Validator::make($request->all(), [
+                'id' => 'required|exists:users,id',
+                'password_actual' => 'required',
+                'nueva_contrasena' => 'required|min:8|confirmed',
+            ], [
+                'password_actual.required' => 'La contraseña actual es obligatoria.',
+                'nueva_contrasena.required' => 'La nueva contraseña es obligatoria.',
+                'nueva_contrasena.min' => 'La nueva contraseña debe tener al menos 8 caracteres.',
+                'nueva_contrasena.confirmed' => 'Las contraseñas nuevas no coinciden.',
+            ]);
 
+            if ($validator->fails()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => $validator->errors()
+                ], 400);
+            }
+
+            // Obtener el usuario
+            $user = User::find($request->id);
+
+            // Verificar si la contraseña actual es correcta
+            if (!Hash::check($request->password_actual, $user->password)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => ['password_actual' => 'La contraseña actual es incorrecta.']
+                ], 400);
+            }
+
+
+            // Actualizar la contraseña
+            $user->password = Hash::make($request->nueva_contrasena);
+            $user->save();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Contraseña cambiada correctamente.'
+            ]);
+        }
 
 }

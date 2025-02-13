@@ -203,8 +203,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('/users/search', [UsuarioController::class, 'search']);
     Route::post('cambiar-password-app', [UsuarioController::class, 'cambiarPasswordApp']);
     Route::get('funcionarios/{id}', [UsuarioController::class, 'obtenerInformacion']);
-
-
+    Route::post('cambiar-contrasena', [UsuarioController::class, 'cambiarContrasena']);
     //profesiones
     Route::post('/agregar-profesion', [CpuProfesionController::class, 'agregarProfesion']);
     Route::put('/modificar-profesion/{id}', [CpuProfesionController::class, 'modificarProfesion']);

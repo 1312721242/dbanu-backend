@@ -74,17 +74,29 @@ class TurnosController extends Controller
         \Log::info("Usuario: $id_funcionario, Fecha Inicio: $ini, Fecha Fin: $hasta, Fecha Actual: $fechaActual, Hora Actual: $horaActual");
 
         $turnosQuery = CpuTurno::where('id_medico', $id_funcionario)
-            ->where('estado', 1)
-            ->whereBetween('fehca_turno', [$ini, $hasta]);
+            ->where('estado', 1);
 
-        if ($ini == $fechaActual) {
-            \Log::info("Consulta para el mismo día");
-            $turnosQuery->where('hora', '>', $horaActual);
+        if ($ini == $fechaActual && $hasta == $fechaActual) {
+            // Caso 1: Solo hoy, después de la hora actual
+            \Log::info("Consulta para el mismo día a partir de la hora actual");
+            $turnosQuery->where('fehca_turno', $ini)->where('hora', '>', $horaActual);
+        } elseif ($ini == $fechaActual && $hasta > $fechaActual) {
+            // Caso 2: Hoy desde la hora actual y días futuros desde cualquier hora
+            \Log::info("Consulta para hoy a partir de la hora actual y días futuros desde cualquier hora");
+            $turnosQuery->where(function($query) use ($ini, $hasta, $horaActual) {
+                $query->where(function($q) use ($ini, $horaActual) {
+                    $q->where('fehca_turno', $ini)->where('hora', '>', $horaActual);
+                })->orWhere('fehca_turno', '>', $ini);
+            });
+        } else {
+            // Caso 3: Fechas futuras, devolver todos los turnos
+            \Log::info("Consulta para fechas futuras sin restricciones de hora");
+            $turnosQuery->whereBetween('fehca_turno', [$ini, $hasta]);
         }
 
         $turnos = $turnosQuery->get();
 
-        // Formatear las fechas y horas
+        // Formatear fechas y horas
         $turnos = $turnos->map(function($turno) {
             $turno->fehca_turno = Carbon::parse($turno->fehca_turno)->format('Y-m-d');
             $turno->hora = Carbon::parse($turno->hora)->format('H:i:s');
@@ -95,6 +107,7 @@ class TurnosController extends Controller
 
         return response()->json($turnos);
     }
+
 
     public function listarTurnosPorFuncionario(Request $request)
     {

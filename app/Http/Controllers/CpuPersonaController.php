@@ -602,7 +602,7 @@ class CpuPersonaController extends Controller
             'email' => 'required|string',
             'referencia' => 'nullable|string',
             'numeroMatricula' => 'nullable|string',
-            'tiposBeca' => 'nullable|string',
+            'tipoBeca' => 'nullable|string',
         ]);
 
         if ($validator->fails()) {
@@ -674,7 +674,7 @@ class CpuPersonaController extends Controller
                 'email' => $validatedData['email'],
                 'referencia' => $validatedData['referencia'],
                 'numero_matricula' => $validatedData['numeroMatricula'],
-                'tipo_beca' => $validatedData['tiposBeca'],
+                'tipo_beca' => $validatedData['tipoBeca'],
             ];
 
             CpuDatosUsuarioExterno::create($usuarioExternoData);

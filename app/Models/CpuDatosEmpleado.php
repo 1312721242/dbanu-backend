@@ -9,6 +9,8 @@ class CpuDatosEmpleado extends Model
 {
     use HasFactory;
 
+    protected $table = 'cpu_datos_empleados';
+
     protected $fillable = [
         'id_persona',
         'emailinstitucional',
@@ -17,8 +19,10 @@ class CpuDatosEmpleado extends Model
         'modalidad',
         'unidad',
         'carrera',
-        'idsubproceso',
-        'escala1',
+        'nombreproceso',
+        'correopersonal',
+        'sector',
+        'referencia',
         'estado',
         'fechaingre'
     ];

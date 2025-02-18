@@ -115,7 +115,7 @@ class CpuPersonaController extends Controller
         Log::info("CEDULA RECIBIDA:  '$cedula'");
         if (strlen($cedula) <= 9) {
             $personas = CpuPersona::where('cedula', 'like', "{$cedula}%")
-                ->with(['datosEmpleados', 'datosEstudiantes', 'datosExternos'])
+                ->with(['datosEmpleados', 'datosEstudiantes', 'datosExternos', 'datosMedicos'])
                 ->get();
 
             foreach ($personas as $persona) {
@@ -128,7 +128,7 @@ class CpuPersonaController extends Controller
         }
 
         $persona = CpuPersona::where('cedula', $cedula)
-            ->with(['datosEmpleados', 'datosEstudiantes', 'datosExternos'])
+            ->with(['datosEmpleados', 'datosEstudiantes', 'datosExternos', 'datosMedicos'])
             ->first();
 
         if ($persona) {
@@ -140,6 +140,8 @@ class CpuPersonaController extends Controller
             $persona->load('datosMedicos'); // Load datosMedicos if available
             $persona->tipoDiscapacidad = $persona->tipo_discapacidad;
             $persona->porcentajeDiscapacidad = $persona->porcentaje_discapacidad;
+            $persona->embarazada = $persona->embarazada;
+            $persona->ultima_fecha_mestruacion = $persona->ultima_fecha_mestruacion;
             $persona->imagen = $persona->imagen;
 
             return response()->json($persona);
@@ -262,14 +264,33 @@ class CpuPersonaController extends Controller
                     'emailinstitucional' => $data['CorreoInstitucional'] ?? 'SIN INFORMACIÓN',
                     'puesto' => $data['Cargo'] ?? 'SIN INFORMACIÓN',
                     'regimen1' => $data['Regimen'] ?? 'SIN INFORMACIÓN',
-                    // 'modalidad' => $data['modalidad'] ?? 'SIN INFORMACIÓN',
-                    'unidad' => $data['Unidad'] ?? 'SIN INFORMACIÓN',
-                    // 'carrera' => $data['carrera'] ?? 'SIN INFORMACIÓN',
-                    'idsubproceso' => $data['idSubProceso'] ?? null,
-                    // 'escala1' => $data['escala1'] ?? 'SIN INFORMACIÓN',
-                    // 'estado' => $data['estado'] ?? 'SIN INFORMACIÓN',
+                    'correopersonal' => $data['CorreoPersonal'] ?? 'SIN INFORMACIÓN',
+                    'unidad' => $data['NombreSubProceso'] ?? 'SIN INFORMACIÓN',
+                    'carrera' => $data['NombreSeccion'] ?? 'SIN INFORMACIÓN',
+                    'nombreproceso' => $data['NombreProceso'] ?? null,
+                    'sector' => $data['Sector'] ?? 'SIN INFORMACIÓN',
+                    'referencia' => $data['Referencia'] ?? 'SIN INFORMACIÓN',
                     'fechaingre' => $data['FechaIngreso'] ?? '1900-01-01',
                 ]);
+
+                Log::info('Datos del empleado creado: ' . json_encode($persona->datosEmpleados));
+
+                CpuDatosMedicos::create([
+                    'id_persona' => $persona->id,
+                    'tipo_sangre' => [
+                        "A+" => 1,
+                        "A-" => 2,
+                        "B+" => 3,
+                        "B-" => 4,
+                        "AB+" => 5,
+                        "AB-" => 6,
+                        "O+" => 7,
+                        "O-" => 8,
+                    ][$data['TipoSangre']] ?? null,
+                    
+                ]);
+
+                Log::info('Datos del médico creado: ' . json_encode($persona->datosMedicos));
 
                 $persona->load(['datosEmpleados', 'datosEstudiantes']); // Load datosEstudiantes if available
                 return response()->json([$persona]);

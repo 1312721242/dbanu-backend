@@ -252,18 +252,44 @@ class UsuarioController extends Controller
                 return response()->json(['error' => 'Error interno del servidor'], 500);
             }
         }
-        /////CAMBIO DE CONTRASEÑA
         public function cambiarContrasena(Request $request)
 {
     // Convertir `id` a número y validar
     $request->merge(['id' => (int) $request->id]);
 
-    $validator = Validator::make($request->all(), [
+    // Obtener usuario
+    $user = User::find($request->id);
+
+    if (!$user) {
+        return response()->json([
+            'success' => false,
+            'message' => 'El usuario no existe.'
+        ], 404);
+    }
+
+    // Validar si hay cambios en la contraseña o solo en la foto
+    $isPasswordChange = $request->filled('password_actual') && $request->filled('nueva_contrasena');
+    $isPhotoChange = $request->hasFile('foto_perfil');
+
+    if (!$isPasswordChange && !$isPhotoChange) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Debes cambiar la contraseña o subir una nueva imagen de perfil.'
+        ], 400);
+    }
+
+    // Validaciones
+    $rules = [
         'id' => 'required|exists:users,id',
-        'password_actual' => 'required',
-        'nueva_contrasena' => 'nullable|min:8|confirmed', // Se mantiene la validación de `confirmed`
-        'foto_perfil' => 'nullable|image|mimes:jpeg,png,jpg|max:2048' // Asegurar que la imagen sea válida
-    ], [
+        'foto_perfil' => 'nullable|image|mimes:jpeg,png,jpg|max:2048'
+    ];
+
+    if ($isPasswordChange) {
+        $rules['password_actual'] = 'required';
+        $rules['nueva_contrasena'] = 'required|min:8|confirmed';
+    }
+
+    $validator = Validator::make($request->all(), $rules, [
         'password_actual.required' => 'La contraseña actual es obligatoria.',
         'nueva_contrasena.required' => 'La nueva contraseña es obligatoria.',
         'nueva_contrasena.min' => 'La nueva contraseña debe tener al menos 8 caracteres.',
@@ -277,29 +303,24 @@ class UsuarioController extends Controller
         ], 400);
     }
 
-    // Obtener usuario
-    $user = User::find($request->id);
-
-    // Validar contraseña actual
-    if (!Hash::check($request->password_actual, $user->password)) {
+    // Si se intenta cambiar la contraseña, verificar si la actual es correcta
+    if ($isPasswordChange && !Hash::check($request->password_actual, $user->password)) {
         return response()->json([
             'success' => false,
             'message' => ['password_actual' => 'La contraseña actual es incorrecta.']
         ], 400);
     }
 
-    // Actualizar la contraseña si se proporciona
-    if ($request->filled('nueva_contrasena')) {
+    // Si todo está bien, actualizar la contraseña
+    if ($isPasswordChange) {
         $user->password = Hash::make($request->nueva_contrasena);
     }
 
     // Guardar nueva imagen si se sube
-    if ($request->hasFile('foto_perfil')) {
+    if ($isPhotoChange) {
         $imagen = $request->file('foto_perfil');
         $nombreImagen = time() . '.' . $imagen->getClientOriginalExtension();
         $imagen->move(public_path('Perfiles'), $nombreImagen);
-
-        // ✅ Guardar solo el nombre del archivo en la base de datos
         $user->foto_perfil = $nombreImagen;
     }
 
@@ -307,10 +328,15 @@ class UsuarioController extends Controller
 
     return response()->json([
         'success' => true,
-        'message' => 'Contraseña y foto de perfil actualizadas correctamente.',
-        'foto_perfil' => url('Perfiles/' . $user->foto_perfil) // ✅ Devolver la URL completa para el frontend
+        'message' => ($isPasswordChange && $isPhotoChange)
+            ? 'Contraseña y foto de perfil actualizadas correctamente.'
+            : ($isPasswordChange
+                ? 'Contraseña actualizada correctamente.'
+                : 'Foto de perfil actualizada correctamente.'),
+        'foto_perfil' => $isPhotoChange ? url('Perfiles/' . $user->foto_perfil) : null
     ]);
 }
+
 
 
 }

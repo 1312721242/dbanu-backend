@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\Auth;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Validator;
 
 class CpuDerivacionController extends Controller
 {
@@ -304,11 +305,16 @@ class CpuDerivacionController extends Controller
                 ->update(['estado' => 7]);
 
             // Llamar a la función enviarCorreo con los datos necesarios después de que la transacción se haya realizado correctamente
-            $this->enviarCorreoPaciente($validatedData, 'reagendamiento');
-            $this->enviarCorreoFuncionario($validatedData, 'reagendamiento');
+            // $this->enviarCorreoPaciente($validatedData, 'reagendamiento');
+            // $this->enviarCorreoFuncionario($validatedData, 'reagendamiento');
 
             // Si todo va bien, confirmar la transacción
             DB::commit();
+
+            // Enviar correos después de confirmar la transacción
+            $correoController = new CpuCorreoEnviadoController();
+            $correoController->enviarCorreoPaciente($validatedData, 'reagendamiento');
+            $correoController->enviarCorreoFuncionario($validatedData, 'reagendamiento');
 
             return response()->json(['message' => 'Registro creado y actualizado correctamente.'], 201);
         } catch (\Exception $e) {
@@ -320,10 +326,67 @@ class CpuDerivacionController extends Controller
     }
 
     // Función para actualizar el estado de derivación a 5 (No asistió a la cita)
+    // public function noAsistioCita(Request $request, $id)
+    // {
+    //     // Validar los datos de entrada
+    //     $validatedData = $request->validate([
+    //         'email_paciente' => 'required|string',
+    //         'area_atencion' => 'required|string',
+    //         'fecha_para_atencion' => 'required|date',
+    //         'hora_para_atencion' => 'required|string',
+    //         'nombres_funcionario' => 'required|string',
+    //         'nombres_paciente' => 'required|string',
+    //         'funcionario_email' => 'required|string',
+    //     ]);
+
+    //     DB::beginTransaction();
+
+    //     try {
+    //         // Verificar si el ID existe en la tabla cpu_derivaciones
+    //         $derivacion = CpuDerivacion::find($id);
+
+    //         if (!$derivacion) {
+    //             return response()->json(['message' => 'Derivación no encontrada.'], 404);
+    //         }
+
+    //         // Actualizar el campo id_estado_derivacion a 5
+    //         $derivacion->update(['id_estado_derivacion' => 5]);
+
+    //         // Enviar correos al paciente y al funcionario utilizando los datos validados
+    //         // $this->enviarCorreoPaciente($validatedData, 'no_show');
+    //         // $this->enviarCorreoFuncionario($validatedData, 'no_show');
+
+    //         DB::commit();
+
+    //         // Enviar correos después de confirmar la transacción
+    //         $correoController = new CpuCorreoEnviadoController();
+    //         $correoController->enviarCorreoPaciente($validatedData, 'no_show');
+    //         $correoController->enviarCorreoFuncionario($validatedData, 'no_show');
+
+    //         return response()->json(['message' => 'Estado de derivación actualizado a 5 correctamente y correos enviados.'], 200);
+    //     } catch (\Exception $e) {
+    //         DB::rollBack();
+    //         return response()->json(['error' => 'Error al actualizar el estado de derivación: ' . $e->getMessage()], 500);
+    //     }
+    // }
+
     public function noAsistioCita(Request $request, $id)
     {
-        // Validar los datos de entrada
-        $validatedData = $request->validate([
+        // 🔍 Imprimir los datos recibidos antes de la validación
+        Log::info('📌 Datos recibidos en noAsistioCita:', $request->all());
+
+        // 🔥 Evita que Laravel transforme `""` en `null`
+        $validatedData = $request->all();
+
+        // Si `id_paciente` no existe o es `null`, lánzalo manualmente
+        if (!isset($validatedData['id_paciente'])) {
+            Log::error('❌ Error: id_paciente no está presente en los datos.');
+            return response()->json(['error' => 'Falta el campo id_paciente'], 400);
+        }
+
+        // 🔥 Validación manual para mayor control
+        $rules = [
+            'id_paciente' => 'required|integer',
             'email_paciente' => 'required|string',
             'area_atencion' => 'required|string',
             'fecha_para_atencion' => 'required|date',
@@ -331,33 +394,40 @@ class CpuDerivacionController extends Controller
             'nombres_funcionario' => 'required|string',
             'nombres_paciente' => 'required|string',
             'funcionario_email' => 'required|string',
-        ]);
+        ];
+        $validator = Validator::make($validatedData, $rules);
+
+        if ($validator->fails()) {
+            Log::error('❌ Error en validación:', ['errors' => $validator->errors()]);
+            return response()->json(['error' => $validator->errors()], 400);
+        }
 
         DB::beginTransaction();
 
         try {
-            // Verificar si el ID existe en la tabla cpu_derivaciones
+            // Buscar derivación
             $derivacion = CpuDerivacion::find($id);
-
             if (!$derivacion) {
                 return response()->json(['message' => 'Derivación no encontrada.'], 404);
             }
 
-            // Actualizar el campo id_estado_derivacion a 5
+            // Actualizar estado de la derivación
             $derivacion->update(['id_estado_derivacion' => 5]);
 
-            // Enviar correos al paciente y al funcionario utilizando los datos validados
-            $this->enviarCorreoPaciente($validatedData, 'no_show');
-            $this->enviarCorreoFuncionario($validatedData, 'no_show');
+            // Enviar correos
+            $correoController = new CpuCorreoEnviadoController();
+            $correoController->enviarCorreoPaciente($validatedData, 'no_show');
+            $correoController->enviarCorreoFuncionario($validatedData, 'no_show');
 
             DB::commit();
-
-            return response()->json(['message' => 'Estado de derivación actualizado a 5 correctamente y correos enviados.'], 200);
+            return response()->json(['message' => 'Estado actualizado y correos enviados.'], 200);
         } catch (\Exception $e) {
             DB::rollBack();
-            return response()->json(['error' => 'Error al actualizar el estado de derivación: ' . $e->getMessage()], 500);
+            Log::error('❌ Error en la transacción:', ['error' => $e->getMessage()]);
+            return response()->json(['error' => 'Error en la operación: ' . $e->getMessage()], 500);
         }
     }
+
 
 
 

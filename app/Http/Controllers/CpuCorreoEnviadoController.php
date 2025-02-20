@@ -13,10 +13,10 @@ class CpuCorreoEnviadoController extends Controller
     public function enviarCorreoAtencionAdmisionSalud(Request $request)
     {
         // Obtener los datos necesarios desde el array validado
-        $email_paciente = 'junior.zamora@uleam.edu.ec';
+        $email_paciente = 'p1311836587@dn.uleam.edu.ec';
         $nombres_paciente = DB::table('cpu_personas')
-        ->where('id', $request->input('id_paciente'))
-        ->value('nombres');
+            ->where('id', $request->input('id_paciente'))
+            ->value('nombres');
         $fecha_de_atencion = $request->input('fecha_hora_atencion');
         $funcionario_derivado = DB::table('users')
             ->where('id', $request->input('id_doctor_al_que_derivan'))
@@ -33,8 +33,8 @@ class CpuCorreoEnviadoController extends Controller
         //           <br><br>Es importante asistir 15 minutos antes de la hora de la cita, acercándose previamente al área de <strong>TRIAJE</strong>.
         //           <br><br>Saludos cordiales.</p>";
 
-         // Cuerpo del mensaje
-    $cuerpo = "<p>Estimado(a) <strong>$nombres_paciente</strong>,</p>
+        // Cuerpo del mensaje
+        $cuerpo = "<p>Estimado(a) <strong>$nombres_paciente</strong>,</p>
 
                 <p>Le informamos que el <strong>$fecha_de_atencion</strong>, la Dirección de Bienestar, Admisión y Nivelación Universitaria (DBANU) registró el agendamiento en el área de <strong>$area_derivada</strong>. La cita ha sido programada con el/la funcionario(a) <strong>$funcionario_derivado</strong>. A continuación, los detalles de su cita:</p>
 
@@ -101,7 +101,6 @@ class CpuCorreoEnviadoController extends Controller
                 $request->input('id_doctor_al_que_derivan'),
                 $request->input('id_funcionario')
             );
-
         } else {
             // Manejar errores
             return response()->json(['error' => "Error consultando. Código de respuesta: $codigoRespuesta"], $codigoRespuesta);
@@ -115,7 +114,7 @@ class CpuCorreoEnviadoController extends Controller
     public function enviarCorreoAtencionAreaSaludPaciente(Request $request)
     {
         // Obtener los datos necesarios desde el array validado
-        $email_paciente = 'junior.zamora@uleam.edu.ec';
+        $email_paciente = 'p1311836587@dn.uleam.edu.ec';
 
         $paciente = DB::table('cpu_personas')
             ->where('id', $request->input('id_paciente'))
@@ -141,18 +140,29 @@ class CpuCorreoEnviadoController extends Controller
         // url de la encuesta de satisfaccion
         $url_encuesta_satisfaccion = "https://servicesdbanu.uleam.edu.ec/valoracion/valorar/" . $id_atencion . "/" . $paciente->id_clasificacion_tipo_usuario;
 
+
+        // Obtener el plan nutricional si el área de atención es 14
+        $planNutricionalTexto = '';
+        if (strtoupper($area_atencion) === "NUTRICIÓN") {
+            $planNutricionalTexto = "<p><strong>📄 Plan Nutricional:</strong></p>";
+            $planNutricionalTexto .= "<pre>{$request->input('plan_nutricional_texto')}</pre>";
+        }
         // Ajustar el asunto y el cuerpo del correo según el tipo
         $asunto = "Registro de atención en el área de $area_atencion";
         // $cuerpo = "<p>Estimado(a) <strong>$nombres_paciente<strong>, el $fecha_de_atencion, la Dirección de Bienestar, Admisión y Nivelación Universitaria, registró la atención por <strong>motivo de $motivo_atencion</strong> en el área de <strong>$area_atencion</strong> con el funcionario <strong>$funcionario_atendio</strong> a las $fecha_de_atencion.
         //           <br><br>Por favor, indique su opinión sobre la atención recibida en la siguiente <a href='$url_encuesta_satisfaccion'><strong>Encuesta de satisfacción del servicio recibido</strong></a>.
         //           <br><br>Saludos cordiales.</p>";
         // Cuerpo del mensaje
-    $cuerpo = "<p>Estimado(a) <strong>$paciente->nombres</strong>,</p>
+        $cuerpo = "<p>Estimado(a) <strong>$paciente->nombres</strong>,</p>
 
                 <p>Le informamos que el <strong>$fecha_de_atencion</strong>, la Dirección de Bienestar, Admisión y Nivelación Universitaria (DBANU) registró su atención en el área de <strong>$area_atencion</strong> con el/la funcionario(a) <strong>$funcionario_atendio</strong>. A continuación, los detalles de la atención:</p>
 
                 <p><strong>📅 Fecha:</strong> $fecha_de_atencion<br>
                 <strong>📌 Motivo:</strong> $motivo_atencion</p>
+
+                <p>Le invitamos a compartir su opinión sobre la atención recibida completando la siguiente <a href='$url_encuesta_satisfaccion' target='_blank'><strong>🌐 Encuesta de satisfacción del servicio</strong></a>.</p>
+
+                $planNutricionalTexto
 
                 <p>Le invitamos a compartir su opinión sobre la atención recibida completando la siguiente <a href='$url_encuesta_satisfaccion' target='_blank'><strong>🌐 Encuesta de satisfacción del servicio</strong></a>.</p>
 
@@ -212,7 +222,6 @@ class CpuCorreoEnviadoController extends Controller
                 $request->input('id_doctor_al_que_derivan'),
                 $request->input('id_funcionario')
             );
-
         } else {
             // Manejar errores
             return response()->json(['error' => "Error consultando. Código de respuesta: $codigoRespuesta"], $codigoRespuesta);
@@ -226,7 +235,7 @@ class CpuCorreoEnviadoController extends Controller
     public function enviarCorreoDerivacionAreaSaludPaciente(Request $request)
     {
         // Obtener los datos necesarios desde el array validado
-        $email_paciente = 'junior.zamora@uleam.edu.ec';
+        $email_paciente = 'p1311836587@dn.uleam.edu.ec';
 
         $paciente = DB::table('cpu_personas')
             ->where('id', $request->input('id_paciente'))
@@ -237,14 +246,14 @@ class CpuCorreoEnviadoController extends Controller
         $funcionario_atendio = DB::table('users')
             ->where('id', $request->input('id_funcionario'))
             ->value('name') ?? null;
-        $email_funcionario = 'junior.zamora@uleam.edu.ec';
+        $email_funcionario = 'p1311836587@dn.uleam.edu.ec';
         $area_atencion = DB::table('cpu_userrole')
             ->where('id_userrole', $request->input('id_area_atencion'))
             ->value('role');
         $funcionario_derivado = DB::table('users')
             ->where('id', $request->input('id_doctor_al_que_derivan'))
             ->value('name') ?? null;
-        $email_funcionario_derivado = 'junior.zamora@uleam.edu.ec';
+        $email_funcionario_derivado = 'p1311836587@dn.uleam.edu.ec';
         $area_derivada = DB::table('cpu_userrole')
             ->where('id_userrole', $request->input('id_area_derivada'))
             ->value('role');
@@ -258,7 +267,7 @@ class CpuCorreoEnviadoController extends Controller
         // Ajustar el asunto y el cuerpo del correo según el tipo
         $asunto = "Registro de agendamiento de cita en el área de $area_derivada";
 
-        if($area_derivada == "FISIOTERAPIA" && $paciente->id_clasificacion_tipo_usuario != 1){
+        if ($area_derivada == "FISIOTERAPIA" && $paciente->id_clasificacion_tipo_usuario != 1) {
             $cuerpo = "<p>Estimado(a) <strong>$paciente->nombres</strong>,</p>
 
                         <p>Le informamos que el <strong>$fecha_de_atencion</strong>, la Dirección de Bienestar, Admisión y Nivelación Universitaria (DBANU) registró su derivación por motivo de <strong>$motivo_derivacion</strong> al área de <strong>$area_derivada</strong>. Su cita ha sido programada con el/la funcionario(a) <strong>$funcionario_derivado</strong>. A continuación, los detalles de su cita:</p>
@@ -288,8 +297,7 @@ class CpuCorreoEnviadoController extends Controller
                         <p>Atentamente,</p>
                         <p>$area_atencion<br>
                         Dirección de Bienestar, Admisión y Nivelación Universitaria</p>";
-        }
-        else if($area_derivada == "FISIOTERAPIA" && $paciente->id_clasificacion_tipo_usuario != 1){
+        } else if ($area_derivada == "FISIOTERAPIA" && $paciente->id_clasificacion_tipo_usuario != 1) {
             $cuerpo = "<p>Estimado(a) <strong>$paciente->nombres</strong>,</p>
 
                         <p>Le informamos que el <strong>$fecha_de_atencion</strong>, la Dirección de Bienestar, Admisión y Nivelación Universitaria (DBANU) registró su derivación por motivo de <strong>$motivo_derivacion</strong> al área de <strong>$area_derivada</strong>. Su cita ha sido programada con el/la funcionario(a) <strong>$funcionario_derivado</strong>. A continuación, los detalles de su cita:</p>
@@ -318,8 +326,7 @@ class CpuCorreoEnviadoController extends Controller
                         <p>Atentamente,</p>
                         <p>$area_atencion<br>
                         Dirección de Bienestar, Admisión y Nivelación Universitaria</p>";
-        }
-        else if ($area_derivada == "TRABAJO SOCIAL") {
+        } else if ($area_derivada == "TRABAJO SOCIAL") {
             $cuerpo = "<p>Estimado(a) <strong>$paciente->nombres</strong>,</p>
 
                        <p>Reciba un cordial saludo de parte del Área de Trabajo Social de la Dirección de Bienestar, Admisión y Nivelación Universitaria (Dbanu) de la Universidad Laica Eloy Alfaro de Manabí (ULEAM).</p>
@@ -344,8 +351,7 @@ class CpuCorreoEnviadoController extends Controller
 
                        Secretaría<br>
                        Dirección de Bienestar, Admisión y Nivelación Universitaria</p>";
-        }
-        else{
+        } else {
             // $cuerpo = "<p>Estimado(a) <strong>$paciente->nombres</strong>; el <strong>$fecha_de_atencion</strong>, La Dirección de Bienestar, Admisión y
             //            Nivelación Universitaria, registró la derivación por motivo de <strong>$motivo_derivacion</strong> en el área de <strong>$area_derivada</strong>
             //             con el/la funcionario(a) <strong>$funcionario_derivado</strong> para el día <strong>$fecha_de_derivacion</strong> a las <strong>$hora_de_derivacion</strong>.
@@ -423,7 +429,6 @@ class CpuCorreoEnviadoController extends Controller
                 $request->input('id_doctor_al_que_derivan'),
                 $request->input('id_funcionario')
             );
-
         } else {
             // Manejar errores
             return response()->json(['error' => "Error consultando. Código de respuesta: $codigoRespuesta"], $codigoRespuesta);
@@ -437,7 +442,7 @@ class CpuCorreoEnviadoController extends Controller
     public function enviarCorreoDerivacionAreaSaludFuncionario(Request $request)
     {
         // Obtener los datos necesarios desde el array validado
-        $email_funcionario = 'junior.zamora@uleam.edu.ec';
+        $email_funcionario = 'p1311836587@dn.uleam.edu.ec';
         $nombres_funcionario = DB::table('cpu_personas')
             ->where('id', $request->input('id_funcionario'))
             ->value('nombres');
@@ -516,7 +521,6 @@ class CpuCorreoEnviadoController extends Controller
                 $request->input('id_doctor_al_que_derivan'),
                 $request->input('id_funcionario')
             );
-
         } else {
             // Manejar errores
             return response()->json(['error' => "Error consultando. Código de respuesta: $codigoRespuesta"], $codigoRespuesta);
@@ -531,7 +535,7 @@ class CpuCorreoEnviadoController extends Controller
     {
         // Obtener los datos necesarios desde el array validado
         // $email_paciente = $validatedData['email_paciente'];
-        $email_paciente = 'junior.zamora@uleam.edu.ec';
+        $email_paciente = 'p1311836587@dn.uleam.edu.ec';
         $area_atencion = $validatedData['id_area_atencion'];
 
         $area_atencion = DB::table('cpu_userrole')
@@ -626,9 +630,9 @@ class CpuCorreoEnviadoController extends Controller
     {
         // Obtener los datos necesarios desde el array validado
         // $email_paciente = $validatedData['email_paciente'];
-        $email_paciente = 'junior.zamora@uleam.edu.ec';
+        $email_paciente = 'p1311836587@dn.uleam.edu.ec';
         // $email_funcionario_derivado = $validatedData['derivacion.id_doctor_al_que_derivan'];
-        $email_funcionario_derivado = 'junior.zamora@uleam.edu.ec';
+        $email_funcionario_derivado = 'p1311836587@dn.uleam.edu.ec';
         // $area_atencion = $validatedData['id_area_atencion'];
 
         $area_atencion = DB::table('cpu_userrole')
@@ -857,6 +861,156 @@ class CpuCorreoEnviadoController extends Controller
                 $validatedData['id_paciente'],
                 $validatedData['id_funcionario_derivado'],
                 $validatedData['id_funcionario_atendio']
+            );
+        } else {
+            // Manejar errores
+            return response()->json(['error' => "Error consultando. Código de respuesta: $codigoRespuesta"], $codigoRespuesta);
+        }
+
+        // Devolver una respuesta
+        return response()->json(['message' => 'Solicitud enviada correctamente'], 200);
+    }
+
+    public function enviarCorreoPaciente(array $validatedData, $tipo)
+    {
+        // Obtener los datos necesarios desde el array validado
+        $email_paciente = 'p1311836587@dn.uleam.edu.ec';
+        $area_atencion = $validatedData['area_atencion'];
+        $fecha_para_atencion = $validatedData['fecha_para_atencion'];
+        $hora_para_atencion = $validatedData['hora_para_atencion'];
+        $nombres_funcionario = $validatedData['nombres_funcionario'];
+
+        // Ajustar el asunto y el cuerpo del correo según el tipo
+        if ($tipo === 'no_show') {
+            $asunto = "Cita no asistida en el área de $area_atencion";
+            $cuerpo = "<p>Estimado(a) ciudadano(a); La Dirección de Bienestar, Admisión y Nivelación Universitaria, informa que no asistió a su cita programada para el área de $area_atencion el día $fecha_para_atencion a las $hora_para_atencion. Si desea reagendar su cita, por favor acerquese al área de salud de la dirección. Saludos cordiales.</p>";
+        } else {
+            $asunto = "Reagendamiento de cita programada para el área de $area_atencion";
+            $cuerpo = "<p>Estimado(a) ciudadano(a); La Dirección de Bienestar, Admisión y Nivelación Universitaria, registra el reagendamiento de una cita programada para el área de $area_atencion para la fecha $fecha_para_atencion a las $hora_para_atencion con el funcionario $nombres_funcionario, por favor presentarse 15 minutos antes, saludos cordiales.</p>";
+        }
+
+        $persona = [
+            "destinatarios" => $email_paciente,
+            "cc" => "",
+            "cco" => "",
+            "asunto" => $asunto,
+            "cuerpo" => $cuerpo
+        ];
+
+        // Codificar los datos
+        $datosCodificados = json_encode($persona);
+
+        // URL de destino
+        $url = "https://prod-44.westus.logic.azure.com:443/workflows/4046dc46113a4d8bb5da374ef1ee3e32/triggers/manual/paths/invoke?api-version=2016-06-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=lA40KwffEyLqEjVA4uyHaWAHblO77vk2jXYEkjUG08s";
+
+        // Inicializar cURL
+        $ch = curl_init($url);
+
+        // Configurar opciones de cURL
+        curl_setopt_array($ch, array(
+            CURLOPT_CUSTOMREQUEST => "POST",
+            CURLOPT_POSTFIELDS => $datosCodificados,
+            CURLOPT_HTTPHEADER => array(
+                'Content-Type: application/json',
+                'Content-Length: ' . strlen($datosCodificados),
+                'Personalizado: ¡Hola mundo!',
+            ),
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_SSL_VERIFYPEER => false, // Deshabilitar verificación SSL (solo para pruebas)
+            CURLOPT_SSL_VERIFYHOST => false, // Deshabilitar verificación del host SSL (solo para pruebas)
+        ));
+
+        // Realizar la solicitud cURL
+        $resultado = curl_exec($ch);
+        $codigoRespuesta = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+
+        // Procesar la respuesta
+        if ($codigoRespuesta === 200) {
+            // Registrar el correo enviado en la base de datos
+            $this->registrarCorreoEnviado(
+                $email_paciente,
+                "",
+                $asunto,
+                $cuerpo,
+                $validatedData['id_paciente'],
+                $validatedData['id_funcionario_derivado'] ?? null,
+                $validatedData['id_funcionario_atendio'] ?? null
+            );
+        } else {
+            // Manejar errores
+            return response()->json(['error' => "Error consultando. Código de respuesta: $codigoRespuesta"], $codigoRespuesta);
+        }
+
+        // Devolver una respuesta
+        return response()->json(['message' => 'Solicitud enviada correctamente'], 200);
+    }
+
+    public function enviarCorreoFuncionario(array $validatedData, $tipo)
+    {
+        // Obtener los datos necesarios desde el array validado
+        $funcionario_email = 'p1311836587@dn.uleam.edu.ec';
+        $area_atencion = $validatedData['area_atencion'];
+        $fecha_para_atencion = $validatedData['fecha_para_atencion'];
+        $hora_para_atencion = $validatedData['hora_para_atencion'];
+        $nombres_paciente = $validatedData['nombres_paciente'];
+
+        // Ajustar el asunto y el cuerpo del correo según el tipo
+        if ($tipo === 'no_show') {
+            $asunto = "Paciente no asistió a la cita en el área de $area_atencion";
+            $cuerpo = "<p>Estimado(a) funcionario(a); La Dirección de Bienestar, Admisión y Nivelación Universitaria, informa que el ciudadano(a) $nombres_paciente no asistió a su cita programada para el área de $area_atencion el día $fecha_para_atencion a las $hora_para_atencion. Saludos cordiales.</p>";
+        } else {
+            $asunto = "Reagendamiento de cita programada para el área de $area_atencion";
+            $cuerpo = "<p>Estimado(a) funcionario(a); La Dirección de Bienestar, Admisión y Nivelación Universitaria, registra el reagendamiento de una cita para el área de $area_atencion para la fecha $fecha_para_atencion a las $hora_para_atencion con el ciudadano(a) $nombres_paciente, saludos cordiales.</p>";
+        }
+
+        $persona = [
+            "destinatarios" => $funcionario_email,
+            "cc" => "",
+            "cco" => "",
+            "asunto" => $asunto,
+            "cuerpo" => $cuerpo
+        ];
+
+        // Codificar los datos
+        $datosCodificados = json_encode($persona);
+
+        // URL de destino
+        $url = "https://prod-44.westus.logic.azure.com:443/workflows/4046dc46113a4d8bb5da374ef1ee3e32/triggers/manual/paths/invoke?api-version=2016-06-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=lA40KwffEyLqEjVA4uyHaWAHblO77vk2jXYEkjUG08s";
+
+        // Inicializar cURL
+        $ch = curl_init($url);
+
+        // Configurar opciones de cURL
+        curl_setopt_array($ch, array(
+            CURLOPT_CUSTOMREQUEST => "POST",
+            CURLOPT_POSTFIELDS => $datosCodificados,
+            CURLOPT_HTTPHEADER => array(
+                'Content-Type: application/json',
+                'Content-Length: ' . strlen($datosCodificados),
+                'Personalizado: ¡Hola mundo!',
+            ),
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_SSL_VERIFYPEER => false, // Deshabilitar verificación SSL (solo para pruebas)
+            CURLOPT_SSL_VERIFYHOST => false, // Deshabilitar verificación del host SSL (solo para pruebas)
+        ));
+
+        // Realizar la solicitud cURL
+        $resultado = curl_exec($ch);
+        $codigoRespuesta = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+
+        // Procesar la respuesta
+        if ($codigoRespuesta === 200) {
+            // Registrar el correo enviado en la base de datos
+            $this->registrarCorreoEnviado(
+                $funcionario_email,
+                "",
+                $asunto,
+                $cuerpo,
+                $validatedData['id_paciente'] ?? null,
+                $validatedData['id_funcionario_derivado'] ?? null,
+                $validatedData['id_funcionario_atendio'] ?? null
             );
         } else {
             // Manejar errores

@@ -16,26 +16,34 @@ class CpuDatosMedicos extends Model
         'enfermedades_catastroficas',
         'detalle_enfermedades',
         'tipo_sangre',
-        'tiene_seguro_medico',
+        'peso',
+        'talla',
+        'imc',
         'alergias',
-        'detalles_alergias',
         'embarazada',
-        'meses_embarazo',
+        'ultima_fecha_mestruacion',
+        'semanas_embarazo',
+        'fecha_estimada_parto',
+        'partos',
+        'partos_data',
         'observacion_embarazo',
         'dependiente_medicamento',
-        'medicamentos_dependiente'
+        'medicamentos_dependiente',
+        'tiene_seguro_medico',
+        'detalles_alergias'
     ];
 
     protected $casts = [
         'enfermedades_catastroficas' => 'boolean',
         'detalle_enfermedades' => 'json',
-        'tiene_seguro_medico' => 'boolean',
-        'alergias' => 'boolean',
-        'detalles_alergias' => 'json',
         'embarazada' => 'boolean',
-        'meses_embarazo' => 'decimal:2',
+        'semanas_embarazo' => 'decimal:2',
         'dependiente_medicamento' => 'boolean',
-        'medicamentos_dependiente' => 'json'
+        'medicamentos_dependiente' => 'json',
+        'tiene_seguro_medico' => 'boolean',
+        'detalles_alergias' => 'json',
+        'partos' => 'boolean',
+        'partos_data' => 'json'
     ];
 
     public function persona()

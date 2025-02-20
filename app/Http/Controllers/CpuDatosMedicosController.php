@@ -17,7 +17,7 @@ class CpuDatosMedicosController extends Controller
     public function store(Request $request)
     {
         $request->validate([
-            'id_persona' => 'required|exists:cpu_personas,id',
+            'id_persona' => 'nullable|exists:cpu_personas,id',
             'enfermedades_catastroficas' => 'nullable|boolean',
             'detalle_enfermedades' => 'nullable|json',
             'tipo_sangre' => 'nullable|exists:cpu_tipos_sangre,id',
@@ -29,6 +29,13 @@ class CpuDatosMedicosController extends Controller
             'observacion_embarazo' => 'nullable|string',
             'dependiente_medicamento' => 'nullable|boolean',
             'medicamentos_dependiente' => 'nullable|json',
+            'peso' => 'nullable|numeric',
+            'talla' => 'nullable|numeric',
+            'imc' => 'nullable|numeric',
+            'ultima_fecha_mestruacion' => 'nullable|date',
+            'semanas_embarazo' => 'nullable|numeric',
+            'fecha_estimada_parto' => 'nullable|date',
+            'partos_data' => 'nullable|json',
         ]);
 
         $datosMedicos = CpuDatosMedicos::create($request->all());
@@ -65,6 +72,13 @@ class CpuDatosMedicosController extends Controller
             'observacion_embarazo' => 'nullable|string',
             'dependiente_medicamento' => 'sometimes|required|boolean',
             'medicamentos_dependiente' => 'nullable|json',
+            'peso' => 'nullable|numeric',
+            'talla' => 'nullable|numeric',
+            'imc' => 'nullable|numeric',
+            'ultima_fecha_mestruacion' => 'nullable|date',
+            'semanas_embarazo' => 'nullable|numeric',
+            'fecha_estimada_parto' => 'nullable|date',
+            'partos_data' => 'nullable|json',
         ]);
 
         $datosMedicos->update($request->all());

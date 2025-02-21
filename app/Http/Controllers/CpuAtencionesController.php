@@ -335,27 +335,27 @@ class CpuAtencionesController extends Controller
             // }
 
             // Ahora buscar en `cpu_atencion_nutricion` por `id_atencion`, NO por `id_derivacion`
-        if (strtoupper($area_atencion) === "NUTRICIÓN") {
-            $atencionNutricion = CpuAtencionNutricion::where('id_atencion', $ultimaConsulta->id)->first();
+            if (strtoupper($area_atencion) === "NUTRICIÓN") {
+                $atencionNutricion = CpuAtencionNutricion::where('id_atencion', $ultimaConsulta->id)->first();
 
-            // 🔍 Agregar LOG para ver lo que devuelve CpuAtencionNutricion
-            Log::info("Datos de CpuAtencionNutricion: ", $atencionNutricion ? $atencionNutricion->toArray() : ['Sin datos']);
+                // 🔍 Agregar LOG para ver lo que devuelve CpuAtencionNutricion
+                Log::info("Datos de CpuAtencionNutricion: ", $atencionNutricion ? $atencionNutricion->toArray() : ['Sin datos']);
 
-            if ($atencionNutricion) {
-                $respuesta['datos_nutricion'] = $atencionNutricion->toArray();
+                if ($atencionNutricion) {
+                    $respuesta['datos_nutricion'] = $atencionNutricion->toArray();
+                }
             }
-        }
 
-        if (strtoupper($area_atencion) === "FISIOTERAPIA") {
-            $atencionFisioterapia = CpuAtencionFisioterapia::where('id_atencion', $ultimaConsulta->id)->first();
+            if (strtoupper($area_atencion) === "FISIOTERAPIA") {
+                $atencionFisioterapia = CpuAtencionFisioterapia::where('id_atencion', $ultimaConsulta->id)->first();
 
-            // 🔍 Agregar LOG para ver lo que devuelve CpuAtencionNutricion
-            Log::info("Datos de CpuAtencionFisioterapia: ", $atencionFisioterapia ? $atencionFisioterapia->toArray() : ['Sin datos']);
+                // 🔍 Agregar LOG para ver lo que devuelve CpuAtencionNutricion
+                Log::info("Datos de CpuAtencionFisioterapia: ", $atencionFisioterapia ? $atencionFisioterapia->toArray() : ['Sin datos']);
 
-            if ($atencionFisioterapia) {
-                $respuesta['datos_fisioterapia'] = $atencionFisioterapia->toArray();
+                if ($atencionFisioterapia) {
+                    $respuesta['datos_fisioterapia'] = $atencionFisioterapia->toArray();
+                }
             }
-        }
 
             // Verificar si ya se ha registrado una auditoría reciente para evitar duplicados
             $cacheKey = 'auditoria_cpu_atencion_ultima_consulta_' . $id_persona;
@@ -669,6 +669,65 @@ class CpuAtencionesController extends Controller
 
             $nutricion->save();
 
+            $nombrePlan = $request->input('nombre_plan_nutricional', 'Plan Nutricional');
+            $planNutricional = json_decode($request->input('plan_nutricional'), true) ?? [];
+            $permitidos = json_decode($request->input('permitidos'), true) ?? [];
+            $noPermitidos = json_decode($request->input('no_permitidos'), true) ?? [];
+
+            // 📌 Construcción del formato de texto estructurado
+            $planTexto = "📌 *Plan Nutricional: {$nombrePlan}*\n\n";
+
+            // 🍏 Alimentos Permitidos
+            $planTexto .= "🍏 *Alimentos Permitidos:*\n";
+            if (!empty($permitidos)) {
+                foreach ($permitidos as $alimento) {
+                    $planTexto .= "- {$alimento}\n";
+                }
+            } else {
+                $planTexto .= "- No se han especificado alimentos permitidos.\n";
+            }
+
+            // 🚫 Alimentos No Permitidos
+            $planTexto .= "\n🚫 *Alimentos No Permitidos:*\n";
+            if (!empty($noPermitidos)) {
+                foreach ($noPermitidos as $alimento) {
+                    $planTexto .= "- {$alimento}\n";
+                }
+            } else {
+                $planTexto .= "- No se han especificado alimentos no permitidos.\n";
+            }
+
+            // 📅 Plan Nutricional Semanal
+            $planTexto .= "\n📅 *Distribución Semanal:*\n";
+
+            $diasSemana = [
+                'lunes' => '🔹 *Lunes*',
+                'martes' => '🔹 *Martes*',
+                'miercoles' => '🔹 *Miércoles*',
+                'jueves' => '🔹 *Jueves*',
+                'viernes' => '🔹 *Viernes*',
+                'sabado' => '🔹 *Sábado*',
+                'domingo' => '🔹 *Domingo*'
+            ];
+
+            foreach ($diasSemana as $dia => $nombreDia) {
+                if (isset($planNutricional[$dia])) {
+                    $planTexto .= "\n{$nombreDia}\n";
+                    foreach ($planNutricional[$dia] as $comida => $descripcion) {
+                        $emoji = match ($comida) {
+                            'desayuno' => '🍽️',
+                            'almuerzo' => '🍛',
+                            'merienda' => '🍵',
+                            'entreComida1' => '🍏',
+                            'entreComida2' => '🥑',
+                            default => '🍴',
+                        };
+                        $planTexto .= "  - {$emoji} *" . ucfirst($comida) . ":* {$descripcion}\n";
+                    }
+                    $planTexto .= "-----------------------\n";
+                }
+            }
+
             // Verificar si se envía el `id_turno_asignado`
             if ($request->filled('id_turno_asignado')) {
                 Log::info('Valor de id_turno_asignado:', ['id_turno_asignado' => $request->input('id_turno_asignado')]);
@@ -696,6 +755,69 @@ class CpuAtencionesController extends Controller
                     $turno = CpuTurno::findOrFail($derivacionData['id_turno_asignado']);
                     $turno->estado = 2; // Actualiza el estado del turno a 2
                     $turno->save();
+
+                    // ✅ Enviar correos según la lógica del controlador
+                    $correoController = new CpuCorreoEnviadoController();
+
+                    // 📩 Enviar correo de atención al paciente
+                    $correoAtencionPaciente = $correoController->enviarCorreoAtencionAreaSaludPaciente(new Request([
+                        'id_atencion' => $idAtencion,
+                        'id_area_atencion' => $request->input('id_area'),
+                        'fecha_hora_atencion' => Carbon::now()->format("Y-m-d H:i:s"),
+                        'motivo_atencion' => $request->input('motivo'),
+                        'id_paciente' => $request->input('id_paciente'),
+                        'id_funcionario' => $request->input('id_funcionario'),
+                        'plan_nutricional_texto' => $planTexto,
+                    ]));
+
+                    if (!$correoAtencionPaciente->isSuccessful()) {
+                        // ❌ Si falla el correo, eliminar la atención guardada
+                        $atencion->delete();
+                        $nutricion->delete();
+                        DB::rollBack();
+                        return response()->json(['error' => 'Error al enviar el correo de atención, la atención no fue guardada'], 500);
+                    }
+
+                    // 📩 Enviar correos de derivación si aplica
+                    if ($request->filled('id_doctor_al_que_derivan')) {
+                        $correoDerivacionPaciente = $correoController->enviarCorreoDerivacionAreaSaludPaciente(new Request([
+                            'id_atencion' => $idAtencion,
+                            'id_area_atencion' => $request->input('id_area'),
+                            'motivo_derivacion' => $request->input('motivo_derivacion'),
+                            'id_paciente' => $request->input('id_paciente'),
+                            'id_funcionario' => $request->input('id_funcionario'),
+                            'id_doctor_al_que_derivan' => $request->input('id_doctor_al_que_derivan'),
+                            'id_area_derivada' => $request->input('id_area_derivada'),
+                            'fecha_para_atencion' => $request->input('fecha_para_atencion'),
+                            'hora_para_atencion' => $request->input('hora_para_atencion'),
+                        ]));
+
+                        if (!$correoDerivacionPaciente->isSuccessful()) {
+                            $atencion->delete();
+                            $nutricion->delete();
+                            DB::rollBack();
+                            return response()->json(['error' => 'Error al enviar el correo de derivación al paciente, la atención no fue guardada'], 500);
+                        }
+
+                        $correoDerivacionFuncionario = $correoController->enviarCorreoDerivacionAreaSaludFuncionario(new Request([
+                            'id_atencion' => $idAtencion,
+                            'id_area_atencion' => $request->input('id_area'),
+                            'motivo_derivacion' => $request->input('motivo_derivacion'),
+                            'id_paciente' => $request->input('id_paciente'),
+                            'id_funcionario' => $request->input('id_funcionario'),
+                            'id_doctor_al_que_derivan' => $request->input('id_doctor_al_que_derivan'),
+                            'id_area_derivada' => $request->input('id_area_derivada'),
+                            'fecha_para_atencion' => $request->input('fecha_para_atencion'),
+                            'hora_para_atencion' => $request->input('hora_para_atencion'),
+                        ]));
+
+                        if (!$correoDerivacionFuncionario->isSuccessful()) {
+                            $atencion->delete();
+                            $nutricion->delete();
+                            DB::rollBack();
+                            return response()->json(['error' => 'Error al enviar el correo de derivación al funcionario, la atención no fue guardada'], 500);
+                        }
+                    }
                 } catch (\Illuminate\Validation\ValidationException $e) {
                     // Capturar los errores de validación y devolver una respuesta JSON
                     return response()->json([

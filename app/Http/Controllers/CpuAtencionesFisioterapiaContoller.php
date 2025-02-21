@@ -223,16 +223,18 @@ class CpuAtencionesFisioterapiaContoller extends Controller
 
                     // ✅ Enviar correo de atención al paciente
                     $correoController = new CpuCorreoEnviadoController();
-                    $correoResponse = $correoController->enviarCorreoAtencionAreaSaludPaciente(new Request([
+
+                    // 📩 Enviar correo de atención al paciente
+                    $correoAtencionPaciente = $correoController->enviarCorreoAtencionAreaSaludPaciente(new Request([
                         'id_atencion' => $idAtencion,
                         'id_area_atencion' => $request->input('id_area'),
                         'fecha_hora_atencion' => Carbon::now()->format("Y-m-d H:i:s"),
-                        'motivo_atencion' => $request->input('motivo_derivacion'),
+                        'motivo_atencion' => $request->input('motivo'),
                         'id_paciente' => $request->input('id_paciente'),
                         'id_funcionario' => $request->input('id_funcionario'),
                     ]));
 
-                    if (!$correoResponse->isSuccessful()) {
+                    if (!$correoAtencionPaciente->isSuccessful()) {
                         // ❌ Si falla el correo, eliminar la atención guardada
                         $atencion->delete();
                         $fisioterapia->delete();
@@ -240,16 +242,18 @@ class CpuAtencionesFisioterapiaContoller extends Controller
                         return response()->json(['error' => 'Error al enviar el correo de atención, la atención no fue guardada'], 500);
                     }
 
-                    // 📌 Si hay derivación, enviar correos de derivación
-                    if ($request->filled('id_doctor_al_que_derivan')) {
+                     // 📩 Enviar correos de derivación si aplica
+                     if ($request->filled('id_doctor_al_que_derivan')) {
                         $correoDerivacionPaciente = $correoController->enviarCorreoDerivacionAreaSaludPaciente(new Request([
                             'id_atencion' => $idAtencion,
                             'id_area_atencion' => $request->input('id_area'),
-                            'motivo_atencion' => $request->input('motivo_derivacion'),
+                            'motivo_derivacion' => $request->input('motivo_derivacion'),
                             'id_paciente' => $request->input('id_paciente'),
                             'id_funcionario' => $request->input('id_funcionario'),
                             'id_doctor_al_que_derivan' => $request->input('id_doctor_al_que_derivan'),
-                            'id_area_derivada' => $request->input('id_area'),
+                            'id_area_derivada' => $request->input('id_area_derivada'),
+                            'fecha_para_atencion' => $request->input('fecha_para_atencion'),
+                            'hora_para_atencion' => $request->input('hora_para_atencion'),
                         ]));
 
                         if (!$correoDerivacionPaciente->isSuccessful()) {
@@ -262,11 +266,13 @@ class CpuAtencionesFisioterapiaContoller extends Controller
                         $correoDerivacionFuncionario = $correoController->enviarCorreoDerivacionAreaSaludFuncionario(new Request([
                             'id_atencion' => $idAtencion,
                             'id_area_atencion' => $request->input('id_area'),
-                            'motivo_atencion' => $request->input('motivo_derivacion'),
+                            'motivo_derivacion' => $request->input('motivo_derivacion'),
                             'id_paciente' => $request->input('id_paciente'),
                             'id_funcionario' => $request->input('id_funcionario'),
                             'id_doctor_al_que_derivan' => $request->input('id_doctor_al_que_derivan'),
-                            'id_area_derivada' => $request->input('id_area'),
+                            'id_area_derivada' => $request->input('id_area_derivada'),
+                            'fecha_para_atencion' => $request->input('fecha_para_atencion'),
+                            'hora_para_atencion' => $request->input('hora_para_atencion'),
                         ]));
 
                         if (!$correoDerivacionFuncionario->isSuccessful()) {

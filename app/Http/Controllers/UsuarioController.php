@@ -268,32 +268,32 @@ class UsuarioController extends Controller
                 Log::error("Profesion no encontrada para ID: " . $funcionario->usr_profesion);
             }
 
-            return response()->json([
-                'name' => $funcionario->name,
-                'profesion' => $profesion ? $profesion->profesion : null,
-            ]);
-        } catch (\Exception $e) {
-            Log::error('Error al obtener información del funcionario: ' . $e->getMessage());
-            return response()->json(['error' => 'Error interno del servidor'], 500);
+                return response()->json([
+                    'name' => $funcionario->name,
+                    'profesion' => $profesion ? $profesion->profesion : null,
+                ]);
+            } catch (\Exception $e) {
+                \Log::error('Error al obtener información del funcionario: ' . $e->getMessage());
+                return response()->json(['error' => 'Error interno del servidor'], 500);
+            }
         }
-    }
-    /////CAMBIO DE CONTRASEÑA
-    public function cambiarContrasena(Request $request)
-    {
-        // Convertir `id` a número y validar
-        $request->merge(['id' => (int) $request->id]);
+        /////CAMBIO DE CONTRASEÑA
+        public function cambiarContrasena(Request $request)
+{
+    // Convertir `id` a número y validar
+    $request->merge(['id' => (int) $request->id]);
 
-        $validator = Validator::make($request->all(), [
-            'id' => 'required|exists:users,id',
-            'password_actual' => 'required',
-            'nueva_contrasena' => 'nullable|min:8|confirmed', // Se mantiene la validación de `confirmed`
-            'foto_perfil' => 'nullable|image|mimes:jpeg,png,jpg|max:2048' // Asegurar que la imagen sea válida
-        ], [
-            'password_actual.required' => 'La contraseña actual es obligatoria.',
-            'nueva_contrasena.required' => 'La nueva contraseña es obligatoria.',
-            'nueva_contrasena.min' => 'La nueva contraseña debe tener al menos 8 caracteres.',
-            'nueva_contrasena.confirmed' => 'Las contraseñas nuevas no coinciden.',
-        ]);
+    $validator = Validator::make($request->all(), [
+        'id' => 'required|exists:users,id',
+        'password_actual' => 'required',
+        'nueva_contrasena' => 'nullable|min:8|confirmed', // Se mantiene la validación de `confirmed`
+        'foto_perfil' => 'nullable|image|mimes:jpeg,png,jpg|max:2048' // Asegurar que la imagen sea válida
+    ], [
+        'password_actual.required' => 'La contraseña actual es obligatoria.',
+        'nueva_contrasena.required' => 'La nueva contraseña es obligatoria.',
+        'nueva_contrasena.min' => 'La nueva contraseña debe tener al menos 8 caracteres.',
+        'nueva_contrasena.confirmed' => 'Las contraseñas nuevas no coinciden.',
+    ]);
 
         if ($validator->fails()) {
             return response()->json([
@@ -302,42 +302,42 @@ class UsuarioController extends Controller
             ], 400);
         }
 
-        // Obtener usuario
-        $user = User::find($request->id);
+    // Obtener usuario
+    $user = User::find($request->id);
 
-        // Validar contraseña actual
-        if (!Hash::check($request->password_actual, $user->password)) {
-            return response()->json([
-                'success' => false,
-                'message' => ['password_actual' => 'La contraseña actual es incorrecta.']
-            ], 400);
-        }
+    // Validar contraseña actual
+    if (!Hash::check($request->password_actual, $user->password)) {
+        return response()->json([
+            'success' => false,
+            'message' => ['password_actual' => 'La contraseña actual es incorrecta.']
+        ], 400);
+    }
 
-        // Actualizar la contraseña si se proporciona
-        if ($request->filled('nueva_contrasena')) {
-            $user->password = Hash::make($request->nueva_contrasena);
-        }
+    // Actualizar la contraseña si se proporciona
+    if ($request->filled('nueva_contrasena')) {
+        $user->password = Hash::make($request->nueva_contrasena);
+    }
 
-        // Guardar nueva imagen si se sube
-        if ($request->hasFile('foto_perfil')) {
-            $imagen = $request->file('foto_perfil');
-            $nombreImagen = time() . '.' . $imagen->getClientOriginalExtension();
-            $imagen->move(public_path('Perfiles'), $nombreImagen);
+    // Guardar nueva imagen si se sube
+    if ($request->hasFile('foto_perfil')) {
+        $imagen = $request->file('foto_perfil');
+        $nombreImagen = time() . '.' . $imagen->getClientOriginalExtension();
+        $imagen->move(public_path('Perfiles'), $nombreImagen);
 
-            // ✅ Guardar solo el nombre del archivo en la base de datos
-            $user->foto_perfil = $nombreImagen;
-        }
+        // ✅ Guardar solo el nombre del archivo en la base de datos
+        $user->foto_perfil = $nombreImagen;
+    }
 
         $user->save();
         //auditar
         $this->auditar('usuario', 'cambiarContrasena', '', $user, 'MODIFICACION', 'Modificación de usuario', $request);
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Contraseña y foto de perfil actualizadas correctamente.',
-            'foto_perfil' => url('Perfiles/' . $user->foto_perfil) // ✅ Devolver la URL completa para el frontend
-        ]);
-    }
+    return response()->json([
+        'success' => true,
+        'message' => 'Contraseña y foto de perfil actualizadas correctamente.',
+        'foto_perfil' => url('Perfiles/' . $user->foto_perfil) // ✅ Devolver la URL completa para el frontend
+    ]);
+}
 
     //auditar
     private function auditar($tabla, $campo, $dataOld, $dataNew, $tipo, $descripcion, $request = null)

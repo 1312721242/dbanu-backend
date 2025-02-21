@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\Auth;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Validator;
 
 class CpuDerivacionController extends Controller
 {
@@ -58,6 +59,7 @@ class CpuDerivacionController extends Controller
                     'id_paciente' => $data['id_paciente']
                 ]);
         }
+        $this->auditar('cpu_derivacion', 'store', '', $derivacion, 'INSERCION', 'Creación de derivación', $request);
 
         return response()->json($derivacion, 201);
     }
@@ -84,6 +86,7 @@ class CpuDerivacionController extends Controller
         ]);
 
         $derivacion->update($data);
+        $this->auditar('cpu_derivacion', 'update', '', $derivacion, 'MODIFICACION', 'Actualización de derivación', $request);
 
         return response()->json($derivacion);
     }
@@ -97,7 +100,7 @@ class CpuDerivacionController extends Controller
         }
 
         $derivacion->delete();
-
+        $this->auditar('cpu_derivacion', 'destroy', '', $derivacion, 'ELIMINACION', 'Eliminación de derivación', $id);
         return response()->json(['success' => true]);
     }
 
@@ -239,7 +242,7 @@ class CpuDerivacionController extends Controller
 
         $derivacion->id_estado_derivacion = $data['id_estado_derivacion'];
         $derivacion->save();
-
+        $this->auditar('cpu_derivacion', 'updateDerivacion', '', $derivacion, 'MODIFICACION', 'Actualización de derivación', $request);
         return response()->json(['success' => true, 'derivacion' => $derivacion]);
     }
 
@@ -304,11 +307,17 @@ class CpuDerivacionController extends Controller
                 ->update(['estado' => 7]);
 
             // Llamar a la función enviarCorreo con los datos necesarios después de que la transacción se haya realizado correctamente
-            $this->enviarCorreoPaciente($validatedData, 'reagendamiento');
-            $this->enviarCorreoFuncionario($validatedData, 'reagendamiento');
+            // $this->enviarCorreoPaciente($validatedData, 'reagendamiento');
+            // $this->enviarCorreoFuncionario($validatedData, 'reagendamiento');
+            $this->auditar('cpu_derivacion', 'Reagendar', '', $derivacion, 'INSERCION', 'Creación de derivación', $request);
 
             // Si todo va bien, confirmar la transacción
             DB::commit();
+
+            // Enviar correos después de confirmar la transacción
+            $correoController = new CpuCorreoEnviadoController();
+            $correoController->enviarCorreoPaciente($validatedData, 'reagendamiento');
+            $correoController->enviarCorreoFuncionario($validatedData, 'reagendamiento');
 
             return response()->json(['message' => 'Registro creado y actualizado correctamente.'], 201);
         } catch (\Exception $e) {
@@ -320,10 +329,67 @@ class CpuDerivacionController extends Controller
     }
 
     // Función para actualizar el estado de derivación a 5 (No asistió a la cita)
+    // public function noAsistioCita(Request $request, $id)
+    // {
+    //     // Validar los datos de entrada
+    //     $validatedData = $request->validate([
+    //         'email_paciente' => 'required|string',
+    //         'area_atencion' => 'required|string',
+    //         'fecha_para_atencion' => 'required|date',
+    //         'hora_para_atencion' => 'required|string',
+    //         'nombres_funcionario' => 'required|string',
+    //         'nombres_paciente' => 'required|string',
+    //         'funcionario_email' => 'required|string',
+    //     ]);
+
+    //     DB::beginTransaction();
+
+    //     try {
+    //         // Verificar si el ID existe en la tabla cpu_derivaciones
+    //         $derivacion = CpuDerivacion::find($id);
+
+    //         if (!$derivacion) {
+    //             return response()->json(['message' => 'Derivación no encontrada.'], 404);
+    //         }
+
+    //         // Actualizar el campo id_estado_derivacion a 5
+    //         $derivacion->update(['id_estado_derivacion' => 5]);
+
+    //         // Enviar correos al paciente y al funcionario utilizando los datos validados
+    //         // $this->enviarCorreoPaciente($validatedData, 'no_show');
+    //         // $this->enviarCorreoFuncionario($validatedData, 'no_show');
+
+    //         DB::commit();
+
+    //         // Enviar correos después de confirmar la transacción
+    //         $correoController = new CpuCorreoEnviadoController();
+    //         $correoController->enviarCorreoPaciente($validatedData, 'no_show');
+    //         $correoController->enviarCorreoFuncionario($validatedData, 'no_show');
+
+    //         return response()->json(['message' => 'Estado de derivación actualizado a 5 correctamente y correos enviados.'], 200);
+    //     } catch (\Exception $e) {
+    //         DB::rollBack();
+    //         return response()->json(['error' => 'Error al actualizar el estado de derivación: ' . $e->getMessage()], 500);
+    //     }
+    // }
+
     public function noAsistioCita(Request $request, $id)
     {
-        // Validar los datos de entrada
-        $validatedData = $request->validate([
+        // 🔍 Imprimir los datos recibidos antes de la validación
+        Log::info('📌 Datos recibidos en noAsistioCita:', $request->all());
+
+        // 🔥 Evita que Laravel transforme `""` en `null`
+        $validatedData = $request->all();
+
+        // Si `id_paciente` no existe o es `null`, lánzalo manualmente
+        if (!isset($validatedData['id_paciente'])) {
+            Log::error('❌ Error: id_paciente no está presente en los datos.');
+            return response()->json(['error' => 'Falta el campo id_paciente'], 400);
+        }
+
+        // 🔥 Validación manual para mayor control
+        $rules = [
+            'id_paciente' => 'required|integer',
             'email_paciente' => 'required|string',
             'area_atencion' => 'required|string',
             'fecha_para_atencion' => 'required|date',
@@ -331,19 +397,24 @@ class CpuDerivacionController extends Controller
             'nombres_funcionario' => 'required|string',
             'nombres_paciente' => 'required|string',
             'funcionario_email' => 'required|string',
-        ]);
+        ];
+        $validator = Validator::make($validatedData, $rules);
+
+        if ($validator->fails()) {
+            Log::error('❌ Error en validación:', ['errors' => $validator->errors()]);
+            return response()->json(['error' => $validator->errors()], 400);
+        }
 
         DB::beginTransaction();
 
         try {
-            // Verificar si el ID existe en la tabla cpu_derivaciones
+            // Buscar derivación
             $derivacion = CpuDerivacion::find($id);
-
             if (!$derivacion) {
                 return response()->json(['message' => 'Derivación no encontrada.'], 404);
             }
 
-            // Actualizar el campo id_estado_derivacion a 5
+            // Actualizar estado de la derivación
             $derivacion->update(['id_estado_derivacion' => 5]);
 
             // Enviar correos al paciente y al funcionario utilizando los datos validados
@@ -351,13 +422,14 @@ class CpuDerivacionController extends Controller
             $this->enviarCorreoFuncionario($validatedData, 'no_show');
 
             DB::commit();
-
-            return response()->json(['message' => 'Estado de derivación actualizado a 5 correctamente y correos enviados.'], 200);
+            return response()->json(['message' => 'Estado actualizado y correos enviados.'], 200);
         } catch (\Exception $e) {
             DB::rollBack();
-            return response()->json(['error' => 'Error al actualizar el estado de derivación: ' . $e->getMessage()], 500);
+            Log::error('❌ Error en la transacción:', ['error' => $e->getMessage()]);
+            return response()->json(['error' => 'Error en la operación: ' . $e->getMessage()], 500);
         }
     }
+
 
 
 
@@ -498,5 +570,72 @@ class CpuDerivacionController extends Controller
 
         // Devolver una respuesta
         return response()->json(['message' => 'Solicitud enviada correctamente'], 200);
+    }
+
+    // Función para auditar
+    private function auditar($tabla, $campo, $dataOld, $dataNew, $tipo, $descripcion, $request = null)
+    {
+        $usuario = $request ? $request->user()->name : auth()->user()->name;
+        $ip = $request ? $request->ip() : request()->ip();
+        $ipv4 = gethostbyname(gethostname());
+        $publicIp = file_get_contents('http://ipecho.net/plain');
+        $ioConcatenadas = 'IP LOCAL: ' . $ip . '  --IPV4: ' . $ipv4 . '  --IP PUBLICA: ' . $publicIp;
+        $nombreequipo = gethostbyaddr($ip);
+        $userAgent = $request ? $request->header('User-Agent') : request()->header('User-Agent');
+        $tipoEquipo = 'Desconocido';
+
+        if (stripos($userAgent, 'Mobile') !== false) {
+            $tipoEquipo = 'Celular';
+        } elseif (stripos($userAgent, 'Tablet') !== false) {
+            $tipoEquipo = 'Tablet';
+        } elseif (stripos($userAgent, 'Laptop') !== false || stripos($userAgent, 'Macintosh') !== false) {
+            $tipoEquipo = 'Laptop';
+        } elseif (stripos($userAgent, 'Windows') !== false || stripos($userAgent, 'Linux') !== false) {
+            $tipoEquipo = 'Computador de Escritorio';
+        }
+        $nombreUsuarioEquipo = get_current_user() . ' en ' . $tipoEquipo;
+
+        $fecha = now();
+        $codigo_auditoria = strtoupper($tabla . '_' . $campo . '_' . $tipo );
+        DB::table('cpu_auditoria')->insert([
+            'aud_user' => $usuario,
+            'aud_tabla' => $tabla,
+            'aud_campo' => $campo,
+            'aud_dataold' => $dataOld,
+            'aud_datanew' => $dataNew,
+            'aud_tipo' => $tipo,
+            'aud_fecha' => $fecha,
+            'aud_ip' => $ioConcatenadas,
+            'aud_tipoauditoria' => $this->getTipoAuditoria($tipo),
+            'aud_descripcion' => $descripcion,
+            'aud_nombreequipo' => $nombreequipo,
+            'aud_descrequipo' => $nombreUsuarioEquipo,
+            'aud_codigo' => $codigo_auditoria,
+            'created_at' => now(),
+            'updated_at' => now(),
+
+        ]);
+    }
+
+    private function getTipoAuditoria($tipo)
+    {
+        switch ($tipo) {
+            case 'CONSULTA':
+                return 1;
+            case 'INSERCION':
+                return 3;
+            case 'MODIFICACION':
+                return 2;
+            case 'ELIMINACION':
+                return 4;
+            case 'LOGIN':
+                return 5;
+            case 'LOGOUT':
+                return 6;
+            case 'DESACTIVACION':
+                return 7;
+            default:
+                return 0;
+        }
     }
 }

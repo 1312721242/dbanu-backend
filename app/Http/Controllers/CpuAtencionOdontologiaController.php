@@ -11,12 +11,15 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Auth;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Cache;
+
 class CpuAtencionOdontologiaController extends Controller
 {
     public function store(Request $request)
     {
         try {
-            \Log::info('Datos recibidos para atención odontológica', $request->all());
+            Log::info('Datos recibidos para atención odontológica', $request->all());
             DB::beginTransaction();
             // Validar los datos del request, permitiendo que los campos de diagnóstico y otros sean opcionales
             $validator = Validator::make($request->all(), [
@@ -112,6 +115,14 @@ class CpuAtencionOdontologiaController extends Controller
                     ->update(['estado' => 7]);
             }
 
+            // Auditoría
+            $this->auditar('cpu_atencion_odontologia', 'id', '', $atencion->id, 'INSERCION', "INSERCION DE NUEVA ATENCION ODONTOLOGIA: {$atencion->id},
+                                                                                PACIENTE: {$request->input('id_persona')},
+                                                                                FUNCIONARIO: {$request->input('id_funcionario')},
+                                                                                VIA DE ATENCION: {$request->input('via_atencion')},
+                                                                                MOTIVO DE ATENCION: {$request->input('motivo_atencion')},
+                                                                                FECHA Y HORA DE ATENCION: {$request->input('fecha_hora_atencion')}", $request);
+
             DB::commit();
             // return response()->json(['message' => 'Atención guardada con éxito'], 201);
             return response()->json(['success' => true, 'atencion_id' => $atencion->id]);
@@ -123,6 +134,73 @@ class CpuAtencionOdontologiaController extends Controller
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
             ], 500);
+        }
+    }
+
+    // Función para auditar
+    private function auditar($tabla, $campo, $dataOld, $dataNew, $tipo, $descripcion, $request = null)
+    {
+        $usuario = $request ? $request->user()->name : auth()->user()->name;
+        $ip = $request ? $request->ip() : request()->ip();
+        $ipv4 = gethostbyname(gethostname());
+        $publicIp = file_get_contents('http://ipecho.net/plain');
+        $ioConcatenadas = 'IP LOCAL: ' . $ip . '  --IPV4: ' . $ipv4 . '  --IP PUBLICA: ' . $publicIp;
+        $nombreequipo = gethostbyaddr($ip);
+        $userAgent = $request ? $request->header('User-Agent') : request()->header('User-Agent');
+        $tipoEquipo = 'Desconocido';
+
+        if (stripos($userAgent, 'Mobile') !== false) {
+            $tipoEquipo = 'Celular';
+        } elseif (stripos($userAgent, 'Tablet') !== false) {
+            $tipoEquipo = 'Tablet';
+        } elseif (stripos($userAgent, 'Laptop') !== false || stripos($userAgent, 'Macintosh') !== false) {
+            $tipoEquipo = 'Laptop';
+        } elseif (stripos($userAgent, 'Windows') !== false || stripos($userAgent, 'Linux') !== false) {
+            $tipoEquipo = 'Computador de Escritorio';
+        }
+        $nombreUsuarioEquipo = get_current_user() . ' en ' . $tipoEquipo;
+
+        $fecha = now();
+        $codigo_auditoria = strtoupper($tabla . '_' . $campo . '_' . $tipo );
+        DB::table('cpu_auditoria')->insert([
+            'aud_user' => $usuario,
+            'aud_tabla' => $tabla,
+            'aud_campo' => $campo,
+            'aud_dataold' => $dataOld,
+            'aud_datanew' => $dataNew,
+            'aud_tipo' => $tipo,
+            'aud_fecha' => $fecha,
+            'aud_ip' => $ioConcatenadas,
+            'aud_tipoauditoria' => $this->getTipoAuditoria($tipo),
+            'aud_descripcion' => $descripcion,
+            'aud_nombreequipo' => $nombreequipo,
+            'aud_descrequipo' => $nombreUsuarioEquipo,
+            'aud_codigo' => $codigo_auditoria,
+            'created_at' => now(),
+            'updated_at' => now(),
+
+        ]);
+    }
+
+    private function getTipoAuditoria($tipo)
+    {
+        switch ($tipo) {
+            case 'CONSULTA':
+                return 1;
+            case 'INSERCION':
+                return 3;
+            case 'MODIFICACION':
+                return 2;
+            case 'ELIMINACION':
+                return 4;
+            case 'LOGIN':
+                return 5;
+            case 'LOGOUT':
+                return 6;
+            case 'DESACTIVACION':
+                return 7;
+            default:
+                return 0;
         }
     }
 }

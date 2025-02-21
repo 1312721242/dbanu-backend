@@ -14,6 +14,7 @@ use App\Models\CpuCarrera;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Cache;
 
 class AuthController extends Controller
 {
@@ -45,7 +46,7 @@ class AuthController extends Controller
             'token' => $token,
             'name' => $user->name,
             'usr_tipo' => $user->tipoUsuario->role,
-        'foto_perfil' => url('Perfiles/' . $user->foto_perfil), // Generar URL completa
+            'foto_perfil' => url('Perfiles/' . $user->foto_perfil), // Generar URL completa
         ];
 
         if ($user->sede) {
@@ -55,6 +56,9 @@ class AuthController extends Controller
         if ($user->profesion) {
             $userData['usr_profesion'] = $user->profesion->profesion;
         }
+
+        // Auditoría
+        $this->auditar('auth', 'login', '', $user->email, 'LOGIN', "LOGIN DE USUARIO: {$user->email}", $request);
 
         return response()->json($userData);
     }
@@ -155,6 +159,9 @@ class AuthController extends Controller
         }
         $userData['carrera'] = $carreraNombre;
 
+        // Auditoría
+        $this->auditar('auth', 'loginApp', '', $ciudadano->email, 'LOGIN', "LOGIN DE USUARIO APP: {$ciudadano->email}", $request);
+
         return response()->json($userData);
     }
 
@@ -166,6 +173,9 @@ class AuthController extends Controller
 
         // Eliminar el token de restablecimiento de contraseña de la base de datos
         DB::table('password_reset_tokens')->where('email', $user->email)->delete();
+
+        // Auditoría
+        $this->auditar('auth', 'logout', $user->email, '', 'LOGOUT', "LOGOUT DE USUARIO: {$user->email}", $request);
 
         return response()->json(['message' => 'Desconectado/a']);
     }
@@ -189,6 +199,73 @@ class AuthController extends Controller
         // $userData['password'] = Hash::make($user->password);
         $userData['password'] = $user->password;
 
+        // Auditoría
+        $this->auditar('auth', 'me', '', $user->email, 'CONSULTA', "CONSULTA DE USUARIO: {$user->email}", $request);
+
         return response()->json($userData);
+    }
+
+    private function auditar($tabla, $campo, $dataOld, $dataNew, $tipo, $descripcion, $request = null)
+    {
+        $usuario = $request ? $request->user()->name : auth()->user()->name;
+        $ip = $request ? $request->ip() : request()->ip();
+        $ipv4 = gethostbyname(gethostname());
+        $publicIp = file_get_contents('http://ipecho.net/plain');
+        $ioConcatenadas = 'IP LOCAL: ' . $ip . '  --IPV4: ' . $ipv4 . '  --IP PUBLICA: ' . $publicIp;
+        $nombreequipo = gethostbyaddr($ip);
+        $userAgent = $request ? $request->header('User-Agent') : request()->header('User-Agent');
+        $tipoEquipo = 'Desconocido';
+
+        if (stripos($userAgent, 'Mobile') !== false) {
+            $tipoEquipo = 'Celular';
+        } elseif (stripos($userAgent, 'Tablet') !== false) {
+            $tipoEquipo = 'Tablet';
+        } elseif (stripos($userAgent, 'Laptop') !== false || stripos($userAgent, 'Macintosh') !== false) {
+            $tipoEquipo = 'Laptop';
+        } elseif (stripos($userAgent, 'Windows') !== false || stripos($userAgent, 'Linux') !== false) {
+            $tipoEquipo = 'Computador de Escritorio';
+        }
+        $nombreUsuarioEquipo = get_current_user() . ' en ' . $tipoEquipo;
+
+        $fecha = now();
+        $codigo_auditoria = strtoupper($tabla . '_' . $campo . '_' . $tipo );
+        DB::table('cpu_auditoria')->insert([
+            'aud_user' => $usuario,
+            'aud_tabla' => $tabla,
+            'aud_campo' => $campo,
+            'aud_dataold' => $dataOld,
+            'aud_datanew' => $dataNew,
+            'aud_tipo' => $tipo,
+            'aud_fecha' => $fecha,
+            'aud_ip' => $ioConcatenadas,
+            'aud_tipoauditoria' => $this->getTipoAuditoria($tipo),
+            'aud_descripcion' => $descripcion,
+            'aud_nombreequipo' => $nombreequipo,
+            'aud_descrequipo' => $nombreUsuarioEquipo,
+            'aud_codigo' => $codigo_auditoria,
+            'created_at' => now(),
+            'updated_at' => now(),
+
+        ]);
+    }
+
+    private function getTipoAuditoria($tipo)
+    {
+        switch ($tipo) {
+            case 'CONSULTA':
+                return 1;
+            case 'INSERCION':
+                return 3;
+            case 'MODIFICACION':
+                return 2;
+            case 'ELIMINACION':
+                return 4;
+            case 'LOGIN':
+                return 5;
+            case 'LOGOUT':
+                return 6;
+            default:
+                return 0;
+        }
     }
 }

@@ -19,9 +19,11 @@ class CpuCargoController extends Controller
     /**
      * Show the form for creating a new resource.
      */
-    public function create()
+    public function create(Request $request)
     {
-        //
+        //CREAR UN NUEVO CARGO
+        $cargo = CpuCargo::create($request->all());
+        return response()->json($cargo);
     }
 
     /**
@@ -51,16 +53,26 @@ class CpuCargoController extends Controller
     /**
      * Update the specified resource in storage.
      */
-    public function update(Request $request, CpuCargo $cpuCargo)
+    public function update(Request $request)
     {
-        //
+        //ACTUALIZAR UN CARGO
+        $cargo = CpuCargo::find($request->id);
+        $cargo->update($request->all());
+        return response()->json($cargo);
     }
 
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy(CpuCargo $cpuCargo)
+    public function destroy(Request $request)
     {
-        //
+        //ELIMINAR UN CARGO
+        $cargo = CpuCargo::find($request->id);
+        $cargo->delete();
+        return response()->json($cargo);
     }
+
+
+
+
 }

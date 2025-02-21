@@ -83,7 +83,7 @@ class CpuTerapiaLenguajeController extends Controller
 
             // Guardar la atención
             $atencion->save();
-
+            $this->auditar('cpu_atencion', 'guardarConsultaTerapia', '', $atencion, 'INSERCION', 'Creación de atención', $request);
             // Crear una nueva instancia de CpuAtencionesTerapiaLenguaje
             $terapiaLenguaje = new CpuAtencionesTerapiaLenguaje();
             $terapiaLenguaje->id_atencion = $atencion->id;
@@ -102,7 +102,7 @@ class CpuTerapiaLenguajeController extends Controller
 
             // Guardar datos específicos de Terapia de Lenguaje
             $terapiaLenguaje->save();
-
+            $this->auditar('cpu_atenciones_terapia_lenguaje', 'guardarConsultaTerapia', '', $terapiaLenguaje, 'INSERCION', 'Creación de atención de terapia de lenguaje', $request);
             // Si se activa la derivación interna
             if (!empty($validatedData['derivacionFlag']) && $validatedData['derivacionFlag']) {
                 $derivacion = CpuDerivacion::create([
@@ -145,6 +145,72 @@ class CpuTerapiaLenguajeController extends Controller
             DB::rollBack();
             Log::error('Error al guardar la consulta de terapia de lenguaje: ' . $e->getMessage());
             return response()->json(['error' => 'Error al guardar la consulta de terapia de lenguaje: ' . $e->getMessage()], 500);
+        }
+    }
+
+    private function auditar($tabla, $campo, $dataOld, $dataNew, $tipo, $descripcion, $request = null)
+    {
+        $usuario = $request ? $request->user()->name : auth()->user()->name;
+        $ip = $request ? $request->ip() : request()->ip();
+        $ipv4 = gethostbyname(gethostname());
+        $publicIp = file_get_contents('http://ipecho.net/plain');
+        $ioConcatenadas = 'IP LOCAL: ' . $ip . '  --IPV4: ' . $ipv4 . '  --IP PUBLICA: ' . $publicIp;
+        $nombreequipo = gethostbyaddr($ip);
+        $userAgent = $request ? $request->header('User-Agent') : request()->header('User-Agent');
+        $tipoEquipo = 'Desconocido';
+
+        if (stripos($userAgent, 'Mobile') !== false) {
+            $tipoEquipo = 'Celular';
+        } elseif (stripos($userAgent, 'Tablet') !== false) {
+            $tipoEquipo = 'Tablet';
+        } elseif (stripos($userAgent, 'Laptop') !== false || stripos($userAgent, 'Macintosh') !== false) {
+            $tipoEquipo = 'Laptop';
+        } elseif (stripos($userAgent, 'Windows') !== false || stripos($userAgent, 'Linux') !== false) {
+            $tipoEquipo = 'Computador de Escritorio';
+        }
+        $nombreUsuarioEquipo = get_current_user() . ' en ' . $tipoEquipo;
+
+        $fecha = now();
+        $codigo_auditoria = strtoupper($tabla . '_' . $campo . '_' . $tipo );
+        DB::table('cpu_auditoria')->insert([
+            'aud_user' => $usuario,
+            'aud_tabla' => $tabla,
+            'aud_campo' => $campo,
+            'aud_dataold' => $dataOld,
+            'aud_datanew' => $dataNew,
+            'aud_tipo' => $tipo,
+            'aud_fecha' => $fecha,
+            'aud_ip' => $ioConcatenadas,
+            'aud_tipoauditoria' => $this->getTipoAuditoria($tipo),
+            'aud_descripcion' => $descripcion,
+            'aud_nombreequipo' => $nombreequipo,
+            'aud_descrequipo' => $nombreUsuarioEquipo,
+            'aud_codigo' => $codigo_auditoria,
+            'created_at' => now(),
+            'updated_at' => now(),
+
+        ]);
+    }
+
+    private function getTipoAuditoria($tipo)
+    {
+        switch ($tipo) {
+            case 'CONSULTA':
+                return 1;
+            case 'INSERCION':
+                return 3;
+            case 'MODIFICACION':
+                return 2;
+            case 'ELIMINACION':
+                return 4;
+            case 'LOGIN':
+                return 5;
+            case 'LOGOUT':
+                return 6;
+            case 'DESACTIVACION':
+                return 7;
+            default:
+                return 0;
         }
     }
 }

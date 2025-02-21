@@ -71,6 +71,14 @@ class CpuPersonaController extends Controller
 
     if ($response->successful()) {
         $data = $response->json();
+            // return response()->json($response->json());
+        } catch (\Exception $e) {
+            Log::error('Error al obtener el token de acceso: ' . $e->getMessage());
+            return response()->json(['error' => 'Error al obtener el token de acceso'], 500);
+        }
+        // dd($response->json());
+        if ($response->successful()) {
+            $data = $response->json();
 
         $persona = CpuPersona::create([
             'cedula' => $data['cedula'],
@@ -109,6 +117,41 @@ class CpuPersonaController extends Controller
 
         return response()->json([$persona]);
     }
+            $persona = CpuPersona::create([
+                'cedula' => $data['cedula'],
+                'nombres' => $data['nombres'],
+                'nacionalidad' => $data['nacionalidad'],
+                'provincia' => $data['provincia'],
+                'ciudad' => $data['ciudad'],
+                'parroquia' => $data['parroquia'],
+                'direccion' => $data['direccion'],
+                'sexo' => $data['sexo'],
+                'fechanaci' => $data['fechanaci'],
+                'celular' => $data['celular'],
+                'tipoetnia' => $data['tipoetnia'],
+                'discapacidad' => $data['discapacidad'],
+                'id_clasificacion_tipo_usuario' => 2,
+                'ocupacion' => $data['ocupacion'],
+            ]);
+            $this->auditar('cpu_persona', 'show', '', $persona, 'INSERCION', 'Creación de persona', $cedula);
+            CpuDatosEmpleado::create([
+                'id_persona' => $persona->id,
+                'emailinstitucional' => $data['emailinstitucional'],
+                'puesto' => $data['puesto'],
+                'regimen1' => $data['regimen1'],
+                'modalidad' => $data['modalidad'],
+                'unidad' => $data['unidad'],
+                'carrera' => $data['carrera'],
+                'idsubproceso' => $data['idSubProceso'],
+                'escala1' => $data['escala1'],
+                'estado' => $data['estado'],
+                'fechaingre' => $data['fechaIngre'],
+            ]);
+            $this->auditar('cpu_datos_empleado', 'create', '', $persona->datosEmpleados, 'INSERCION', 'Creación de datos de empleado', $cedula);
+            $persona->load('datosEmpleados');
+            $this->auditar('cpu_persona', 'show', '', $persona, 'CONSULTA', 'Consulta de persona', $cedula);
+            return response()->json([$persona]);
+        }
 
     return response()->json(['message' => 'Persona no encontrada'], 404);
 }
@@ -263,7 +306,7 @@ class CpuPersonaController extends Controller
 
                 // 4. Finalmente, creas la persona
                 $persona = CpuPersona::create($personaData);
-
+                $this->auditar('cpu_persona', 'showBienestar', '', $persona, 'INSERCION', 'Creación de persona', $cedula);
                 CpuDatosEmpleado::create([
                     'id_persona' => $persona->id,
                     'emailinstitucional' => $data['CorreoInstitucional'] ?? 'SIN INFORMACIÓN',
@@ -293,11 +336,14 @@ class CpuPersonaController extends Controller
                         "O-" => 8,
                     ][$data['TipoSangre']] ?? null,
 
+
                 ]);
+                $this->auditar('cpu_datos_medicos', 'create', '', $persona->datosMedicos, 'INSERCION', 'Creación de datos médicos', $cedula);
 
                 Log::info('Datos del médico creado: ' . json_encode($persona->datosMedicos));
 
                 $persona->load(['datosEmpleados', 'datosEstudiantes']); // Load datosEstudiantes if available
+                $this->auditar('cpu_persona', 'showBienestar', '', $persona, 'CONSULTA', 'Consulta de persona', $cedula);
                 return response()->json([$persona]);
             }
         }
@@ -407,7 +453,7 @@ class CpuPersonaController extends Controller
                 'id_clasificacion_tipo_usuario' => 1,
                 // 'ocupacion' => $data['ocupacion'],
             ]);
-
+            $this->auditar('cpu_persona', 'showBienestar', '', $persona, 'INSERCION', 'Creación de persona', $cedula);
             CpuDatosEstudiantes::create([
                 'id_persona' => $persona->id,
                 'campus' => $data['campus'] ?? 'SIN INFORMACIÓN',
@@ -423,7 +469,7 @@ class CpuPersonaController extends Controller
                 'periodo' => $data['periodo'] ?? 'SIN INFORMACIÓN',
                 'estado_matricula' => $data['estadoMatricula'] ?? 'SIN INFORMACIÓN',
             ]);
-
+            $this->auditar('cpu_datos_estudiantes', 'create', '', $persona->datosEstudiantes, 'INSERCION', 'Creación de datos de estudiante', $cedula);
             $persona->load(['datosEmpleados', 'datosEstudiantes']);
             return response()->json([$persona]);
         }
@@ -496,7 +542,7 @@ class CpuPersonaController extends Controller
             'estado',
             'fechaingre'
         ]));
-
+        $this->auditar('cpu_datos_empleado', 'update', '', $persona->datosEmpleados, 'ACTUALIZACION', 'Actualización de datos de empleado', $cedula);
         return response()->json($persona->load(['datosEmpleados', 'datosMedicos', 'datosEstudiantes']));
     }
 
@@ -605,6 +651,7 @@ class CpuPersonaController extends Controller
             }
 
             $persona->save();
+            $this->auditar('cpu_persona', 'updateDatosPersonales', '', $persona, 'ACTUALIZACION', 'Actualización de datos personales', $cedula);
 
             // Confirmar transacción
             DB::commit();
@@ -724,7 +771,7 @@ class CpuPersonaController extends Controller
             ];
 
             CpuDatosUsuarioExterno::create($usuarioExternoData);
-
+            $this->auditar('cpu_datos_usuario_externo', 'create', '', $usuarioExternoData, 'INSERCION', 'Creación de datos de usuario externo', $request);
 
             // Confirmar la transacción
             DB::commit();
@@ -838,7 +885,7 @@ class CpuPersonaController extends Controller
             ];
 
             CpuDatosUsuarioExterno::create($usuarioExternoData);
-
+            $this->auditar('cpu_datos_usuario_externo', 'create', '', $usuarioExternoData, 'INSERCION', 'Creación de datos de usuario externo', $request);
             // Confirmar la transacción
             DB::commit();
 
@@ -851,6 +898,72 @@ class CpuPersonaController extends Controller
                 'exception' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()
             ], 500);
+        }
+    }
+
+    private function auditar($tabla, $campo, $dataOld, $dataNew, $tipo, $descripcion, $request = null)
+    {
+        $usuario = $request ? $request->user()->name : auth()->user()->name;
+        $ip = $request ? $request->ip() : request()->ip();
+        $ipv4 = gethostbyname(gethostname());
+        $publicIp = file_get_contents('http://ipecho.net/plain');
+        $ioConcatenadas = 'IP LOCAL: ' . $ip . '  --IPV4: ' . $ipv4 . '  --IP PUBLICA: ' . $publicIp;
+        $nombreequipo = gethostbyaddr($ip);
+        $userAgent = $request ? $request->header('User-Agent') : request()->header('User-Agent');
+        $tipoEquipo = 'Desconocido';
+
+        if (stripos($userAgent, 'Mobile') !== false) {
+            $tipoEquipo = 'Celular';
+        } elseif (stripos($userAgent, 'Tablet') !== false) {
+            $tipoEquipo = 'Tablet';
+        } elseif (stripos($userAgent, 'Laptop') !== false || stripos($userAgent, 'Macintosh') !== false) {
+            $tipoEquipo = 'Laptop';
+        } elseif (stripos($userAgent, 'Windows') !== false || stripos($userAgent, 'Linux') !== false) {
+            $tipoEquipo = 'Computador de Escritorio';
+        }
+        $nombreUsuarioEquipo = get_current_user() . ' en ' . $tipoEquipo;
+
+        $fecha = now();
+        $codigo_auditoria = strtoupper($tabla . '_' . $campo . '_' . $tipo );
+        DB::table('cpu_auditoria')->insert([
+            'aud_user' => $usuario,
+            'aud_tabla' => $tabla,
+            'aud_campo' => $campo,
+            'aud_dataold' => $dataOld,
+            'aud_datanew' => $dataNew,
+            'aud_tipo' => $tipo,
+            'aud_fecha' => $fecha,
+            'aud_ip' => $ioConcatenadas,
+            'aud_tipoauditoria' => $this->getTipoAuditoria($tipo),
+            'aud_descripcion' => $descripcion,
+            'aud_nombreequipo' => $nombreequipo,
+            'aud_descrequipo' => $nombreUsuarioEquipo,
+            'aud_codigo' => $codigo_auditoria,
+            'created_at' => now(),
+            'updated_at' => now(),
+
+        ]);
+    }
+
+    private function getTipoAuditoria($tipo)
+    {
+        switch ($tipo) {
+            case 'CONSULTA':
+                return 1;
+            case 'INSERCION':
+                return 3;
+            case 'MODIFICACION':
+                return 2;
+            case 'ELIMINACION':
+                return 4;
+            case 'LOGIN':
+                return 5;
+            case 'LOGOUT':
+                return 6;
+            case 'DESACTIVACION':
+                return 7;
+            default:
+                return 0;
         }
     }
 }

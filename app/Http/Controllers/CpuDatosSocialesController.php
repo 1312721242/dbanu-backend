@@ -61,6 +61,7 @@ class CpuDatosSocialesController extends Controller
         }
 
         $datosSociales = CpuDatosSociales::create(array_merge($validated, ['image_path' => $imagePath]));
+        $this->auditar('cpu_datos_sociales', 'store', '', $datosSociales, 'INSERCION', 'Creación de datos sociales', $request);
 
         return response()->json(['message' => 'Datos sociales guardados exitosamente', 'data' => $datosSociales]);
     }
@@ -99,6 +100,7 @@ class CpuDatosSocialesController extends Controller
         }
 
         $datosSociales->update($validated);
+        $this->auditar('cpu_datos_sociales', 'updateByPersonaId', '', $datosSociales, 'MODIFICACION', 'Actualización de datos sociales', $request);
 
         return response()->json(['message' => 'Datos sociales actualizados exitosamente', 'data' => $datosSociales]);
     }

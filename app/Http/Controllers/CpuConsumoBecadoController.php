@@ -57,7 +57,7 @@ class CpuConsumoBecadoController extends Controller
 
         // Llamar a la función enviarCorreo con los datos necesarios
         $this->enviarCorreo($request, $restante);
-        $this->auditar('cpu_consumo_becado', 'registrarConsumo', $request->all(), $consumo, 'INSERCION', 'Consumo de alimentos por ayuda económica - Tasty Uleam, Identificacion: ' . $request->identificacion . ' - Monto: ' . $request->monto_facturado . ' - Tipo de alimento: ' . $request->tipo_alimento . ' - Tipo de usuario: ' . $request->tipo_usuario);
+        $this->auditar('cpu_consumo_becado', 'registrarConsumo', '', $consumo, 'INSERCION', 'Consumo de alimentos por ayuda económica - Tasty Uleam, Identificacion: ' . $request->identificacion . ' - Monto: ' . $request->monto_facturado . ' - Tipo de alimento: ' . $request->tipo_alimento . ' - Tipo de usuario: ' . $request->tipo_usuario);
 
         return response()->json(['message' => 'Consumo registrado correctamente', 'code' => 200], 200);
     }
@@ -103,7 +103,7 @@ class CpuConsumoBecadoController extends Controller
             'total_registros' => $registros->count(),
             'total_monto' => $registros->sum('monto_facturado'),
         ];
-        $this->auditar('cpu_consumo_becado', 'registrosPorFechas', $request->all(), $total_global, 'CONSULTA', 'Consulta de consumo de alimentos por ayuda económica - Tasty Uleam');
+        $this->auditar('cpu_consumo_becado', 'registrosPorFechas', '', '', 'CONSULTA', 'Consulta de consumo de alimentos por ayuda económica - Tasty Uleam');
 
         return response()->json([
             'fecha_inicio' => $fechaInicio->toDateString(),
@@ -211,7 +211,7 @@ class CpuConsumoBecadoController extends Controller
 
         // Log de los detalles que se devuelven
         // Log::info('Detalles devueltos en detalleRegistros:', ['detalles' => $detalles]);
-        $this->auditar('cpu_consumo_becado', 'detalleRegistros', $request->all(), $detalles, 'CONSULTA', 'Consulta de consumo de alimentos por ayuda económica - Tasty Uleam');
+        $this->auditar('cpu_consumo_becado', 'detalleRegistros', '', '', 'CONSULTA', 'Consulta de consumo de alimentos por ayuda económica - Tasty Uleam');
 
         return response()->json([
             'fecha_inicio' => $fechaInicio->toDateString(),
@@ -295,13 +295,13 @@ class CpuConsumoBecadoController extends Controller
     // Función para auditar
     private function auditar($tabla, $campo, $dataOld, $dataNew, $tipo, $descripcion, $request = null)
     {
-        $usuario = $request ? $request->user()->name : auth()->user()->name;
-        $ip = $request ? $request->ip() : request()->ip();
+        $usuario = $request && !is_string($request) ? $request->user()->name : auth()->user()->name;
+        $ip = $request && !is_string($request) ? $request->ip() : request()->ip();
         $ipv4 = gethostbyname(gethostname());
         $publicIp = file_get_contents('http://ipecho.net/plain');
         $ioConcatenadas = 'IP LOCAL: ' . $ip . '  --IPV4: ' . $ipv4 . '  --IP PUBLICA: ' . $publicIp;
         $nombreequipo = gethostbyaddr($ip);
-        $userAgent = $request ? $request->header('User-Agent') : request()->header('User-Agent');
+        $userAgent = $request && !is_string($request) ? $request->header('User-Agent') : request()->header('User-Agent');
         $tipoEquipo = 'Desconocido';
 
         if (stripos($userAgent, 'Mobile') !== false) {

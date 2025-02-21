@@ -58,7 +58,7 @@ class AuthController extends Controller
         }
 
         // Auditoría
-        $this->auditar('auth', 'login', '', $user->email, 'LOGIN', "LOGIN DE USUARIO: {$user->email}", $request);
+        $this->auditar('auth', 'login', '', $user->email, 'LOGIN', "LOGIN DE USUARIO: {$user->email}");
 
         return response()->json($userData);
     }
@@ -160,7 +160,7 @@ class AuthController extends Controller
         $userData['carrera'] = $carreraNombre;
 
         // Auditoría
-        $this->auditar('auth', 'loginApp', '', $ciudadano->email, 'LOGIN', "LOGIN DE USUARIO APP: {$ciudadano->email}", $request);
+        $this->auditar('auth', 'loginApp', '', $ciudadano->email, 'LOGIN', "LOGIN DE USUARIO APP: {$ciudadano->email}");
 
         return response()->json($userData);
     }
@@ -175,7 +175,7 @@ class AuthController extends Controller
         DB::table('password_reset_tokens')->where('email', $user->email)->delete();
 
         // Auditoría
-        $this->auditar('auth', 'logout', $user->email, '', 'LOGOUT', "LOGOUT DE USUARIO: {$user->email}", $request);
+        $this->auditar('auth', 'logout', $user->email, '', 'LOGOUT', "LOGOUT DE USUARIO: {$user->email}");
 
         return response()->json(['message' => 'Desconectado/a']);
     }
@@ -200,7 +200,7 @@ class AuthController extends Controller
         $userData['password'] = $user->password;
 
         // Auditoría
-        $this->auditar('auth', 'me', '', $user->email, 'CONSULTA', "CONSULTA DE USUARIO: {$user->email}", $request);
+        $this->auditar('auth', 'me', '', $user->email, 'CONSULTA', "CONSULTA DE USUARIO: {$user->email}");
 
         return response()->json($userData);
     }
@@ -264,6 +264,8 @@ class AuthController extends Controller
                 return 5;
             case 'LOGOUT':
                 return 6;
+            case 'DESACTIVACION':
+                return 7;
             default:
                 return 0;
         }

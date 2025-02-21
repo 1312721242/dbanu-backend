@@ -85,7 +85,7 @@ class CpuEvidenciaController extends Controller
         $evidencia->id_fuente_informacion = $fuenteInformacionId;
         $evidencia->id_sede = $sedeId;
         $evidencia->save();
-        $this->auditar('cpu_evidencia', 'agregarEvidencia', '', $evidencia, 'INSERCION', 'Creación de evidencia', $request);
+        $this->auditar('cpu_evidencia', 'agregarEvidencia', '', $evidencia, 'INSERCION', 'Creación de evidencia');
 
         return response()->json(['message' => 'Evidencia agregada correctamente']);
     }
@@ -139,7 +139,7 @@ class CpuEvidenciaController extends Controller
         }
 
         $evidencia->save();
-        $this->auditar('cpu_evidencia', 'actualizarEvidencia', '', $evidencia, 'MODIFICACION', 'Actualización de evidencia', $request);
+        $this->auditar('cpu_evidencia', 'actualizarEvidencia', '', $evidencia, 'MODIFICACION', 'Actualización de evidencia');
         return response()->json(['message' => 'Evidencia actualizada correctamente']);
     }
 
@@ -278,7 +278,7 @@ class CpuEvidenciaController extends Controller
             ];
             $response[] = $objetivoData;
         }
-        $this->auditar('cpu_evidencia', 'obtenerInformacionPorAno', '', $response, 'CONSULTA', 'Consulta de evidencias por año', $ano);
+        $this->auditar('cpu_evidencia', 'obtenerInformacionPorAno', '', '', 'CONSULTA', 'Consulta de evidencias por año', $ano);
         return response()->json(['ano' => $ano, 'objetivos_nacionales' => $response]);
 
     } catch (\Exception $e) {
@@ -297,15 +297,17 @@ class CpuEvidenciaController extends Controller
         return response()->download(storage_path('app/' . $rutaArchivo));
     }
 
+
+    //funcion para auditar
     private function auditar($tabla, $campo, $dataOld, $dataNew, $tipo, $descripcion, $request = null)
     {
-        $usuario = $request ? $request->user()->name : auth()->user()->name;
-        $ip = $request ? $request->ip() : request()->ip();
+        $usuario = $request && !is_string($request) ? $request->user()->name : auth()->user()->name;
+        $ip = $request && !is_string($request) ? $request->ip() : request()->ip();
         $ipv4 = gethostbyname(gethostname());
         $publicIp = file_get_contents('http://ipecho.net/plain');
         $ioConcatenadas = 'IP LOCAL: ' . $ip . '  --IPV4: ' . $ipv4 . '  --IP PUBLICA: ' . $publicIp;
         $nombreequipo = gethostbyaddr($ip);
-        $userAgent = $request ? $request->header('User-Agent') : request()->header('User-Agent');
+        $userAgent = $request && !is_string($request) ? $request->header('User-Agent') : request()->header('User-Agent');
         $tipoEquipo = 'Desconocido';
 
         if (stripos($userAgent, 'Mobile') !== false) {

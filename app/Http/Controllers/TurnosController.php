@@ -6,8 +6,9 @@ use Illuminate\Http\Request;
 use App\Models\CpuTurno;
 use Illuminate\Support\Facades\Auth;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
-
+use Illuminate\Support\Facades\DB;
 class TurnosController extends Controller
 {
     public function agregarTurnos(Request $request)
@@ -57,6 +58,8 @@ class TurnosController extends Controller
                 }
             }
         }
+        //auditar
+        $this->auditar('turnos', 'agregarTurnos', '', $response, 'INSERCION', 'Agregación de turnos', $request);
 
         return response()->json($response);
     }
@@ -71,18 +74,18 @@ class TurnosController extends Controller
         $horaActual = date('H:i:s');
 
         // Depuración
-        \Log::info("Usuario: $id_funcionario, Fecha Inicio: $ini, Fecha Fin: $hasta, Fecha Actual: $fechaActual, Hora Actual: $horaActual");
+        Log::info("Usuario: $id_funcionario, Fecha Inicio: $ini, Fecha Fin: $hasta, Fecha Actual: $fechaActual, Hora Actual: $horaActual");
 
         $turnosQuery = CpuTurno::where('id_medico', $id_funcionario)
             ->where('estado', 1);
 
         if ($ini == $fechaActual && $hasta == $fechaActual) {
             // Caso 1: Solo hoy, después de la hora actual
-            \Log::info("Consulta para el mismo día a partir de la hora actual");
+            Log::info("Consulta para el mismo día a partir de la hora actual");
             $turnosQuery->where('fehca_turno', $ini)->where('hora', '>', $horaActual);
         } elseif ($ini == $fechaActual && $hasta > $fechaActual) {
             // Caso 2: Hoy desde la hora actual y días futuros desde cualquier hora
-            \Log::info("Consulta para hoy a partir de la hora actual y días futuros desde cualquier hora");
+            Log::info("Consulta para hoy a partir de la hora actual y días futuros desde cualquier hora");
             $turnosQuery->where(function($query) use ($ini, $hasta, $horaActual) {
                 $query->where(function($q) use ($ini, $horaActual) {
                     $q->where('fehca_turno', $ini)->where('hora', '>', $horaActual);
@@ -90,7 +93,7 @@ class TurnosController extends Controller
             });
         } else {
             // Caso 3: Fechas futuras, devolver todos los turnos
-            \Log::info("Consulta para fechas futuras sin restricciones de hora");
+            Log::info("Consulta para fechas futuras sin restricciones de hora");
             $turnosQuery->whereBetween('fehca_turno', [$ini, $hasta]);
         }
 
@@ -103,7 +106,9 @@ class TurnosController extends Controller
             return $turno;
         });
 
-        \Log::info("Turnos encontrados: " . $turnos->count());
+        Log::info("Turnos encontrados: " . $turnos->count());
+        //auditar
+        $this->auditar('turnos', 'listarTurnos', '', $turnos, 'CONSULTA', 'Consulta de turnos', $request);
 
         return response()->json($turnos);
     }
@@ -117,7 +122,7 @@ class TurnosController extends Controller
         $horaActual = Carbon::now()->format('H:i:s');
 
         // Log para depuración
-        \Log::info("Funcionario: $idFuncionario, Fecha: $fecha, Área: $area, Hora Actual: $horaActual");
+        Log::info("Funcionario: $idFuncionario, Fecha: $fecha, Área: $area, Hora Actual: $horaActual");
 
         $turnosQuery = CpuTurno::where('id_medico', $idFuncionario)
             ->where('estado', 1)
@@ -131,8 +136,8 @@ class TurnosController extends Controller
         $turnos = $turnosQuery->get();
 
         // Depuración de SQL
-        \Log::info("Consulta SQL: " . $turnosQuery->toSql());
-        \Log::info("Parámetros de consulta: " . json_encode($turnosQuery->getBindings()));
+        Log::info("Consulta SQL: " . $turnosQuery->toSql());
+        Log::info("Parámetros de consulta: " . json_encode($turnosQuery->getBindings()));
 
         // Formatear las fechas y horas
         $turnos = $turnos->map(function($turno) {
@@ -141,8 +146,10 @@ class TurnosController extends Controller
             return $turno;
         });
 
-        \Log::info("Turnos encontrados: " . $turnos->count());
-        \Log::info("Turnos: " . json_encode($turnos));
+        Log::info("Turnos encontrados: " . $turnos->count());
+        Log::info("Turnos: " . json_encode($turnos));
+        //auditar
+        $this->auditar('turnos', 'listarTurnosPorFuncionario', '', $turnos, 'CONSULTA', 'Consulta de turnos por funcionario', $request);
 
         return response()->json($turnos);
     }
@@ -156,11 +163,13 @@ class TurnosController extends Controller
             $turno->estado = 3;
             $turno->usr_date_baja = now();
             $turno->save();
-
+            //auditar
+            $this->auditar('turnos', 'eliminarTurno', '', $turno, 'MODIFICACION', 'Eliminación de turno', $request);
             return response()->json(['success' => true]);
         } else {
             return response()->json(['success' => false], 404);
         }
+
     }
 
     public function reservarTurno(Request $request)
@@ -178,7 +187,76 @@ class TurnosController extends Controller
         $turno->id_paciente = $request->input('id_paciente');
         $turno->estado = 7; // Cambia el estado según sea necesario
         $turno->save();
+        //auditar
+        $this->auditar('turnos', 'reservarTurno', '', $turno, 'MODIFICACION', 'Reservación de turno', $request);
 
         return response()->json(['success' => true]);
+    }
+
+    //auditar
+    private function auditar($tabla, $campo, $dataOld, $dataNew, $tipo, $descripcion, $request = null)
+    {
+        $usuario = $request ? $request->user()->name : auth()->user()->name;
+        $ip = $request ? $request->ip() : request()->ip();
+        $ipv4 = gethostbyname(gethostname());
+        $publicIp = file_get_contents('http://ipecho.net/plain');
+        $ioConcatenadas = 'IP LOCAL: ' . $ip . '  --IPV4: ' . $ipv4 . '  --IP PUBLICA: ' . $publicIp;
+        $nombreequipo = gethostbyaddr($ip);
+        $userAgent = $request ? $request->header('User-Agent') : request()->header('User-Agent');
+        $tipoEquipo = 'Desconocido';
+
+        if (stripos($userAgent, 'Mobile') !== false) {
+            $tipoEquipo = 'Celular';
+        } elseif (stripos($userAgent, 'Tablet') !== false) {
+            $tipoEquipo = 'Tablet';
+        } elseif (stripos($userAgent, 'Laptop') !== false || stripos($userAgent, 'Macintosh') !== false) {
+            $tipoEquipo = 'Laptop';
+        } elseif (stripos($userAgent, 'Windows') !== false || stripos($userAgent, 'Linux') !== false) {
+            $tipoEquipo = 'Computador de Escritorio';
+        }
+        $nombreUsuarioEquipo = get_current_user() . ' en ' . $tipoEquipo;
+
+        $fecha = now();
+        $codigo_auditoria = strtoupper($tabla . '_' . $campo . '_' . $tipo );
+        DB::table('cpu_auditoria')->insert([
+            'aud_user' => $usuario,
+            'aud_tabla' => $tabla,
+            'aud_campo' => $campo,
+            'aud_dataold' => $dataOld,
+            'aud_datanew' => $dataNew,
+            'aud_tipo' => $tipo,
+            'aud_fecha' => $fecha,
+            'aud_ip' => $ioConcatenadas,
+            'aud_tipoauditoria' => $this->getTipoAuditoria($tipo),
+            'aud_descripcion' => $descripcion,
+            'aud_nombreequipo' => $nombreequipo,
+            'aud_descrequipo' => $nombreUsuarioEquipo,
+            'aud_codigo' => $codigo_auditoria,
+            'created_at' => now(),
+            'updated_at' => now(),
+
+        ]);
+    }
+
+    private function getTipoAuditoria($tipo)
+    {
+        switch ($tipo) {
+            case 'CONSULTA':
+                return 1;
+            case 'INSERCION':
+                return 3;
+            case 'MODIFICACION':
+                return 2;
+            case 'ELIMINACION':
+                return 4;
+            case 'LOGIN':
+                return 5;
+            case 'LOGOUT':
+                return 6;
+            case 'DESACTIVACION':
+                return 7;
+            default:
+                return 0;
+        }
     }
 }

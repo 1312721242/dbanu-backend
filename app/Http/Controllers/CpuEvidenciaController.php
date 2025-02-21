@@ -85,6 +85,7 @@ class CpuEvidenciaController extends Controller
         $evidencia->id_fuente_informacion = $fuenteInformacionId;
         $evidencia->id_sede = $sedeId;
         $evidencia->save();
+        $this->auditar('cpu_evidencia', 'agregarEvidencia', '', $evidencia, 'INSERCION', 'Creación de evidencia', $request);
 
         return response()->json(['message' => 'Evidencia agregada correctamente']);
     }
@@ -138,7 +139,7 @@ class CpuEvidenciaController extends Controller
         }
 
         $evidencia->save();
-
+        $this->auditar('cpu_evidencia', 'actualizarEvidencia', '', $evidencia, 'MODIFICACION', 'Actualización de evidencia', $request);
         return response()->json(['message' => 'Evidencia actualizada correctamente']);
     }
 
@@ -156,7 +157,7 @@ class CpuEvidenciaController extends Controller
         }
 
         $evidencia->delete();
-
+        $this->auditar('cpu_evidencia', 'eliminarEvidencia', '', $evidencia, 'ELIMINACION', 'Eliminación de evidencia', $id);
         return response()->json(['message' => 'Evidencia eliminada correctamente']);
     }
 
@@ -174,7 +175,7 @@ class CpuEvidenciaController extends Controller
             $evidencia->enlace_evidencia = $baseUrl . '/' . $evidencia->enlace_evidencia;
             return $evidencia;
         });
-
+        $this->auditar('cpu_evidencia', 'consultarEvidencias', '', $evidencias, 'CONSULTA', 'Consulta de evidencias');
         return response()->json($evidencias);
     }
 
@@ -277,7 +278,7 @@ class CpuEvidenciaController extends Controller
             ];
             $response[] = $objetivoData;
         }
-
+        $this->auditar('cpu_evidencia', 'obtenerInformacionPorAno', '', $response, 'CONSULTA', 'Consulta de evidencias por año', $ano);
         return response()->json(['ano' => $ano, 'objetivos_nacionales' => $response]);
 
     } catch (\Exception $e) {
@@ -292,6 +293,73 @@ class CpuEvidenciaController extends Controller
     {
         // Lógica para descargar el archivo y devolverlo como respuesta
         $rutaArchivo = 'evidencias/' . $ano . '/' . $archivo;
+        $this->auditar('cpu_evidencia', 'descargarArchivo', '', $rutaArchivo, 'CONSULTA', 'Descarga de evidencia', $ano, $archivo);
         return response()->download(storage_path('app/' . $rutaArchivo));
+    }
+
+    private function auditar($tabla, $campo, $dataOld, $dataNew, $tipo, $descripcion, $request = null)
+    {
+        $usuario = $request ? $request->user()->name : auth()->user()->name;
+        $ip = $request ? $request->ip() : request()->ip();
+        $ipv4 = gethostbyname(gethostname());
+        $publicIp = file_get_contents('http://ipecho.net/plain');
+        $ioConcatenadas = 'IP LOCAL: ' . $ip . '  --IPV4: ' . $ipv4 . '  --IP PUBLICA: ' . $publicIp;
+        $nombreequipo = gethostbyaddr($ip);
+        $userAgent = $request ? $request->header('User-Agent') : request()->header('User-Agent');
+        $tipoEquipo = 'Desconocido';
+
+        if (stripos($userAgent, 'Mobile') !== false) {
+            $tipoEquipo = 'Celular';
+        } elseif (stripos($userAgent, 'Tablet') !== false) {
+            $tipoEquipo = 'Tablet';
+        } elseif (stripos($userAgent, 'Laptop') !== false || stripos($userAgent, 'Macintosh') !== false) {
+            $tipoEquipo = 'Laptop';
+        } elseif (stripos($userAgent, 'Windows') !== false || stripos($userAgent, 'Linux') !== false) {
+            $tipoEquipo = 'Computador de Escritorio';
+        }
+        $nombreUsuarioEquipo = get_current_user() . ' en ' . $tipoEquipo;
+
+        $fecha = now();
+        $codigo_auditoria = strtoupper($tabla . '_' . $campo . '_' . $tipo );
+        DB::table('cpu_auditoria')->insert([
+            'aud_user' => $usuario,
+            'aud_tabla' => $tabla,
+            'aud_campo' => $campo,
+            'aud_dataold' => $dataOld,
+            'aud_datanew' => $dataNew,
+            'aud_tipo' => $tipo,
+            'aud_fecha' => $fecha,
+            'aud_ip' => $ioConcatenadas,
+            'aud_tipoauditoria' => $this->getTipoAuditoria($tipo),
+            'aud_descripcion' => $descripcion,
+            'aud_nombreequipo' => $nombreequipo,
+            'aud_descrequipo' => $nombreUsuarioEquipo,
+            'aud_codigo' => $codigo_auditoria,
+            'created_at' => now(),
+            'updated_at' => now(),
+
+        ]);
+    }
+
+    private function getTipoAuditoria($tipo)
+    {
+        switch ($tipo) {
+            case 'CONSULTA':
+                return 1;
+            case 'INSERCION':
+                return 3;
+            case 'MODIFICACION':
+                return 2;
+            case 'ELIMINACION':
+                return 4;
+            case 'LOGIN':
+                return 5;
+            case 'LOGOUT':
+                return 6;
+            case 'DESACTIVACION':
+                return 7;
+            default:
+                return 0;
+        }
     }
 }

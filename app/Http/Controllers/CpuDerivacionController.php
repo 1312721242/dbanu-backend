@@ -58,6 +58,7 @@ class CpuDerivacionController extends Controller
                     'id_paciente' => $data['id_paciente']
                 ]);
         }
+        $this->auditar('cpu_derivacion', 'store', '', $derivacion, 'INSERCION', 'Creación de derivación', $request);
 
         return response()->json($derivacion, 201);
     }
@@ -84,6 +85,7 @@ class CpuDerivacionController extends Controller
         ]);
 
         $derivacion->update($data);
+        $this->auditar('cpu_derivacion', 'update', '', $derivacion, 'MODIFICACION', 'Actualización de derivación', $request);
 
         return response()->json($derivacion);
     }
@@ -97,7 +99,7 @@ class CpuDerivacionController extends Controller
         }
 
         $derivacion->delete();
-
+        $this->auditar('cpu_derivacion', 'destroy', '', $derivacion, 'ELIMINACION', 'Eliminación de derivación', $id);
         return response()->json(['success' => true]);
     }
 
@@ -239,7 +241,7 @@ class CpuDerivacionController extends Controller
 
         $derivacion->id_estado_derivacion = $data['id_estado_derivacion'];
         $derivacion->save();
-
+        $this->auditar('cpu_derivacion', 'updateDerivacion', '', $derivacion, 'MODIFICACION', 'Actualización de derivación', $request);
         return response()->json(['success' => true, 'derivacion' => $derivacion]);
     }
 
@@ -306,6 +308,7 @@ class CpuDerivacionController extends Controller
             // Llamar a la función enviarCorreo con los datos necesarios después de que la transacción se haya realizado correctamente
             $this->enviarCorreoPaciente($validatedData, 'reagendamiento');
             $this->enviarCorreoFuncionario($validatedData, 'reagendamiento');
+            $this->auditar('cpu_derivacion', 'Reagendar', '', $derivacion, 'INSERCION', 'Creación de derivación', $request);
 
             // Si todo va bien, confirmar la transacción
             DB::commit();
@@ -349,6 +352,7 @@ class CpuDerivacionController extends Controller
             // Enviar correos al paciente y al funcionario utilizando los datos validados
             $this->enviarCorreoPaciente($validatedData, 'no_show');
             $this->enviarCorreoFuncionario($validatedData, 'no_show');
+            $this->auditar('cpu_derivacion', 'noAsistioCita', '', $derivacion, 'MODIFICACION', 'Actualización de derivación', $request);
 
             DB::commit();
 
@@ -498,5 +502,72 @@ class CpuDerivacionController extends Controller
 
         // Devolver una respuesta
         return response()->json(['message' => 'Solicitud enviada correctamente'], 200);
+    }
+
+    // Función para auditar
+    private function auditar($tabla, $campo, $dataOld, $dataNew, $tipo, $descripcion, $request = null)
+    {
+        $usuario = $request ? $request->user()->name : auth()->user()->name;
+        $ip = $request ? $request->ip() : request()->ip();
+        $ipv4 = gethostbyname(gethostname());
+        $publicIp = file_get_contents('http://ipecho.net/plain');
+        $ioConcatenadas = 'IP LOCAL: ' . $ip . '  --IPV4: ' . $ipv4 . '  --IP PUBLICA: ' . $publicIp;
+        $nombreequipo = gethostbyaddr($ip);
+        $userAgent = $request ? $request->header('User-Agent') : request()->header('User-Agent');
+        $tipoEquipo = 'Desconocido';
+
+        if (stripos($userAgent, 'Mobile') !== false) {
+            $tipoEquipo = 'Celular';
+        } elseif (stripos($userAgent, 'Tablet') !== false) {
+            $tipoEquipo = 'Tablet';
+        } elseif (stripos($userAgent, 'Laptop') !== false || stripos($userAgent, 'Macintosh') !== false) {
+            $tipoEquipo = 'Laptop';
+        } elseif (stripos($userAgent, 'Windows') !== false || stripos($userAgent, 'Linux') !== false) {
+            $tipoEquipo = 'Computador de Escritorio';
+        }
+        $nombreUsuarioEquipo = get_current_user() . ' en ' . $tipoEquipo;
+
+        $fecha = now();
+        $codigo_auditoria = strtoupper($tabla . '_' . $campo . '_' . $tipo );
+        DB::table('cpu_auditoria')->insert([
+            'aud_user' => $usuario,
+            'aud_tabla' => $tabla,
+            'aud_campo' => $campo,
+            'aud_dataold' => $dataOld,
+            'aud_datanew' => $dataNew,
+            'aud_tipo' => $tipo,
+            'aud_fecha' => $fecha,
+            'aud_ip' => $ioConcatenadas,
+            'aud_tipoauditoria' => $this->getTipoAuditoria($tipo),
+            'aud_descripcion' => $descripcion,
+            'aud_nombreequipo' => $nombreequipo,
+            'aud_descrequipo' => $nombreUsuarioEquipo,
+            'aud_codigo' => $codigo_auditoria,
+            'created_at' => now(),
+            'updated_at' => now(),
+
+        ]);
+    }
+
+    private function getTipoAuditoria($tipo)
+    {
+        switch ($tipo) {
+            case 'CONSULTA':
+                return 1;
+            case 'INSERCION':
+                return 3;
+            case 'MODIFICACION':
+                return 2;
+            case 'ELIMINACION':
+                return 4;
+            case 'LOGIN':
+                return 5;
+            case 'LOGOUT':
+                return 6;
+            case 'DESACTIVACION':
+                return 7;
+            default:
+                return 0;
+        }
     }
 }

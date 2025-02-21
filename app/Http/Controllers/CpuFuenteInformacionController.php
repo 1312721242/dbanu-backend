@@ -29,7 +29,7 @@ class CpuFuenteInformacionController extends Controller
             'id_indicador' => $validatedData['id_indicador'],
             'descripcion' => $validatedData['descripcion'],
         ]);
-        $this->auditar('cpu_fuente_informacion', 'storeFuenteInformacion', '', $fuente, 'INSERCION', 'Creación de fuente de información', $request);
+        $this->auditar('cpu_fuente_informacion', 'storeFuenteInformacion', '', $fuente, 'INSERCION', 'Creación de fuente de información');
         // Retornar una respuesta en formato JSON
         return response()->json([
             'message' => 'Fuente de información creada exitosamente.',
@@ -58,23 +58,23 @@ class CpuFuenteInformacionController extends Controller
         $fuente->id_indicador = $validatedData['id_indicador'];
         $fuente->descripcion = $validatedData['descripcion'];
         $fuente->save();
-        $this->auditar('cpu_fuente_informacion', 'updateFuenteInformacion', '', $fuente, 'MODIFICACION', 'Actualización de fuente de información', $request);
+        $this->auditar('cpu_fuente_informacion', 'updateFuenteInformacion', '', $fuente, 'MODIFICACION', 'Actualización de fuente de información');
         // Retornar una respuesta en formato JSON
         return response()->json([
             'message' => 'Fuente de información actualizada exitosamente.',
             'data' => $fuente,
         ], 200);
     }
-
+    //funcion para auditar
     private function auditar($tabla, $campo, $dataOld, $dataNew, $tipo, $descripcion, $request = null)
     {
-        $usuario = $request ? $request->user()->name : auth()->user()->name;
-        $ip = $request ? $request->ip() : request()->ip();
+        $usuario = $request && !is_string($request) ? $request->user()->name : auth()->user()->name;
+        $ip = $request && !is_string($request) ? $request->ip() : request()->ip();
         $ipv4 = gethostbyname(gethostname());
         $publicIp = file_get_contents('http://ipecho.net/plain');
         $ioConcatenadas = 'IP LOCAL: ' . $ip . '  --IPV4: ' . $ipv4 . '  --IP PUBLICA: ' . $publicIp;
         $nombreequipo = gethostbyaddr($ip);
-        $userAgent = $request ? $request->header('User-Agent') : request()->header('User-Agent');
+        $userAgent = $request && !is_string($request) ? $request->header('User-Agent') : request()->header('User-Agent');
         $tipoEquipo = 'Desconocido';
 
         if (stripos($userAgent, 'Mobile') !== false) {
@@ -131,6 +131,5 @@ class CpuFuenteInformacionController extends Controller
                 return 0;
         }
     }
-
 
 }

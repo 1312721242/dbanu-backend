@@ -21,7 +21,7 @@ class CpuInsumoOcupadoController extends Controller
         ]);
 
         $insumoOcupado = CpuInsumoOcupado::create($data);
-        $this->auditar('cpu_insumo_ocupado', 'store', '', $insumoOcupado, 'INSERCION', 'Creación de insumo ocupado', $request);
+        $this->auditar('cpu_insumo_ocupado', 'store', '', $insumoOcupado, 'INSERCION', 'Creación de insumo ocupado');
         return response()->json($insumoOcupado, 201);
     }
 
@@ -37,7 +37,7 @@ class CpuInsumoOcupadoController extends Controller
         $fechaFin = Carbon::parse($request->input('fecha_fin'))->endOfDay();
 
         $insumosOcupados = CpuInsumoOcupado::whereBetween('fecha_uso', [$fechaInicio, $fechaFin])->get();
-        $this->auditar('cpu_insumo_ocupado', 'getByDateRange', '', $insumosOcupados, 'CONSULTA', 'Consulta de insumos ocupados por rango de fechas', $request);
+        $this->auditar('cpu_insumo_ocupado', 'getByDateRange', '', $insumosOcupados, 'CONSULTA', 'Consulta de insumos ocupados por rango de fechas');
         return response()->json($insumosOcupados);
     }
 
@@ -57,15 +57,16 @@ class CpuInsumoOcupadoController extends Controller
         return response()->json($insumosOcupados);
     }
 
+    //funcion para auditar
     private function auditar($tabla, $campo, $dataOld, $dataNew, $tipo, $descripcion, $request = null)
     {
-        $usuario = $request ? $request->user()->name : auth()->user()->name;
-        $ip = $request ? $request->ip() : request()->ip();
+        $usuario = $request && !is_string($request) ? $request->user()->name : auth()->user()->name;
+        $ip = $request && !is_string($request) ? $request->ip() : request()->ip();
         $ipv4 = gethostbyname(gethostname());
         $publicIp = file_get_contents('http://ipecho.net/plain');
         $ioConcatenadas = 'IP LOCAL: ' . $ip . '  --IPV4: ' . $ipv4 . '  --IP PUBLICA: ' . $publicIp;
         $nombreequipo = gethostbyaddr($ip);
-        $userAgent = $request ? $request->header('User-Agent') : request()->header('User-Agent');
+        $userAgent = $request && !is_string($request) ? $request->header('User-Agent') : request()->header('User-Agent');
         $tipoEquipo = 'Desconocido';
 
         if (stripos($userAgent, 'Mobile') !== false) {

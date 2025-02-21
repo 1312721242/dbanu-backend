@@ -83,7 +83,7 @@ class CpuTerapiaLenguajeController extends Controller
 
             // Guardar la atención
             $atencion->save();
-            $this->auditar('cpu_atencion', 'guardarConsultaTerapia', '', $atencion, 'INSERCION', 'Creación de atención', $request);
+            $this->auditar('cpu_atencion', 'guardarConsultaTerapia', '', $atencion, 'INSERCION', 'Creación de atención');
             // Crear una nueva instancia de CpuAtencionesTerapiaLenguaje
             $terapiaLenguaje = new CpuAtencionesTerapiaLenguaje();
             $terapiaLenguaje->id_atencion = $atencion->id;
@@ -102,7 +102,7 @@ class CpuTerapiaLenguajeController extends Controller
 
             // Guardar datos específicos de Terapia de Lenguaje
             $terapiaLenguaje->save();
-            $this->auditar('cpu_atenciones_terapia_lenguaje', 'guardarConsultaTerapia', '', $terapiaLenguaje, 'INSERCION', 'Creación de atención de terapia de lenguaje', $request);
+            $this->auditar('cpu_atenciones_terapia_lenguaje', 'guardarConsultaTerapia', '', $terapiaLenguaje, 'INSERCION', 'Creación de atención de terapia de lenguaje');
             // Si se activa la derivación interna
             if (!empty($validatedData['derivacionFlag']) && $validatedData['derivacionFlag']) {
                 $derivacion = CpuDerivacion::create([
@@ -148,15 +148,16 @@ class CpuTerapiaLenguajeController extends Controller
         }
     }
 
+    //funcion para auditar
     private function auditar($tabla, $campo, $dataOld, $dataNew, $tipo, $descripcion, $request = null)
     {
-        $usuario = $request ? $request->user()->name : auth()->user()->name;
-        $ip = $request ? $request->ip() : request()->ip();
+        $usuario = $request && !is_string($request) ? $request->user()->name : auth()->user()->name;
+        $ip = $request && !is_string($request) ? $request->ip() : request()->ip();
         $ipv4 = gethostbyname(gethostname());
         $publicIp = file_get_contents('http://ipecho.net/plain');
         $ioConcatenadas = 'IP LOCAL: ' . $ip . '  --IPV4: ' . $ipv4 . '  --IP PUBLICA: ' . $publicIp;
         $nombreequipo = gethostbyaddr($ip);
-        $userAgent = $request ? $request->header('User-Agent') : request()->header('User-Agent');
+        $userAgent = $request && !is_string($request) ? $request->header('User-Agent') : request()->header('User-Agent');
         $tipoEquipo = 'Desconocido';
 
         if (stripos($userAgent, 'Mobile') !== false) {

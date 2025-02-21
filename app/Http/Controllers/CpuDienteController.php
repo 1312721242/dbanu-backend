@@ -50,19 +50,20 @@ class CpuDienteController extends Controller
         // Aquí ya no necesitas json_encode, porque se guardará como un array en la columna jsonb
         $diente->arcada = $request->input('arcada');
         $diente->save();
-        $this->auditar('cpu_diente', 'actualizarDiente', '', $diente, 'MODIFICACION', 'Actualización de diente', $request);
+        $this->auditar('cpu_diente', 'actualizarDiente', '', $diente, 'MODIFICACION', 'Actualización de diente');
         return response()->json(['message' => 'Diente actualizado con éxito']);
     }
 
+    //funcion para auditar
     private function auditar($tabla, $campo, $dataOld, $dataNew, $tipo, $descripcion, $request = null)
     {
-        $usuario = $request ? $request->user()->name : auth()->user()->name;
-        $ip = $request ? $request->ip() : request()->ip();
+        $usuario = $request && !is_string($request) ? $request->user()->name : auth()->user()->name;
+        $ip = $request && !is_string($request) ? $request->ip() : request()->ip();
         $ipv4 = gethostbyname(gethostname());
         $publicIp = file_get_contents('http://ipecho.net/plain');
         $ioConcatenadas = 'IP LOCAL: ' . $ip . '  --IPV4: ' . $ipv4 . '  --IP PUBLICA: ' . $publicIp;
         $nombreequipo = gethostbyaddr($ip);
-        $userAgent = $request ? $request->header('User-Agent') : request()->header('User-Agent');
+        $userAgent = $request && !is_string($request) ? $request->header('User-Agent') : request()->header('User-Agent');
         $tipoEquipo = 'Desconocido';
 
         if (stripos($userAgent, 'Mobile') !== false) {
@@ -77,7 +78,7 @@ class CpuDienteController extends Controller
         $nombreUsuarioEquipo = get_current_user() . ' en ' . $tipoEquipo;
 
         $fecha = now();
-        $codigo_auditoria = strtoupper($tabla . '_' . $campo . '_' . $tipo);
+        $codigo_auditoria = strtoupper($tabla . '_' . $campo . '_' . $tipo );
         DB::table('cpu_auditoria')->insert([
             'aud_user' => $usuario,
             'aud_tabla' => $tabla,

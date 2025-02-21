@@ -292,7 +292,7 @@ class CpuConsumoBecadoController extends Controller
         }
     }
 
-    // Función para auditar
+    //funcion para auditar
     private function auditar($tabla, $campo, $dataOld, $dataNew, $tipo, $descripcion, $request = null)
     {
         $usuario = $request && !is_string($request) ? $request->user()->name : auth()->user()->name;

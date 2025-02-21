@@ -61,7 +61,7 @@ class CpuDatosSocialesController extends Controller
         }
 
         $datosSociales = CpuDatosSociales::create(array_merge($validated, ['image_path' => $imagePath]));
-        $this->auditar('cpu_datos_sociales', 'store', '', $datosSociales, 'INSERCION', 'Creación de datos sociales', $request);
+        $this->auditar('cpu_datos_sociales', 'store', '', $datosSociales, 'INSERCION', 'Creación de datos sociales');
 
         return response()->json(['message' => 'Datos sociales guardados exitosamente', 'data' => $datosSociales]);
     }
@@ -100,20 +100,21 @@ class CpuDatosSocialesController extends Controller
         }
 
         $datosSociales->update($validated);
-        $this->auditar('cpu_datos_sociales', 'updateByPersonaId', '', $datosSociales, 'MODIFICACION', 'Actualización de datos sociales', $request);
+        $this->auditar('cpu_datos_sociales', 'updateByPersonaId', '', $datosSociales, 'MODIFICACION', 'Actualización de datos sociales');
 
         return response()->json(['message' => 'Datos sociales actualizados exitosamente', 'data' => $datosSociales]);
     }
 
+    //funcion para auditar
     private function auditar($tabla, $campo, $dataOld, $dataNew, $tipo, $descripcion, $request = null)
     {
-        $usuario = $request ? $request->user()->name : auth()->user()->name;
-        $ip = $request ? $request->ip() : request()->ip();
+        $usuario = $request && !is_string($request) ? $request->user()->name : auth()->user()->name;
+        $ip = $request && !is_string($request) ? $request->ip() : request()->ip();
         $ipv4 = gethostbyname(gethostname());
         $publicIp = file_get_contents('http://ipecho.net/plain');
         $ioConcatenadas = 'IP LOCAL: ' . $ip . '  --IPV4: ' . $ipv4 . '  --IP PUBLICA: ' . $publicIp;
         $nombreequipo = gethostbyaddr($ip);
-        $userAgent = $request ? $request->header('User-Agent') : request()->header('User-Agent');
+        $userAgent = $request && !is_string($request) ? $request->header('User-Agent') : request()->header('User-Agent');
         $tipoEquipo = 'Desconocido';
 
         if (stripos($userAgent, 'Mobile') !== false) {

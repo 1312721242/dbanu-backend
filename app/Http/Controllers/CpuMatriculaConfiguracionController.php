@@ -34,7 +34,7 @@ class CpuMatriculaConfiguracionController extends Controller
             ['id' => $request->id], // Keys to find
             $validatedData // Values to fill or update
         );
-        $this->auditar('cpu_matricula_configuracion', 'store', '', $configuracion, 'INSERCION', 'Creación de configuración de matrícula', $request);
+        $this->auditar('cpu_matricula_configuracion', 'store', '', $configuracion, 'INSERCION', 'Creación de configuración de matrícula');
         return response()->json($configuracion, 200);
     }
 
@@ -55,15 +55,16 @@ class CpuMatriculaConfiguracionController extends Controller
         return CpuMatriculaConfiguracion::where('id_estado', 8)->get();
     }
 
+    //funcion para auditar
     private function auditar($tabla, $campo, $dataOld, $dataNew, $tipo, $descripcion, $request = null)
     {
-        $usuario = $request ? $request->user()->name : auth()->user()->name;
-        $ip = $request ? $request->ip() : request()->ip();
+        $usuario = $request && !is_string($request) ? $request->user()->name : auth()->user()->name;
+        $ip = $request && !is_string($request) ? $request->ip() : request()->ip();
         $ipv4 = gethostbyname(gethostname());
         $publicIp = file_get_contents('http://ipecho.net/plain');
         $ioConcatenadas = 'IP LOCAL: ' . $ip . '  --IPV4: ' . $ipv4 . '  --IP PUBLICA: ' . $publicIp;
         $nombreequipo = gethostbyaddr($ip);
-        $userAgent = $request ? $request->header('User-Agent') : request()->header('User-Agent');
+        $userAgent = $request && !is_string($request) ? $request->header('User-Agent') : request()->header('User-Agent');
         $tipoEquipo = 'Desconocido';
 
         if (stripos($userAgent, 'Mobile') !== false) {
@@ -78,7 +79,7 @@ class CpuMatriculaConfiguracionController extends Controller
         $nombreUsuarioEquipo = get_current_user() . ' en ' . $tipoEquipo;
 
         $fecha = now();
-        $codigo_auditoria = strtoupper($tabla . '_' . $campo . '_' . $tipo);
+        $codigo_auditoria = strtoupper($tabla . '_' . $campo . '_' . $tipo );
         DB::table('cpu_auditoria')->insert([
             'aud_user' => $usuario,
             'aud_tabla' => $tabla,

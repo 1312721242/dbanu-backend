@@ -34,7 +34,7 @@ class CpuTipoBecaController extends Controller
             'created_at' => now(),
             'updated_at' => now()
         ]);
-        $this->auditar('cpu_tipo_beca', 'create', '', $tipoBeca, 'INSERCION', 'Creación de tipo de beca', $request);
+        $this->auditar('cpu_tipo_beca', 'create', '', $tipoBeca, 'INSERCION', 'Creación de tipo de beca');
 
         return response()->json($tipoBeca, 201);
     }
@@ -83,15 +83,16 @@ class CpuTipoBecaController extends Controller
         return response()->json($tipoBeca);
     }
 
+    //funcion para auditar
     private function auditar($tabla, $campo, $dataOld, $dataNew, $tipo, $descripcion, $request = null)
     {
-        $usuario = $request ? $request->user()->name : auth()->user()->name;
-        $ip = $request ? $request->ip() : request()->ip();
+        $usuario = $request && !is_string($request) ? $request->user()->name : auth()->user()->name;
+        $ip = $request && !is_string($request) ? $request->ip() : request()->ip();
         $ipv4 = gethostbyname(gethostname());
         $publicIp = file_get_contents('http://ipecho.net/plain');
         $ioConcatenadas = 'IP LOCAL: ' . $ip . '  --IPV4: ' . $ipv4 . '  --IP PUBLICA: ' . $publicIp;
         $nombreequipo = gethostbyaddr($ip);
-        $userAgent = $request ? $request->header('User-Agent') : request()->header('User-Agent');
+        $userAgent = $request && !is_string($request) ? $request->header('User-Agent') : request()->header('User-Agent');
         $tipoEquipo = 'Desconocido';
 
         if (stripos($userAgent, 'Mobile') !== false) {

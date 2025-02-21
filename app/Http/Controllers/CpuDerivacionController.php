@@ -59,7 +59,7 @@ class CpuDerivacionController extends Controller
                     'id_paciente' => $data['id_paciente']
                 ]);
         }
-        $this->auditar('cpu_derivacion', 'store', '', $derivacion, 'INSERCION', 'Creación de derivación', $request);
+        $this->auditar('cpu_derivacion', 'store', '', $derivacion, 'INSERCION', 'Creación de derivación');
 
         return response()->json($derivacion, 201);
     }
@@ -86,7 +86,7 @@ class CpuDerivacionController extends Controller
         ]);
 
         $derivacion->update($data);
-        $this->auditar('cpu_derivacion', 'update', '', $derivacion, 'MODIFICACION', 'Actualización de derivación', $request);
+        $this->auditar('cpu_derivacion', 'update', '', $derivacion, 'MODIFICACION', 'Actualización de derivación');
 
         return response()->json($derivacion);
     }
@@ -242,7 +242,7 @@ class CpuDerivacionController extends Controller
 
         $derivacion->id_estado_derivacion = $data['id_estado_derivacion'];
         $derivacion->save();
-        $this->auditar('cpu_derivacion', 'updateDerivacion', '', $derivacion, 'MODIFICACION', 'Actualización de derivación', $request);
+        $this->auditar('cpu_derivacion', 'updateDerivacion', '', $derivacion, 'MODIFICACION', 'Actualización de derivación');
         return response()->json(['success' => true, 'derivacion' => $derivacion]);
     }
 
@@ -309,7 +309,7 @@ class CpuDerivacionController extends Controller
             // Llamar a la función enviarCorreo con los datos necesarios después de que la transacción se haya realizado correctamente
             // $this->enviarCorreoPaciente($validatedData, 'reagendamiento');
             // $this->enviarCorreoFuncionario($validatedData, 'reagendamiento');
-            $this->auditar('cpu_derivacion', 'Reagendar', '', $derivacion, 'INSERCION', 'Creación de derivación', $request);
+            $this->auditar('cpu_derivacion', 'Reagendar', '', $derivacion, 'INSERCION', 'Creación de derivación');
 
             // Si todo va bien, confirmar la transacción
             DB::commit();
@@ -572,16 +572,16 @@ class CpuDerivacionController extends Controller
         return response()->json(['message' => 'Solicitud enviada correctamente'], 200);
     }
 
-    // Función para auditar
+    //funcion para auditar
     private function auditar($tabla, $campo, $dataOld, $dataNew, $tipo, $descripcion, $request = null)
     {
-        $usuario = $request ? $request->user()->name : auth()->user()->name;
-        $ip = $request ? $request->ip() : request()->ip();
+        $usuario = $request && !is_string($request) ? $request->user()->name : auth()->user()->name;
+        $ip = $request && !is_string($request) ? $request->ip() : request()->ip();
         $ipv4 = gethostbyname(gethostname());
         $publicIp = file_get_contents('http://ipecho.net/plain');
         $ioConcatenadas = 'IP LOCAL: ' . $ip . '  --IPV4: ' . $ipv4 . '  --IP PUBLICA: ' . $publicIp;
         $nombreequipo = gethostbyaddr($ip);
-        $userAgent = $request ? $request->header('User-Agent') : request()->header('User-Agent');
+        $userAgent = $request && !is_string($request) ? $request->header('User-Agent') : request()->header('User-Agent');
         $tipoEquipo = 'Desconocido';
 
         if (stripos($userAgent, 'Mobile') !== false) {

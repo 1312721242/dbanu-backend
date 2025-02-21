@@ -17,7 +17,7 @@ class CpuTipoUsuarioController extends Controller
         $request->validate([
             'tipo_usuario' => 'required|string|max:255',
         ]);
-        $this->auditar('cpu_tipo_usuario', 'store', '', $request->all(), 'INSERCION', 'Creación de tipo de usuario', $request);
+        $this->auditar('cpu_tipo_usuario', 'store', '', $request->all(), 'INSERCION', 'Creación de tipo de usuario');
         return CpuTipoUsuario::create($request->all());
     }
 
@@ -34,7 +34,7 @@ class CpuTipoUsuarioController extends Controller
 
         $cpuTipoUsuario = CpuTipoUsuario::findOrFail($id);
         $cpuTipoUsuario->update($request->all());
-        $this->auditar('cpu_tipo_usuario', 'update', '', $cpuTipoUsuario, 'MODIFICACION', 'Modificación de tipo de usuario', $request, $id);
+        $this->auditar('cpu_tipo_usuario', 'update', '', $cpuTipoUsuario, 'MODIFICACION', 'Modificación de tipo de usuario', $id);
         return $cpuTipoUsuario;
     }
 
@@ -54,16 +54,16 @@ class CpuTipoUsuarioController extends Controller
         // Retorna los resultados
         return response()->json($tiposUsuario);
     }
-    //auditar
+    //funcion para auditar
     private function auditar($tabla, $campo, $dataOld, $dataNew, $tipo, $descripcion, $request = null)
     {
-        $usuario = $request ? $request->user()->name : auth()->user()->name;
-        $ip = $request ? $request->ip() : request()->ip();
+        $usuario = $request && !is_string($request) ? $request->user()->name : auth()->user()->name;
+        $ip = $request && !is_string($request) ? $request->ip() : request()->ip();
         $ipv4 = gethostbyname(gethostname());
         $publicIp = file_get_contents('http://ipecho.net/plain');
         $ioConcatenadas = 'IP LOCAL: ' . $ip . '  --IPV4: ' . $ipv4 . '  --IP PUBLICA: ' . $publicIp;
         $nombreequipo = gethostbyaddr($ip);
-        $userAgent = $request ? $request->header('User-Agent') : request()->header('User-Agent');
+        $userAgent = $request && !is_string($request) ? $request->header('User-Agent') : request()->header('User-Agent');
         $tipoEquipo = 'Desconocido';
 
         if (stripos($userAgent, 'Mobile') !== false) {

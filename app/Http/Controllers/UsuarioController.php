@@ -48,7 +48,7 @@ class UsuarioController extends Controller
             'api_token' => $request->input('api_token'),
         ]);
         //auditar
-        $this->auditar('usuario', 'agregarUsuario', '', $usuario, 'INSERCION', 'Agregación de usuario', $request);
+        $this->auditar('usuario', 'agregarUsuario', '', $usuario, 'INSERCION', 'Agregación de usuario');
 
         return response()->json(['success' => true, 'message' => 'Usuario agregado correctamente', 'user' => ['id' => $usuario->id]]);
     }
@@ -65,7 +65,7 @@ class UsuarioController extends Controller
 
         $usuario->update(['usr_estado' => 9]);
         //auditar
-        $this->auditar('usuario', 'darDeBajaUsuario', '', $usuario, 'MODIFICACION', 'Modificación de usuario', $request);
+        $this->auditar('usuario', 'darDeBajaUsuario', '', $usuario, 'MODIFICACION', 'Modificación de usuario');
 
         return response()->json(['success' => true, 'message' => 'Usuario dado de baja correctamente']);
     }
@@ -81,7 +81,7 @@ class UsuarioController extends Controller
 
         $usuario->update(['usr_estado' => 8]);
         //auditar
-        $this->auditar('usuario', 'darDeAltaUsuario', '', $usuario, 'MODIFICACION', 'Modificación de usuario', $request);
+        $this->auditar('usuario', 'darDeAltaUsuario', '', $usuario, 'MODIFICACION', 'Modificación de usuario');
 
         return response()->json(['success' => true, 'message' => 'Usuario dado de alta correctamente']);
     }
@@ -105,7 +105,7 @@ class UsuarioController extends Controller
 
         $usuario->update(['password' => Hash::make($request->input('password'))]);
         //auditar
-        $this->auditar('usuario', 'cambiarPassword', '', $usuario, 'MODIFICACION', 'Modificación de usuario', $request);
+        $this->auditar('usuario', 'cambiarPassword', '', $usuario, 'MODIFICACION', 'Modificación de usuario');
 
         return response()->json(['success' => true, 'message' => 'Contraseña cambiada correctamente']);
     }
@@ -135,7 +135,7 @@ class UsuarioController extends Controller
         // Cambiar la contraseña
         $usuario->update(['password' => Hash::make($request->input('new_password'))]);
         //auditar
-        $this->auditar('usuario', 'cambiarPasswordApp', '', $usuario, 'MODIFICACION', 'Modificación de usuario', $request);
+        $this->auditar('usuario', 'cambiarPasswordApp', '', $usuario, 'MODIFICACION', 'Modificación de usuario');
 
         return response()->json(['success' => true, 'message' => 'Contraseña cambiada correctamente']);
     }
@@ -186,7 +186,7 @@ class UsuarioController extends Controller
 
         $usuario->update($updateData);
         //auditar
-        $this->auditar('usuario', 'actualizarInformacionPersonal', '', $usuario, 'MODIFICACION', 'Modificación de usuario', $request);
+        $this->auditar('usuario', 'actualizarInformacionPersonal', '', $usuario, 'MODIFICACION', 'Modificación de usuario');
 
         return response()->json(['success' => true, 'message' => 'Información personal actualizada correctamente']);
     }
@@ -213,7 +213,7 @@ class UsuarioController extends Controller
                 'api_token'
             ]);
         //auditar
-        $this->auditar('usuario', 'search', '', $users, 'CONSULTA', 'Consulta de usuarios', $request);
+        $this->auditar('usuario', 'search', '', $users, 'CONSULTA', 'Consulta de usuarios');
 
         // Devolver los resultados como respuesta JSON
         return response()->json($users);
@@ -249,7 +249,7 @@ class UsuarioController extends Controller
         //     ];
         // });
         //auditar
-        $this->auditar('usuario', 'buscarfuncionariorol', '', $users, 'CONSULTA', 'Consulta de usuarios por rol', $request);
+        $this->auditar('usuario', 'buscarfuncionariorol', '', $users, 'CONSULTA', 'Consulta de usuarios por rol');
 
         return response()->json($users);
     }
@@ -330,7 +330,7 @@ class UsuarioController extends Controller
 
         $user->save();
         //auditar
-        $this->auditar('usuario', 'cambiarContrasena', '', $user, 'MODIFICACION', 'Modificación de usuario', $request);
+        $this->auditar('usuario', 'cambiarContrasena', '', $user, 'MODIFICACION', 'Modificación de usuario');
 
         return response()->json([
             'success' => true,
@@ -339,16 +339,16 @@ class UsuarioController extends Controller
         ]);
     }
 
-    //auditar
+    //funcion para auditar
     private function auditar($tabla, $campo, $dataOld, $dataNew, $tipo, $descripcion, $request = null)
     {
-        $usuario = $request ? $request->user()->name : auth()->user()->name;
-        $ip = $request ? $request->ip() : request()->ip();
+        $usuario = $request && !is_string($request) ? $request->user()->name : auth()->user()->name;
+        $ip = $request && !is_string($request) ? $request->ip() : request()->ip();
         $ipv4 = gethostbyname(gethostname());
         $publicIp = file_get_contents('http://ipecho.net/plain');
         $ioConcatenadas = 'IP LOCAL: ' . $ip . '  --IPV4: ' . $ipv4 . '  --IP PUBLICA: ' . $publicIp;
         $nombreequipo = gethostbyaddr($ip);
-        $userAgent = $request ? $request->header('User-Agent') : request()->header('User-Agent');
+        $userAgent = $request && !is_string($request) ? $request->header('User-Agent') : request()->header('User-Agent');
         $tipoEquipo = 'Desconocido';
 
         if (stripos($userAgent, 'Mobile') !== false) {
@@ -363,7 +363,7 @@ class UsuarioController extends Controller
         $nombreUsuarioEquipo = get_current_user() . ' en ' . $tipoEquipo;
 
         $fecha = now();
-        $codigo_auditoria = strtoupper($tabla . '_' . $campo . '_' . $tipo);
+        $codigo_auditoria = strtoupper($tabla . '_' . $campo . '_' . $tipo );
         DB::table('cpu_auditoria')->insert([
             'aud_user' => $usuario,
             'aud_tabla' => $tabla,

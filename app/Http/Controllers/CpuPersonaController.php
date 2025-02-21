@@ -8,6 +8,7 @@ use App\Models\CpuDatosEmpleado;
 use App\Models\CpuDatosMedicos;
 use App\Models\CpuDatosEstudiantes;
 use App\Models\CpuDatosUsuarioExterno;
+use App\Models\CpuTipoDiscapacidad;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -18,96 +19,100 @@ class CpuPersonaController extends Controller
 {
     //aqui para tenciones de medico ocupacional
     public function show($cedula)
-    {
-        if (strlen($cedula) < 10) {
-            $personas = CpuPersona::where('cedula', 'like', "{$cedula}%")
-                ->with('datosEmpleados')
-                ->get();
-            return response()->json($personas);
-        }
+{
+    if (strlen($cedula) < 10) {
+        $personas = CpuPersona::where('cedula', 'like', "{$cedula}%")
+            ->with(['datosEmpleados', 'tipoDiscapacidad']) // Se añade la relación
+            ->get();
+        return response()->json($personas);
+    }
 
-        $persona = CpuPersona::where('cedula', $cedula)->with('datosEmpleados')->first();
+    $persona = CpuPersona::where('cedula', $cedula)
+        ->with(['datosEmpleados', 'tipoDiscapacidad']) // Se añade la relación
+        ->first();
 
-        if ($persona) {
-            return response()->json($persona);
-        }
+    if ($persona) {
+        return response()->json($persona);
+    }
 
-        // $response = Http::get("https://apps2.uleam.edu.ec/DATHApi/api/personal/{$cedula}/bienestar");
-        //Second API call if first API doesn't provide any data
-        try {
-            $response = Http::asForm()->post('https://login.microsoftonline.com/31a17900-7589-4cfc-b11a-f4e83c27b8ed/oauth2/v2.0/token', [
-                'grant_type' => 'client_credentials',
-                'client_id' => '1111b1c0-8b4f-4f50-96ea-ea4cc2df1c6d',
-                'client_secret' => 'iZH8Q~TRpKFW5PCG4OlBw-R1SDDnpT-611myKasT',
-                'scope' => 'https://service.flow.microsoft.com//.default'
-            ]);
+    // Llamada externa en caso de no encontrar la persona
+    try {
+        $response = Http::asForm()->post('https://login.microsoftonline.com/31a17900-7589-4cfc-b11a-f4e83c27b8ed/oauth2/v2.0/token', [
+            'grant_type' => 'client_credentials',
+            'client_id' => '1111b1c0-8b4f-4f50-96ea-ea4cc2df1c6d',
+            'client_secret' => 'iZH8Q~TRpKFW5PCG4OlBw-R1SDDnpT-611myKasT',
+            'scope' => 'https://service.flow.microsoft.com//.default'
+        ]);
 
-            if ($response->failed()) {
-                Log::error('Error al obtener el token de acceso: ' . $response->status() . ' ' . $response->body());
-                return response()->json(['error' => 'Error al obtener el token de acceso'], 500);
-            }
-
-            $access_token = $response->json()['access_token'];
-            $identificacion = $cedula;
-
-            $response = Http::withHeaders([
-                'Authorization' => 'Bearer ' . $access_token,
-                'Content-Type' => 'application/json'
-            ])->post('https://prod-160.westus.logic.azure.com/workflows/79256a92249b4f85bc6c0737d8d17d10/triggers/manual/paths/invoke/cedula/{identificacion}?api-version=2016-06-01', [
-                'identificacion' => $identificacion
-            ]);
-
-            if ($response->failed()) {
-                Log::error('Error al enviar la solicitud a Azure Logic Apps: ' . $response->status() . ' ' . $response->body());
-                return response()->json(['error' => 'Error al enviar la solicitud a Azure Logic Apps'], 500);
-            }
-
-            // return response()->json($response->json());
-        } catch (\Exception $e) {
-            Log::error('Error al obtener el token de acceso: ' . $e->getMessage());
+        if ($response->failed()) {
+            Log::error('Error al obtener el token de acceso: ' . $response->status() . ' ' . $response->body());
             return response()->json(['error' => 'Error al obtener el token de acceso'], 500);
         }
-        dd($response->json());
-        if ($response->successful()) {
-            $data = $response->json();
 
-            $persona = CpuPersona::create([
-                'cedula' => $data['cedula'],
-                'nombres' => $data['nombres'],
-                'nacionalidad' => $data['nacionalidad'],
-                'provincia' => $data['provincia'],
-                'ciudad' => $data['ciudad'],
-                'parroquia' => $data['parroquia'],
-                'direccion' => $data['direccion'],
-                'sexo' => $data['sexo'],
-                'fechanaci' => $data['fechanaci'],
-                'celular' => $data['celular'],
-                'tipoetnia' => $data['tipoetnia'],
-                'discapacidad' => $data['discapacidad'],
-                'id_clasificacion_tipo_usuario' => 2,
-                'ocupacion' => $data['ocupacion'],
-            ]);
+        $access_token = $response->json()['access_token'];
+        $identificacion = $cedula;
 
-            CpuDatosEmpleado::create([
-                'id_persona' => $persona->id,
-                'emailinstitucional' => $data['emailinstitucional'],
-                'puesto' => $data['puesto'],
-                'regimen1' => $data['regimen1'],
-                'modalidad' => $data['modalidad'],
-                'unidad' => $data['unidad'],
-                'carrera' => $data['carrera'],
-                'idsubproceso' => $data['idSubProceso'],
-                'escala1' => $data['escala1'],
-                'estado' => $data['estado'],
-                'fechaingre' => $data['fechaIngre'],
-            ]);
+        $response = Http::withHeaders([
+            'Authorization' => 'Bearer ' . $access_token,
+            'Content-Type' => 'application/json'
+        ])->post('https://prod-160.westus.logic.azure.com/workflows/79256a92249b4f85bc6c0737d8d17d10/triggers/manual/paths/invoke/cedula/{identificacion}?api-version=2016-06-01', [
+            'identificacion' => $identificacion
+        ]);
 
-            $persona->load('datosEmpleados');
-            return response()->json([$persona]);
+        if ($response->failed()) {
+            Log::error('Error al enviar la solicitud a Azure Logic Apps: ' . $response->status() . ' ' . $response->body());
+            return response()->json(['error' => 'Error al enviar la solicitud a Azure Logic Apps'], 500);
         }
 
-        return response()->json(['message' => 'Persona no encontrada'], 404);
+    } catch (\Exception $e) {
+        Log::error('Error al obtener el token de acceso: ' . $e->getMessage());
+        return response()->json(['error' => 'Error al obtener el token de acceso'], 500);
     }
+
+    if ($response->successful()) {
+        $data = $response->json();
+
+        $persona = CpuPersona::create([
+            'cedula' => $data['cedula'],
+            'nombres' => $data['nombres'],
+            'nacionalidad' => $data['nacionalidad'],
+            'provincia' => $data['provincia'],
+            'ciudad' => $data['ciudad'],
+            'parroquia' => $data['parroquia'],
+            'direccion' => $data['direccion'],
+            'sexo' => $data['sexo'],
+            'fechanaci' => $data['fechanaci'],
+            'celular' => $data['celular'],
+            'tipoetnia' => $data['tipoetnia'],
+            'discapacidad' => $data['discapacidad'],
+            'tipo_discapacidad' => $data['tipo_discapacidad'], // Se guarda el ID de discapacidad
+            'id_clasificacion_tipo_usuario' => 2,
+            'ocupacion' => $data['ocupacion'],
+        ]);
+
+        CpuDatosEmpleado::create([
+            'id_persona' => $persona->id,
+            'emailinstitucional' => $data['emailinstitucional'],
+            'puesto' => $data['puesto'],
+            'regimen1' => $data['regimen1'],
+            'modalidad' => $data['modalidad'],
+            'unidad' => $data['unidad'],
+            'carrera' => $data['carrera'],
+            'idsubproceso' => $data['idSubProceso'],
+            'escala1' => $data['escala1'],
+            'estado' => $data['estado'],
+            'fechaingre' => $data['fechaIngre'],
+        ]);
+
+        // Cargar la relación con el tipo de discapacidad
+        $persona->load(['datosEmpleados', 'tipoDiscapacidad']);
+
+        return response()->json([$persona]);
+    }
+
+    return response()->json(['message' => 'Persona no encontrada'], 404);
+}
+
 
     // Aquí para atenciones de bienestar
     public function showBienestar($cedula)
@@ -287,7 +292,7 @@ class CpuPersonaController extends Controller
                         "O+" => 7,
                         "O-" => 8,
                     ][$data['TipoSangre']] ?? null,
-                    
+
                 ]);
 
                 Log::info('Datos del médico creado: ' . json_encode($persona->datosMedicos));

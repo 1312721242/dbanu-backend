@@ -69,7 +69,7 @@ class CpuAtencionTriajeController extends Controller
         $idAtencion = $request->input('id_atencion');
 
         // Obtener los datos de triaje correspondientes a la derivación
-        $triaje = CpuAtencionTriaje::where('ate_id', $idAtencion)->first();
+        $triaje = CpuAtencionTriaje::where('id_atencion', $idAtencion)->first();
 
         if (!$triaje) {
             return response()->json(['error' => 'Datos de triaje no encontrados para la derivación'], 204);

@@ -285,12 +285,11 @@ class UsuarioController extends Controller
 
         $validator = Validator::make($request->all(), [
             'id' => 'required|exists:users,id',
-            'password_actual' => 'required',
-            'nueva_contrasena' => 'nullable|min:8|confirmed', // Se mantiene la validación de `confirmed`
-            'foto_perfil' => 'nullable|image|mimes:jpeg,png,jpg|max:2048' // Asegurar que la imagen sea válida
+            'password_actual' => $request->filled('nueva_contrasena') ? 'required' : 'nullable',
+            'nueva_contrasena' => 'nullable|min:8|confirmed',
+            'foto_perfil' => 'nullable|image|mimes:jpeg,png,jpg|max:2048'
         ], [
-            'password_actual.required' => 'La contraseña actual es obligatoria.',
-            'nueva_contrasena.required' => 'La nueva contraseña es obligatoria.',
+            'password_actual.required' => 'La contraseña actual es obligatoria si deseas cambiar la contraseña.',
             'nueva_contrasena.min' => 'La nueva contraseña debe tener al menos 8 caracteres.',
             'nueva_contrasena.confirmed' => 'Las contraseñas nuevas no coinciden.',
         ]);
@@ -305,8 +304,8 @@ class UsuarioController extends Controller
         // Obtener usuario
         $user = User::find($request->id);
 
-        // Validar contraseña actual
-        if (!Hash::check($request->password_actual, $user->password)) {
+        // Validar contraseña actual solo si se proporciona nueva contraseña
+        if ($request->filled('nueva_contrasena') && !Hash::check($request->password_actual, $user->password)) {
             return response()->json([
                 'success' => false,
                 'message' => ['password_actual' => 'La contraseña actual es incorrecta.']
@@ -323,21 +322,21 @@ class UsuarioController extends Controller
             $imagen = $request->file('foto_perfil');
             $nombreImagen = time() . '.' . $imagen->getClientOriginalExtension();
             $imagen->move(public_path('Perfiles'), $nombreImagen);
-
-            // ✅ Guardar solo el nombre del archivo en la base de datos
             $user->foto_perfil = $nombreImagen;
         }
 
         $user->save();
-        //auditar
+
+        // Auditoría
         $this->auditar('usuario', 'cambiarContrasena', '', $user, 'MODIFICACION', 'Modificación de usuario');
 
         return response()->json([
             'success' => true,
-            'message' => 'Contraseña y foto de perfil actualizadas correctamente.',
-            'foto_perfil' => url('Perfiles/' . $user->foto_perfil) // ✅ Devolver la URL completa para el frontend
+            'message' => 'Datos actualizados correctamente.',
+            'foto_perfil' => url('Perfiles/' . $user->foto_perfil)
         ]);
     }
+
 
     //funcion para auditar
     private function auditar($tabla, $campo, $dataOld, $dataNew, $tipo, $descripcion, $request = null)

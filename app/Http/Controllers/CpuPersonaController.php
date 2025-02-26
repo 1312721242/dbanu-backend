@@ -20,26 +20,45 @@ class CpuPersonaController extends Controller
     //aqui para tenciones de medico ocupacional
     public function show($cedula)
     {
-        if (strlen($cedula) < 10) {
+        Log::info("CEDULA RECIBIDA:  '$cedula'");
+        if (strlen($cedula) <= 9) {
             $personas = CpuPersona::where('cedula', 'like', "{$cedula}%")
-                // ->with('datosEmpleados')
-                ->with(['datosEmpleados', 'tipoDiscapacidad']) // Se añade la relación
+                ->with(['datosEmpleados', 'datosEstudiantes', 'datosExternos', 'datosMedicos'])
                 ->get();
+
+            foreach ($personas as $persona) {
+                $persona->tipoDiscapacidad = $persona->tipo_discapacidad;
+                $persona->porcentajeDiscapacidad = $persona->porcentaje_discapacidad;
+                $persona->imagen = url('Perfiles/' . $persona->imagen);
+            }
+
             return response()->json($personas);
         }
 
         $persona = CpuPersona::where('cedula', $cedula)
-        // ->with('datosEmpleados')->first();
-        ->with(['datosEmpleados', 'tipoDiscapacidad']) ->first();// Se añade la relación
+            ->with(['datosEmpleados', 'datosEstudiantes', 'datosExternos', 'datosMedicos'])
+            ->first();
 
         if ($persona) {
+            // Generar el código de persona
+            $codigoPersona = $this->generarCodigoPersona($persona->cedula, $persona->nombres);
+            $persona->codigo_persona = $codigoPersona;
+            $persona->save();
+
+            $persona->load('datosMedicos'); // Load datosMedicos if available
+            $persona->tipoDiscapacidad = $persona->tipo_discapacidad;
+            $persona->porcentajeDiscapacidad = $persona->porcentaje_discapacidad;
+            $persona->embarazada = $persona->embarazada;
+            $persona->ultima_fecha_mestruacion = $persona->ultima_fecha_mestruacion;
+            $persona->imagen = $persona->imagen;
+
             return response()->json($persona);
         }
 
+        // First API call
         // $response = Http::get("https://apps2.uleam.edu.ec/DATHApi/api/personal/{$cedula}/bienestar");
-        //Second API call if first API doesn't provide any data
         try {
-            $response = Http::asForm()->post('https://login.microsoftonline.com/31a17900-7589-4cfc-b11a-f4e83c27b8ed/oauth2/v2.0/token', [
+            $response = Http::withOptions(['verify' => false])->asForm()->post('https://login.microsoftonline.com/31a17900-7589-4cfc-b11a-f4e83c27b8ed/oauth2/v2.0/token', [
                 'grant_type' => 'client_credentials',
                 'client_id' => '1111b1c0-8b4f-4f50-96ea-ea4cc2df1c6d',
                 'client_secret' => 'iZH8Q~TRpKFW5PCG4OlBw-R1SDDnpT-611myKasT',
@@ -52,65 +71,141 @@ class CpuPersonaController extends Controller
             }
 
             $access_token = $response->json()['access_token'];
+
+            Log::info("TOKEN OBTENIDO: " . $access_token);
             $identificacion = $cedula;
 
-            $response = Http::withHeaders([
+            // Construcción de la URL con el identificador
+            $url = "https://prod-160.westus.logic.azure.com/workflows/79256a92249b4f85bc6c0737d8d17d10/triggers/manual/paths/invoke/cedula/{$identificacion}?api-version=2016-06-01";
+
+            // Llamar a Azure Logic Apps con el token correcto y el identificador
+            $response = Http::withOptions(['verify' => false])->withHeaders([
                 'Authorization' => 'Bearer ' . $access_token,
                 'Content-Type' => 'application/json'
-            ])->post('https://prod-160.westus.logic.azure.com/workflows/79256a92249b4f85bc6c0737d8d17d10/triggers/manual/paths/invoke/cedula/{identificacion}?api-version=2016-06-01', [
-                'identificacion' => $identificacion
-            ]);
+            ])->get($url);
 
             if ($response->failed()) {
                 Log::error('Error al enviar la solicitud a Azure Logic Apps: ' . $response->status() . ' ' . $response->body());
                 return response()->json(['error' => 'Error al enviar la solicitud a Azure Logic Apps'], 500);
             }
 
+            $data = $response->json();
+            Log::info('RESPUESTA API (empleados): ' . json_encode($data));
+
             // return response()->json($response->json());
         } catch (\Exception $e) {
             Log::error('Error al obtener el token de acceso: ' . $e->getMessage());
             return response()->json(['error' => 'Error al obtener el token de acceso'], 500);
         }
-        // dd($response->json());
-        if ($response->successful()) {
+        if (isset($response) && $response->successful()) {
             $data = $response->json();
 
-            $persona = CpuPersona::create([
-                'cedula' => $data['cedula'],
-                'nombres' => $data['nombres'],
-                'nacionalidad' => $data['nacionalidad'],
-                'provincia' => $data['provincia'],
-                'ciudad' => $data['ciudad'],
-                'parroquia' => $data['parroquia'],
-                'direccion' => $data['direccion'],
-                'sexo' => $data['sexo'],
-                'fechanaci' => $data['fechanaci'],
-                'celular' => $data['celular'],
-                'tipoetnia' => $data['tipoetnia'],
-                'discapacidad' => $data['discapacidad'],
-                'id_clasificacion_tipo_usuario' => 2,
-                'ocupacion' => $data['ocupacion'],
-            ]);
-            $this->auditar('cpu_persona', 'show', '', $persona, 'INSERCION', 'Creación de persona', $cedula);
-            CpuDatosEmpleado::create([
-                'id_persona' => $persona->id,
-                'emailinstitucional' => $data['emailinstitucional'],
-                'puesto' => $data['puesto'],
-                'regimen1' => $data['regimen1'],
-                'modalidad' => $data['modalidad'],
-                'unidad' => $data['unidad'],
-                'carrera' => $data['carrera'],
-                'idsubproceso' => $data['idSubProceso'],
-                'escala1' => $data['escala1'],
-                'estado' => $data['estado'],
-                'fechaingre' => $data['fechaIngre'],
-            ]);
-            $this->auditar('cpu_datos_empleado', 'create', '', $persona->datosEmpleados, 'INSERCION', 'Creación de datos de empleado', $cedula);
-            // $persona->load('datosEmpleados');
-            $persona->load(['datosEmpleados', 'tipoDiscapacidad']);
+            // Verificar si está vacío o no
+            $isEmptyData = empty($data['Cedula'])
+                && empty($data['Nombres'])
+                && empty($data['PaisNacimiento'])
+                && empty($data['ProvinciaDomicilio'])
+                && empty($data['CantonDomicilio'])
+                && empty($data['ParroquiaDomicilio'])
+                && empty($data['Direccion'])
+                && empty($data['Sexo'])
+                && empty($data['FechaNacimiento'])
+                && empty($data['TelefonoMovil'])
+                && empty($data['TipoEtnia']);
 
-            $this->auditar('cpu_persona', 'show', '', $persona, 'CONSULTA', 'Consulta de persona', $cedula);
-            return response()->json([$persona]);
+            // Si NO está vacío, creamos persona y retornamos
+
+            // // Check if the data returned is essentially empty
+            // $isEmptyData = empty($data['cedula']) && empty($data['nombres']) && empty($data['nacionalidad']) &&
+            //     empty($data['provincia']) && empty($data['ciudad']) && empty($data['parroquia']) &&
+            //     empty($data['direccion']) && empty($data['sexo']) && empty($data['fechanaci']) &&
+            //     empty($data['celular']) && empty($data['tipoetnia']);
+
+            if (!$isEmptyData) {
+                // Generar el código de persona
+                $codigoPersona = $this->generarCodigoPersona($data['Cedula'], $data['Nombres']);
+
+                $personaData = [
+                    'cedula' => $data['Cedula'] ?? '',
+                    'nombres' => $data['Nombres'] ?? 'SIN INFORMACIÓN',
+                    'nacionalidad' => $data['PaisNacimiento'] ?? 'SIN INFORMACIÓN',
+                    'provincia' => $data['ProvinciaDomicilio'] ?? 'SIN INFORMACIÓN',
+                    'ciudad' => $data['CantonDomicilio'] ?? 'SIN INFORMACIÓN',
+                    'parroquia' => $data['ParroquiaDomicilio'] ?? 'SIN INFORMACIÓN',
+                    'direccion' => $data['Direccion'] ?? 'SIN INFORMACIÓN',
+                    'sexo' => $data['Sexo'] ?? 'SIN INFORMACIÓN',
+                    'fechanaci' => $data['FechaNacimiento'] ?? '1900-01-01',
+                    'celular' => $data['TelefonoMovil'] ?? 'SIN INFORMACIÓN',
+                    'tipoetnia' => $data['TipoEtnia'] ?? 'SIN INFORMACIÓN',
+                    'discapacidad' => $data['TieneDiscapacidad'] ?? 'SIN INFORMACIÓN',
+                    'porcentaje_discapacidad' => (
+                        !empty($data['PorcentajeDiscapacidad'])
+                        && is_numeric($data['PorcentajeDiscapacidad'])
+                    ) ? (float)$data['PorcentajeDiscapacidad'] : 0,
+                    'codigo_persona' => $codigoPersona,
+                    'imagen' => $data['imagen'] ?? null,
+                    'email' => $data['CorreoInstitucional'] ?? '',
+                    'id_clasificacion_tipo_usuario' => 2,
+                    'ocupacion' => $data['ocupacion'] ?? null,
+                    'estado_civil' => $data['EstadCcivil'] ?? 'SIN INFORMACIÓN',
+                    'bono_desarrollo' => $data['bono_desarrollo'] ?? 'SIN INFORMACIÓN',
+                ];
+
+                // 2. Busca, si existe, la descripción en la tabla cpu_tipos_discapacidad
+                if (!empty($data['TipoDiscapacidad'])) {
+                    $tipoDiscapacidad = DB::table('cpu_tipos_discapacidad')
+                        ->where('descripcion', $data['TipoDiscapacidad'])
+                        ->value('id'); // Devuelve el id, o null si no lo encuentra
+
+                    // 3. Si la descripción existe, asigna el ID
+                    if ($tipoDiscapacidad) {
+                        $personaData['tipo_discapacidad'] = $tipoDiscapacidad;
+                    }
+                    // De lo contrario, no se asigna nada, evitando la violación de FK
+                }
+
+                // 4. Finalmente, creas la persona
+                $persona = CpuPersona::create($personaData);
+                $this->auditar('cpu_persona', 'showBienestar', '', $persona, 'INSERCION', 'Creación de persona', $cedula);
+                CpuDatosEmpleado::create([
+                    'id_persona' => $persona->id,
+                    'emailinstitucional' => $data['CorreoInstitucional'] ?? 'SIN INFORMACIÓN',
+                    'puesto' => $data['Cargo'] ?? 'SIN INFORMACIÓN',
+                    'regimen1' => $data['Regimen'] ?? 'SIN INFORMACIÓN',
+                    'correopersonal' => $data['CorreoPersonal'] ?? 'SIN INFORMACIÓN',
+                    'unidad' => $data['NombreSubProceso'] ?? 'SIN INFORMACIÓN',
+                    'carrera' => $data['NombreSeccion'] ?? 'SIN INFORMACIÓN',
+                    'nombreproceso' => $data['NombreProceso'] ?? null,
+                    'sector' => $data['Sector'] ?? 'SIN INFORMACIÓN',
+                    'referencia' => $data['Referencia'] ?? 'SIN INFORMACIÓN',
+                    'fechaingre' => $data['FechaIngreso'] ?? '1900-01-01',
+                ]);
+
+                Log::info('Datos del empleado creado: ' . json_encode($persona->datosEmpleados));
+
+                CpuDatosMedicos::create([
+                    'id_persona' => $persona->id,
+                    'tipo_sangre' => [
+                        "A+" => 1,
+                        "A-" => 2,
+                        "B+" => 3,
+                        "B-" => 4,
+                        "AB+" => 5,
+                        "AB-" => 6,
+                        "O+" => 7,
+                        "O-" => 8,
+                    ][$data['TipoSangre']] ?? null,
+
+                ]);
+                $this->auditar('cpu_datos_medicos', 'create', '', $persona->datosMedicos, 'INSERCION', 'Creación de datos médicos', $cedula);
+
+                Log::info('Datos del médico creado: ' . json_encode($persona->datosMedicos));
+
+                $persona->load(['datosEmpleados', 'datosEstudiantes']); // Load datosEstudiantes if available
+                $this->auditar('cpu_persona', 'showBienestar', '', $persona, 'CONSULTA', 'Consulta de persona', $cedula);
+                return response()->json([$persona]);
+            }
+
         }
 
         return response()->json(['message' => 'Persona no encontrada'], 404);

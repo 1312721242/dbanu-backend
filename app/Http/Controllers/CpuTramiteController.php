@@ -52,7 +52,7 @@ class CpuTramiteController extends Controller
             // Crear nuevo trámite
             $tramite = new CpuTramite($validatedData);
             $tramite->save();
-
+            $this->auditar('cpu_tramite', 'create', '', $tramite, 'INSERCION', 'Creación de trámite');
             // Confirmar transacción
             DB::commit();
 
@@ -106,6 +106,7 @@ class CpuTramiteController extends Controller
                 $tramite->dias_desde_recibido = now()->diffInDays($tramite->tra_fecha_recibido);
                 return $tramite;
             });
+        $this->auditar('cpu_tramite', 'show', '', $tramitesEnRango, 'CONSULTA', 'Consulta de trámites en rango de fechas');
 
         return response()->json([
             'tramitesEnRango' => $tramitesEnRango,
@@ -159,7 +160,7 @@ class CpuTramiteController extends Controller
 
         // Actualizar solo los campos enviados por el usuario
         $cpuTramite->update($validatedData);
-
+        $this->auditar('cpu_tramite', 'update', '', $cpuTramite, 'MODIFICACION', 'Modificación de trámite');
         return response()->json([
             'message' => 'Trámite actualizado exitosamente',
             'data' => $cpuTramite
@@ -177,5 +178,72 @@ class CpuTramiteController extends Controller
         }
         $tramite->delete();
         return response()->json(['message' => 'Trámite eliminado correctamente']);
+    }
+
+    //funcion para auditar
+    private function auditar($tabla, $campo, $dataOld, $dataNew, $tipo, $descripcion, $request = null)
+    {
+        $usuario = $request && !is_string($request) ? $request->user()->name : auth()->user()->name;
+        $ip = $request && !is_string($request) ? $request->ip() : request()->ip();
+        $ipv4 = gethostbyname(gethostname());
+        $publicIp = file_get_contents('http://ipecho.net/plain');
+        $ioConcatenadas = 'IP LOCAL: ' . $ip . '  --IPV4: ' . $ipv4 . '  --IP PUBLICA: ' . $publicIp;
+        $nombreequipo = gethostbyaddr($ip);
+        $userAgent = $request && !is_string($request) ? $request->header('User-Agent') : request()->header('User-Agent');
+        $tipoEquipo = 'Desconocido';
+
+        if (stripos($userAgent, 'Mobile') !== false) {
+            $tipoEquipo = 'Celular';
+        } elseif (stripos($userAgent, 'Tablet') !== false) {
+            $tipoEquipo = 'Tablet';
+        } elseif (stripos($userAgent, 'Laptop') !== false || stripos($userAgent, 'Macintosh') !== false) {
+            $tipoEquipo = 'Laptop';
+        } elseif (stripos($userAgent, 'Windows') !== false || stripos($userAgent, 'Linux') !== false) {
+            $tipoEquipo = 'Computador de Escritorio';
+        }
+        $nombreUsuarioEquipo = get_current_user() . ' en ' . $tipoEquipo;
+
+        $fecha = now();
+        $codigo_auditoria = strtoupper($tabla . '_' . $campo . '_' . $tipo );
+        DB::table('cpu_auditoria')->insert([
+            'aud_user' => $usuario,
+            'aud_tabla' => $tabla,
+            'aud_campo' => $campo,
+            'aud_dataold' => $dataOld,
+            'aud_datanew' => $dataNew,
+            'aud_tipo' => $tipo,
+            'aud_fecha' => $fecha,
+            'aud_ip' => $ioConcatenadas,
+            'aud_tipoauditoria' => $this->getTipoAuditoria($tipo),
+            'aud_descripcion' => $descripcion,
+            'aud_nombreequipo' => $nombreequipo,
+            'aud_descrequipo' => $nombreUsuarioEquipo,
+            'aud_codigo' => $codigo_auditoria,
+            'created_at' => now(),
+            'updated_at' => now(),
+
+        ]);
+    }
+
+    private function getTipoAuditoria($tipo)
+    {
+        switch ($tipo) {
+            case 'CONSULTA':
+                return 1;
+            case 'INSERCION':
+                return 3;
+            case 'MODIFICACION':
+                return 2;
+            case 'ELIMINACION':
+                return 4;
+            case 'LOGIN':
+                return 5;
+            case 'LOGOUT':
+                return 6;
+            case 'DESACTIVACION':
+                return 7;
+            default:
+                return 0;
+        }
     }
 }

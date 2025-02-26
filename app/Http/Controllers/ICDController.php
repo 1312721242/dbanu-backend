@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 
 class ICDController extends Controller
 {
@@ -21,7 +22,7 @@ class ICDController extends Controller
         try {
             // Verificar que las credenciales estén configuradas
             if (empty($this->clientId) || empty($this->clientSecret)) {
-                \Log::error('Credenciales de API no configuradas');
+                Log::error('Credenciales de API no configuradas');
                 return response()->json(['error' => 'Credenciales de API no configuradas'], 500);
             }
 
@@ -37,10 +38,10 @@ class ICDController extends Controller
                 return response()->json($response->json());
             } else {
                 $errorMessage = 'Error al obtener el token: ' . $response->body();
-                \Log::error($errorMessage);
-                
+                Log::error($errorMessage);
+
                 // Registrar información adicional para depuración
-                \Log::debug('Detalles de la solicitud:', [
+                Log::debug('Detalles de la solicitud:', [
                     'clientId' => $this->clientId,
                     'clientSecret' => substr($this->clientSecret, 0, 5) . '...',
                     'responseStatus' => $response->status(),
@@ -54,7 +55,7 @@ class ICDController extends Controller
             }
         } catch (\Exception $e) {
             $errorMessage = 'Excepción al obtener el token: ' . $e->getMessage();
-            \Log::error($errorMessage);
+            Log::error($errorMessage);
             return response()->json(['error' => 'Error interno del servidor: ' . $e->getMessage()], 500);
         }
     }

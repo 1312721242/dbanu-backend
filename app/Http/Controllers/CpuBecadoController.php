@@ -21,13 +21,10 @@ use SimpleSoftwareIO\QrCode\Facades\QrCode;
 use Endroid\QrCode\QrCode as EndroidQrCode;
 use Carbon\Carbon; // Asegúrate de importar Carbon
 use Illuminate\Support\Facades\Log;
-
+use Illuminate\Support\Facades\Cache;
 class CpuBecadoController extends Controller
 {
-    // public function __construct()
-    // {
-    //     $this->middleware('auth:api');
-    // }
+
 
     public function consultarPorIdentificacionYPeriodo($identificacion, $periodo)
     {
@@ -39,6 +36,9 @@ class CpuBecadoController extends Controller
         if ($becado) {
             return response()->json($becado);
         }
+
+        // Auditoría
+        $this->auditar('cpu_becado', 'identificacion', '', '', 'CONSULTA', "CONSULTA DE BECADOS POR IDENTIFICACION Y PERIODO: {$identificacion}, {$periodo}");
 
         return response()->json(['message' => 'No se encontró el o la estudiante'], 404);
     }
@@ -62,6 +62,9 @@ class CpuBecadoController extends Controller
                 ->sum('monto_facturado');
 
             // Log::info('Registro encontrado en CpuBecado');
+
+            // Auditoría
+            $this->auditar('cpu_becado', 'identificacion', '', '', 'CONSULTA', "CONSULTA DE BECADOS POR CODIGO DE TARJETA: {$codigoTarjeta}");
 
             return response()->json([
                 'becado' => $becado,
@@ -92,11 +95,6 @@ class CpuBecadoController extends Controller
 
         return response()->json(['message' => 'No se encontró un registro válido para el código de tarjeta'], 404);
     }
-
-
-
-
-
 
     public function importarExcel(Request $request)
     {
@@ -158,7 +156,8 @@ class CpuBecadoController extends Controller
                         'numero_matricula' => $row[31] ?? null,
                     ]);
                     $imported++;
-                } catch (\Exception $e) {
+                }
+                catch (\Exception $e) {
                     // Guardar información del error
                     $errors[] = [
                         'fila' => $key + 1,
@@ -172,6 +171,10 @@ class CpuBecadoController extends Controller
             } else {
                 return response()->json(['message' => 'Datos importados correctamente', 'imported' => $imported, 'errors' => $errors], 200);
             }
+
+            // Auditoría
+            $this->auditar('cpu_becado', 'identificacion', '', '', 'INSERCION', "IMPORTACION DE BECADOS POR EXCEL");
+
         } catch (\Exception $e) {
             return response()->json(['message' => 'Error en la importación: ' . $e->getMessage(), 'errors' => 1], 422);
         }
@@ -183,6 +186,9 @@ class CpuBecadoController extends Controller
 
         // Generar el código QR y guardarlo en una variable
         $qrCode = QrCode::format('png')->size(300)->generate($contenidoQR);
+
+        // Auditoría
+        $this->auditar('cpu_becado', 'identificacion', '', '', 'GENERACION', "GENERACION DE QR CODE PARA BECADOS: {$identificacion}, {$periodo}");
 
         // Devolver el código QR como una respuesta de tipo imagen PNG
         return response($qrCode)->header('Content-Type', 'image/png');
@@ -276,6 +282,9 @@ class CpuBecadoController extends Controller
         // Renderizar el PDF
         $dompdf->render();
 
+        // Auditoría
+        $this->auditar('cpu_becado', 'identificacion', '', '', 'GENERACION', "GENERACION DE PDF DE CREDENCIAL PARA BECADOS: {$identificacion}, {$periodo}");
+
         // Devolver el PDF como una respuesta de tipo application/pdf
         return $dompdf->stream('credencial.pdf');
     }
@@ -296,6 +305,9 @@ class CpuBecadoController extends Controller
         // Guardar el QR code en un archivo temporal
         $tempFilePath = storage_path('app/temp/qr_code.png');
         $qrCode->writeFile($tempFilePath);
+
+        // Auditoría
+        $this->auditar('cpu_becado', 'identificacion', '', '', 'GENERACION', "GENERACION DE QR CODE PARA BECADOS: {$identificacion}, {$periodo}");
 
         // Devolver la ruta del archivo temporal
         return $tempFilePath;
@@ -328,6 +340,9 @@ class CpuBecadoController extends Controller
 
         // Combinar las dos colecciones
         $combinedResults = $becados->concat($clientesTasty);
+
+        // Auditoría
+        $this->auditar('cpu_becado', 'identificacion', '', '', 'CONSULTA', "CONSULTA DE TODOS LOS BECADOS");
 
         return response()->json($combinedResults);
     }
@@ -365,7 +380,77 @@ class CpuBecadoController extends Controller
             return response()->json(['message' => 'Código de tarjeta actualizado correctamente en CpuFuncionarioComunidad', 'cliente' => $clienteTasty], 200);
         }
 
+        // Auditoría
+        $this->auditar('cpu_becado', 'identificacion', '', '', 'MODIFICACION', "ACTUALIZACION DE CODIGO DE TARJETA PARA BECADOS: {$identificacion}, {$request->input('codigo_tarjeta')}");
+
         // Si no se encuentra en ninguna tabla
         return response()->json(['message' => 'No se encontró el registro con esa identificación'], 404);
     }
+
+      //funcion para auditar
+      private function auditar($tabla, $campo, $dataOld, $dataNew, $tipo, $descripcion, $request = null)
+      {
+          $usuario = $request && !is_string($request) ? $request->user()->name : auth()->user()->name;
+          $ip = $request && !is_string($request) ? $request->ip() : request()->ip();
+          $ipv4 = gethostbyname(gethostname());
+          $publicIp = file_get_contents('http://ipecho.net/plain');
+          $ioConcatenadas = 'IP LOCAL: ' . $ip . '  --IPV4: ' . $ipv4 . '  --IP PUBLICA: ' . $publicIp;
+          $nombreequipo = gethostbyaddr($ip);
+          $userAgent = $request && !is_string($request) ? $request->header('User-Agent') : request()->header('User-Agent');
+          $tipoEquipo = 'Desconocido';
+
+          if (stripos($userAgent, 'Mobile') !== false) {
+              $tipoEquipo = 'Celular';
+          } elseif (stripos($userAgent, 'Tablet') !== false) {
+              $tipoEquipo = 'Tablet';
+          } elseif (stripos($userAgent, 'Laptop') !== false || stripos($userAgent, 'Macintosh') !== false) {
+              $tipoEquipo = 'Laptop';
+          } elseif (stripos($userAgent, 'Windows') !== false || stripos($userAgent, 'Linux') !== false) {
+              $tipoEquipo = 'Computador de Escritorio';
+          }
+          $nombreUsuarioEquipo = get_current_user() . ' en ' . $tipoEquipo;
+
+          $fecha = now();
+          $codigo_auditoria = strtoupper($tabla . '_' . $campo . '_' . $tipo );
+          DB::table('cpu_auditoria')->insert([
+              'aud_user' => $usuario,
+              'aud_tabla' => $tabla,
+              'aud_campo' => $campo,
+              'aud_dataold' => $dataOld,
+              'aud_datanew' => $dataNew,
+              'aud_tipo' => $tipo,
+              'aud_fecha' => $fecha,
+              'aud_ip' => $ioConcatenadas,
+              'aud_tipoauditoria' => $this->getTipoAuditoria($tipo),
+              'aud_descripcion' => $descripcion,
+              'aud_nombreequipo' => $nombreequipo,
+              'aud_descrequipo' => $nombreUsuarioEquipo,
+              'aud_codigo' => $codigo_auditoria,
+              'created_at' => now(),
+              'updated_at' => now(),
+
+          ]);
+      }
+
+      private function getTipoAuditoria($tipo)
+      {
+          switch ($tipo) {
+              case 'CONSULTA':
+                  return 1;
+              case 'INSERCION':
+                  return 3;
+              case 'MODIFICACION':
+                  return 2;
+              case 'ELIMINACION':
+                  return 4;
+              case 'LOGIN':
+                  return 5;
+              case 'LOGOUT':
+                  return 6;
+              case 'DESACTIVACION':
+                  return 7;
+              default:
+                  return 0;
+          }
+      }
 }

@@ -28,7 +28,7 @@ class MenuController extends Controller
                 $item[0]->subItems = $item->flatMap->userFunctions;
                 return $item[0];
             });
-    
+
         return response()->json(['menuItems' => $menuItems]);
     }
 
@@ -48,7 +48,7 @@ class MenuController extends Controller
                 $item[0]->subItems = $item->flatMap->userFunctions;
                 return $item[0];
             });
-    
+
         return response()->json(['menuItems' => $menuItems]);
     }
 
@@ -57,7 +57,7 @@ class MenuController extends Controller
         $menuItems = UserMenu::orderBy('menu', 'asc')->get();
         return response()->json(['menuItems' => $menuItems]);
     }
-    
+
     public function agregarMenu(Request $request)
     {
         $request->validate([
@@ -74,4 +74,5 @@ class MenuController extends Controller
 
         return response()->json(['success' => true, 'menu' => $menu]);
     }
+
 }

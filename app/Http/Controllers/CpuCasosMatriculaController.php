@@ -11,7 +11,7 @@ use App\Models\CpuLegalizacionMatricula;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Log;
 use Carbon\Carbon;
-
+use Illuminate\Support\Facades\Cache;
 class CpuCasosMatriculaController extends Controller
 {
     public function __construct()
@@ -37,35 +37,35 @@ class CpuCasosMatriculaController extends Controller
 
         // Consulta para obtener los casos de matricula asignados a la secretaria en el periodo dado
         $casosMatricula = DB::table('cpu_casos_matricula')
-        ->leftJoin('cpu_legalizacion_matricula', 'cpu_casos_matricula.id_legalizacion_matricula', '=', 'cpu_legalizacion_matricula.id')
-        ->leftJoin('cpu_carrera', 'cpu_legalizacion_matricula.id_carrera', '=', 'cpu_carrera.id')
-        ->leftJoin('cpu_sede', 'cpu_legalizacion_matricula.id_sede', '=', 'cpu_sede.id')
-        ->where('cpu_casos_matricula.id_secretaria', $idSecretaria)
-        ->where('cpu_legalizacion_matricula.id_periodo', $idPeriodo)
-        ->select(
-            'cpu_casos_matricula.id as id_caso',
-            'cpu_casos_matricula.id_estado',
-            'cpu_legalizacion_matricula.id as id_legalizacion',
-            'cpu_legalizacion_matricula.nombres',
-            'cpu_legalizacion_matricula.apellidos',
-            'cpu_legalizacion_matricula.genero',
-            'cpu_legalizacion_matricula.cedula',
-            'cpu_legalizacion_matricula.etnia',
-            'cpu_legalizacion_matricula.discapacidad',
-            'cpu_legalizacion_matricula.id_sede as sede_id',
-            'cpu_sede.nombre_sede as sede',
-            'cpu_legalizacion_matricula.id_carrera as carrera_id',
-            'cpu_carrera.name as carrera',
-            'cpu_legalizacion_matricula.copia_identificacion',
-            'cpu_legalizacion_matricula.estado_identificacion',
-            'cpu_legalizacion_matricula.copia_titulo_acta_grado as copia_titulo',
-            'cpu_legalizacion_matricula.estado_titulo',
-            'cpu_legalizacion_matricula.copia_aceptacion_cupo',
-            'cpu_legalizacion_matricula.tipo_matricula',
-            'cpu_legalizacion_matricula.estado_cupo',
-            'cpu_legalizacion_matricula.id_notificacion'
-        )
-        ->get();
+            ->leftJoin('cpu_legalizacion_matricula', 'cpu_casos_matricula.id_legalizacion_matricula', '=', 'cpu_legalizacion_matricula.id')
+            ->leftJoin('cpu_carrera', 'cpu_legalizacion_matricula.id_carrera', '=', 'cpu_carrera.id')
+            ->leftJoin('cpu_sede', 'cpu_legalizacion_matricula.id_sede', '=', 'cpu_sede.id')
+            ->where('cpu_casos_matricula.id_secretaria', $idSecretaria)
+            ->where('cpu_legalizacion_matricula.id_periodo', $idPeriodo)
+            ->select(
+                'cpu_casos_matricula.id as id_caso',
+                'cpu_casos_matricula.id_estado',
+                'cpu_legalizacion_matricula.id as id_legalizacion',
+                'cpu_legalizacion_matricula.nombres',
+                'cpu_legalizacion_matricula.apellidos',
+                'cpu_legalizacion_matricula.genero',
+                'cpu_legalizacion_matricula.cedula',
+                'cpu_legalizacion_matricula.etnia',
+                'cpu_legalizacion_matricula.discapacidad',
+                'cpu_legalizacion_matricula.id_sede as sede_id',
+                'cpu_sede.nombre_sede as sede',
+                'cpu_legalizacion_matricula.id_carrera as carrera_id',
+                'cpu_carrera.name as carrera',
+                'cpu_legalizacion_matricula.copia_identificacion',
+                'cpu_legalizacion_matricula.estado_identificacion',
+                'cpu_legalizacion_matricula.copia_titulo_acta_grado as copia_titulo',
+                'cpu_legalizacion_matricula.estado_titulo',
+                'cpu_legalizacion_matricula.copia_aceptacion_cupo',
+                'cpu_legalizacion_matricula.tipo_matricula',
+                'cpu_legalizacion_matricula.estado_cupo',
+                'cpu_legalizacion_matricula.id_notificacion'
+            )
+            ->get();
 
         $casosMatriculaFiltrados = $casosMatricula->filter(function ($caso) {
             return $caso->id_estado != 14;
@@ -80,6 +80,9 @@ class CpuCasosMatriculaController extends Controller
             $notificacionMatricula = CpuNotificacionMatricula::find($caso->id_notificacion);
             $caso->observacion = $notificacionMatricula ? $notificacionMatricula->mensaje : null;
         }
+
+        // Auditoría
+        $this->auditar('cpu_casos_matricula', 'id', '', '', 'CONSULTA', "CONSULTA DE TODOS LOS CASOS DE MATRICULA");
 
         return response()->json($casosMatriculaFiltrados->values());
     }
@@ -138,20 +141,24 @@ class CpuCasosMatriculaController extends Controller
         }
 
         // Verificar si todos los estados son igual a 10
-        if (isset($documentos['estado_cedula']) && $documentos['estado_cedula'] == 10 &&
+        if (
+            isset($documentos['estado_cedula']) && $documentos['estado_cedula'] == 10 &&
             isset($documentos['estado_titulo']) && $documentos['estado_titulo'] == 10 &&
-            isset($documentos['estado_cupo']) && $documentos['estado_cupo'] == 10) {
+            isset($documentos['estado_cupo']) && $documentos['estado_cupo'] == 10
+        ) {
             $notificacion->titulo = 'Proceso de legalización de matrícula satisfactorio';
             $notificacion->mensaje = 'Proceso de legalización de matrícula satisfactorio, esté pendiente a su correo electrónico para próximas indicaciones sobre el proceso de Nivelación. ¡Bienvenido/a a la Uleam!';
             // Actualizar el estado a 14 en la tabla cpu_casos_matricula
             $casoMatricula->id_estado = 14;
         } else {
             // Verificar si algún estado es igual a 11
-            if (isset($documentos['estado_cedula']) && $documentos['estado_cedula'] == 11 ||
+            if (
+                isset($documentos['estado_cedula']) && $documentos['estado_cedula'] == 11 ||
                 isset($documentos['estado_titulo']) && $documentos['estado_titulo'] == 11 ||
-                isset($documentos['estado_cupo']) && $documentos['estado_cupo'] == 11) {
-                    // Actualizar el estado a 14 en la tabla cpu_casos_matricula
-            $casoMatricula->id_estado = 13;
+                isset($documentos['estado_cupo']) && $documentos['estado_cupo'] == 11
+            ) {
+                // Actualizar el estado a 14 en la tabla cpu_casos_matricula
+                $casoMatricula->id_estado = 13;
                 $notificacion->titulo = 'Corregir documentos';
             } else {
                 $notificacion->titulo = 'Legalización de matrícula satisfactoria';
@@ -177,28 +184,32 @@ class CpuCasosMatriculaController extends Controller
         $asunto = '';
         $cuerpo = '';
 
-        if ($casoMatricula->legalizacionMatricula->estado_identificacion == 10 &&
+        if (
+            $casoMatricula->legalizacionMatricula->estado_identificacion == 10 &&
             $casoMatricula->legalizacionMatricula->estado_titulo == 10 &&
-            $casoMatricula->legalizacionMatricula->estado_cupo == 10) {
+            $casoMatricula->legalizacionMatricula->estado_cupo == 10
+        ) {
             $asunto = 'Legalización de matrícula correcta';
             $cuerpo = "La legalización de matrícula para el/la ciudadano/a {$casoMatricula->legalizacionMatricula->nombres} {$casoMatricula->legalizacionMatricula->apellidos} con cédula {$casoMatricula->legalizacionMatricula->cedula} en la sede {$casoMatricula->legalizacionMatricula->sede->nombre_sede} y carrera {$casoMatricula->legalizacionMatricula->carrera->name} ha sido realizada correctamente el día {$fechaHoraActual}.";
             // Actualizar el estado a 14 en la tabla cpu_casos_matricula
             $casoMatricula->id_estado = 14;
             $casoMatricula->save();
-        } elseif ($casoMatricula->legalizacionMatricula->estado_identificacion == 11 ||
-                $casoMatricula->legalizacionMatricula->estado_titulo == 11 ||
-                $casoMatricula->legalizacionMatricula->estado_cupo == 11) {
-                    $asunto = 'Corregir Archivo';
+        } elseif (
+            $casoMatricula->legalizacionMatricula->estado_identificacion == 11 ||
+            $casoMatricula->legalizacionMatricula->estado_titulo == 11 ||
+            $casoMatricula->legalizacionMatricula->estado_cupo == 11
+        ) {
+            $asunto = 'Corregir Archivo';
 
-                    if ($casoMatricula->legalizacionMatricula->estado_identificacion == 11) {
-                        $asunto .= ' Identificación';
-                    }
-                    if ($casoMatricula->legalizacionMatricula->estado_titulo == 11) {
-                        $asunto .= ' Título o Acta de Grado';
-                    }
-                    if ($casoMatricula->legalizacionMatricula->estado_cupo == 11) {
-                        $asunto .= ' Cupo';
-                    }
+            if ($casoMatricula->legalizacionMatricula->estado_identificacion == 11) {
+                $asunto .= ' Identificación';
+            }
+            if ($casoMatricula->legalizacionMatricula->estado_titulo == 11) {
+                $asunto .= ' Título o Acta de Grado';
+            }
+            if ($casoMatricula->legalizacionMatricula->estado_cupo == 11) {
+                $asunto .= ' Cupo';
+            }
 
             $observacion = '';
             if ($casoMatricula->legalizacionMatricula->estado_identificacion == 11) {
@@ -222,33 +233,7 @@ class CpuCasosMatriculaController extends Controller
             return response()->json(['error' => 'Usuario no encontrado'], 404);
         }
 
-        // $persona = [
-        //     "destinatarios" => $usuario->email,
-        //     "cc" => "",
-        //     "cco" => "",
-        //     "asunto" => $asunto,
-        //     "cuerpo" => $cuerpo
-        // ];
 
-        // $datosCodificados = json_encode($persona);
-
-        // $url = "https://prod-44.westus.logic.azure.com:443/workflows/4046dc46113a4d8bb5da374ef1ee3e32/triggers/manual/paths/invoke?api-version=2016-06-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=lA40KwffEyLqEjVA4uyHaWAHblO77vk2jXYEkjUG08s";
-        // $ch = curl_init($url);
-
-        // curl_setopt($ch, CURLOPT_CUSTOMREQUEST, "POST");
-        // curl_setopt($ch, CURLOPT_POSTFIELDS, $datosCodificados);
-        // curl_setopt($ch, CURLOPT_HTTPHEADER, [
-        //     'Content-Type: application/json',
-        //     'Content-Length: ' . strlen($datosCodificados)
-        // ]);
-        // curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-
-        // $resultado = curl_exec($ch);
-        // $codigoRespuesta = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-
-        // curl_close($ch);
-
-        // echo "Respuesta: $resultado, Código: $codigoRespuesta";
 
         $recipient = $usuario->email;
         $subject = $asunto;
@@ -267,58 +252,88 @@ class CpuCasosMatriculaController extends Controller
             return response()->json(['message' => 'Error al enviar el correo: ' . $e->getMessage()], 500);
         }
 
+        // Auditoría
+        $this->auditar('cpu_casos_matricula', 'id', '', '', 'CONSULTA', "CONSULTA DE TODOS LOS CASOS DE MATRICULA");
+
         return response()->json(['message' => 'Documentos revisados y notificación enviada', 'id_notificacion' => $idNotificacion], 200);
     }
 
-//funcion para probar envio de correo
+    //funcion para probar envio de correo
 
-public function sendEmailTest()
-{
-    $recipient = 'junior.zamora@uleam.edu.ec';
-    $subject = 'Asunto del correo';
-    $body = 'Este es el cuerpo del correo en texto plano.';
+    public function sendEmailTest()
+    {
+        $recipient = 'junior.zamora@uleam.edu.ec';
+        $subject = 'Asunto del correo';
+        $body = 'Este es el cuerpo del correo en texto plano.';
 
-    try {
-        Mail::raw($body, function ($message) use ($recipient, $subject) {
-            $message->to($recipient)
-                ->subject($subject);
-        });
+        try {
+            Mail::raw($body, function ($message) use ($recipient, $subject) {
+                $message->to($recipient)
+                    ->subject($subject);
+            });
 
-        // El correo se envió correctamente
-        return response()->json(['message' => 'Correo enviado correctamente'], 200);
-    } catch (\Exception $e) {
-        // Error al enviar el correo
-        return response()->json(['message' => 'Error al enviar el correo: ' . $e->getMessage()], 500);
-    }
-}
-
-//obtener todos los registros de matricula de ese proceso:
-
-public function getMatriculaCases($id_usuario, $id_periodo)
-{
-    // Buscar el id_secretaria por medio del id_usuario
-    $secretaria = DB::table('cpu_secretaria_matricula')
-        ->where('id_usuario', $id_usuario)
-        ->first();
-
-    if (!$secretaria) {
-        return response()->json(['error' => 'Secretaria no encontrada'], 404);
+            // El correo se envió correctamente
+            return response()->json(['message' => 'Correo enviado correctamente'], 200);
+        } catch (\Exception $e) {
+            // Error al enviar el correo
+            return response()->json(['message' => 'Error al enviar el correo: ' . $e->getMessage()], 500);
+        }
     }
 
-    // Obtener el id_secretaria
-    $idSecretaria = $secretaria->id;
+    //obtener todos los registros de matricula de ese proceso:
 
-    $cases = DB::table('cpu_legalizacion_matricula as lm')
-        ->select([
-            'cm.id', 'lm.id_periodo', 'lm.id_registro_nacional', 'lm.id_postulacion', 'lm.ciudad_campus',
-            'lm.id_sede', 'lm.id_facultad', 'lm.id_carrera', 'lm.email', 'lm.cedula', 'lm.apellidos',
-            'lm.nombres', 'lm.genero', 'lm.etnia', 'lm.discapacidad', 'lm.segmento_persona',
-            'lm.nota_postulacion', 'lm.fecha_nacimiento', 'lm.nacionalidad', 'lm.provincia_reside',
-            'lm.canton_reside', 'lm.parroquia_reside', 'lm.instancia_postulacion',
-            'lm.instancia_de_asignacion', 'lm.gratuidad', 'lm.observacion_gratuidad',
-            'lm.copia_identificacion', 'lm.copia_titulo_acta_grado', 'lm.copia_aceptacion_cupo',
-            'lm.id_notificacion', 'lm.listo_para_revision', 'lm.legalizo_matricula', 'lm.tipo_matricula', 'lm.created_at',
-            'lm.updated_at', DB::raw('CASE
+    public function getMatriculaCases($id_usuario, $id_periodo)
+    {
+        // Buscar el id_secretaria por medio del id_usuario
+        $secretaria = DB::table('cpu_secretaria_matricula')
+            ->where('id_usuario', $id_usuario)
+            ->first();
+
+        if (!$secretaria) {
+            return response()->json(['error' => 'Secretaria no encontrada'], 404);
+        }
+
+        // Obtener el id_secretaria
+        $idSecretaria = $secretaria->id;
+
+        $cases = DB::table('cpu_legalizacion_matricula as lm')
+            ->select([
+                'cm.id',
+                'lm.id_periodo',
+                'lm.id_registro_nacional',
+                'lm.id_postulacion',
+                'lm.ciudad_campus',
+                'lm.id_sede',
+                'lm.id_facultad',
+                'lm.id_carrera',
+                'lm.email',
+                'lm.cedula',
+                'lm.apellidos',
+                'lm.nombres',
+                'lm.genero',
+                'lm.etnia',
+                'lm.discapacidad',
+                'lm.segmento_persona',
+                'lm.nota_postulacion',
+                'lm.fecha_nacimiento',
+                'lm.nacionalidad',
+                'lm.provincia_reside',
+                'lm.canton_reside',
+                'lm.parroquia_reside',
+                'lm.instancia_postulacion',
+                'lm.instancia_de_asignacion',
+                'lm.gratuidad',
+                'lm.observacion_gratuidad',
+                'lm.copia_identificacion',
+                'lm.copia_titulo_acta_grado',
+                'lm.copia_aceptacion_cupo',
+                'lm.id_notificacion',
+                'lm.listo_para_revision',
+                'lm.legalizo_matricula',
+                'lm.tipo_matricula',
+                'lm.created_at',
+                'lm.updated_at',
+                DB::raw('CASE
                 WHEN lm.estado_identificacion = 10
                 AND lm.estado_titulo = 10
                 AND lm.estado_cupo = 10 THEN \'Legalizado\'
@@ -333,36 +348,66 @@ public function getMatriculaCases($id_usuario, $id_periodo)
                 AND lm.estado_cupo = 12 THEN \'Documentos cargados\'
                 ELSE \'En proceso\'
             END AS estado_matricula'),
-            DB::raw('(SELECT nombre FROM cpu_secretaria_matricula WHERE id = cm.id_secretaria) AS secretaria_nombre'),
-            'cp.nombre AS nombre_periodo' // Agregar el nombre del periodo
-        ])
-        ->join('cpu_casos_matricula as cm', 'lm.id', '=', 'cm.id_legalizacion_matricula')
-        ->join('cpu_periodo as cp', 'lm.id_periodo', '=', 'cp.id') // Unir con la tabla cpu_periodo
-        ->where('lm.id_periodo', '=', $id_periodo)
-        ->where('cm.id_secretaria', '=', $idSecretaria)
-        ->get();
+                DB::raw('(SELECT nombre FROM cpu_secretaria_matricula WHERE id = cm.id_secretaria) AS secretaria_nombre'),
+                'cp.nombre AS nombre_periodo' // Agregar el nombre del periodo
+            ])
+            ->join('cpu_casos_matricula as cm', 'lm.id', '=', 'cm.id_legalizacion_matricula')
+            ->join('cpu_periodo as cp', 'lm.id_periodo', '=', 'cp.id') // Unir con la tabla cpu_periodo
+            ->where('lm.id_periodo', '=', $id_periodo)
+            ->where('cm.id_secretaria', '=', $idSecretaria)
+            ->get();
 
-    return collect($cases);
-}
+        // Auditoría
+        $this->auditar('cpu_casos_matricula', 'id', '', '', 'CONSULTA', "CONSULTA DE TODOS LOS CASOS DE MATRICULA");
 
-//todos los registros de legalizacion_matricula, legalizados y no legalizados
-public function getAllMatriculaCases($id_periodo)
-{
-    $cases = DB::table('cpu_legalizacion_matricula as lm')
-                ->select([
-                    'lm.id', 'lm.id_periodo', 'lm.id_registro_nacional', 'lm.id_postulacion', 'lm.ciudad_campus',
-                    'lm.id_sede', 'sede.nombre_sede as nombre_sede',
-                    'lm.id_facultad', 'facultad.fac_nombre as nombre_facultad',
-                    'lm.id_carrera', 'carrera.name as nombre_carrera',
-                    'lm.email', 'lm.cedula', 'lm.apellidos', 'lm.nombres', 'lm.genero', 'lm.etnia',
-                    'lm.discapacidad', 'lm.segmento_persona', 'lm.nota_postulacion', 'lm.fecha_nacimiento',
-                    'lm.nacionalidad', 'lm.provincia_reside', 'lm.canton_reside', 'lm.parroquia_reside',
-                    'lm.instancia_postulacion', 'lm.instancia_de_asignacion', 'lm.gratuidad',
-                    'lm.observacion_gratuidad', 'lm.copia_identificacion', 'lm.copia_titulo_acta_grado',
-                    'lm.copia_aceptacion_cupo', 'lm.id_notificacion', 'lm.listo_para_revision',
-                    'lm.legalizo_matricula', 'lm.tipo_matricula', 'lm.created_at', 'lm.updated_at',
+        return collect($cases);
+    }
 
-                    DB::raw('CASE
+    //todos los registros de legalizacion_matricula, legalizados y no legalizados
+    public function getAllMatriculaCases($id_periodo)
+    {
+        $cases = DB::table('cpu_legalizacion_matricula as lm')
+            ->select([
+                'lm.id',
+                'lm.id_periodo',
+                'lm.id_registro_nacional',
+                'lm.id_postulacion',
+                'lm.ciudad_campus',
+                'lm.id_sede',
+                'sede.nombre_sede as nombre_sede',
+                'lm.id_facultad',
+                'facultad.fac_nombre as nombre_facultad',
+                'lm.id_carrera',
+                'carrera.name as nombre_carrera',
+                'lm.email',
+                'lm.cedula',
+                'lm.apellidos',
+                'lm.nombres',
+                'lm.genero',
+                'lm.etnia',
+                'lm.discapacidad',
+                'lm.segmento_persona',
+                'lm.nota_postulacion',
+                'lm.fecha_nacimiento',
+                'lm.nacionalidad',
+                'lm.provincia_reside',
+                'lm.canton_reside',
+                'lm.parroquia_reside',
+                'lm.instancia_postulacion',
+                'lm.instancia_de_asignacion',
+                'lm.gratuidad',
+                'lm.observacion_gratuidad',
+                'lm.copia_identificacion',
+                'lm.copia_titulo_acta_grado',
+                'lm.copia_aceptacion_cupo',
+                'lm.id_notificacion',
+                'lm.listo_para_revision',
+                'lm.legalizo_matricula',
+                'lm.tipo_matricula',
+                'lm.created_at',
+                'lm.updated_at',
+
+                DB::raw('CASE
                         WHEN lm.estado_identificacion = 10
                         AND lm.estado_titulo = 10
                         AND lm.estado_cupo = 10 THEN \'Legalizado\'
@@ -377,24 +422,89 @@ public function getAllMatriculaCases($id_periodo)
                         AND lm.estado_cupo = 12 THEN \'Documentos cargados\'
                         ELSE \'En proceso\'
                     END AS estado_matricula'),
-                      DB::raw('(SELECT nombre FROM cpu_secretaria_matricula WHERE id = cm.id_secretaria) AS secretaria_nombre')
-                  ])
-                ->leftJoin('cpu_casos_matricula as cm', 'lm.id', '=', 'cm.id_legalizacion_matricula')
-                ->leftJoin('cpu_sede as sede', 'lm.id_sede', '=', 'sede.id')
-                ->leftJoin('cpu_facultad as facultad', 'lm.id_facultad', '=', 'facultad.id')
-                ->leftJoin('cpu_carrera as carrera', 'lm.id_carrera', '=', 'carrera.id')
-                ->where('lm.id_periodo', '=', $id_periodo)
-                ->orderBy('sede.nombre_sede')
-                ->orderBy('carrera.name')
-                ->orderBy('lm.apellidos')
-                ->orderBy('lm.nombres')
-                ->orderByRaw('CASE WHEN cm.id_legalizacion_matricula IS NOT NULL THEN 0 ELSE 1 END')
-                ->get();
+                DB::raw('(SELECT nombre FROM cpu_secretaria_matricula WHERE id = cm.id_secretaria) AS secretaria_nombre')
+            ])
+            ->leftJoin('cpu_casos_matricula as cm', 'lm.id', '=', 'cm.id_legalizacion_matricula')
+            ->leftJoin('cpu_sede as sede', 'lm.id_sede', '=', 'sede.id')
+            ->leftJoin('cpu_facultad as facultad', 'lm.id_facultad', '=', 'facultad.id')
+            ->leftJoin('cpu_carrera as carrera', 'lm.id_carrera', '=', 'carrera.id')
+            ->where('lm.id_periodo', '=', $id_periodo)
+            ->orderBy('sede.nombre_sede')
+            ->orderBy('carrera.name')
+            ->orderBy('lm.apellidos')
+            ->orderBy('lm.nombres')
+            ->orderByRaw('CASE WHEN cm.id_legalizacion_matricula IS NOT NULL THEN 0 ELSE 1 END')
+            ->get();
 
-    return collect($cases);
-}
+        // Auditoría
+        $this->auditar('cpu_casos_matricula', 'id', '', '', 'CONSULTA', "CONSULTA DE TODOS LOS CASOS DE MATRICULA");
 
+        return collect($cases);
+    }
+    //funcion para auditar
+    private function auditar($tabla, $campo, $dataOld, $dataNew, $tipo, $descripcion, $request = null)
+    {
+        $usuario = $request && !is_string($request) ? $request->user()->name : auth()->user()->name;
+        $ip = $request && !is_string($request) ? $request->ip() : request()->ip();
+        $ipv4 = gethostbyname(gethostname());
+        $publicIp = file_get_contents('http://ipecho.net/plain');
+        $ioConcatenadas = 'IP LOCAL: ' . $ip . '  --IPV4: ' . $ipv4 . '  --IP PUBLICA: ' . $publicIp;
+        $nombreequipo = gethostbyaddr($ip);
+        $userAgent = $request && !is_string($request) ? $request->header('User-Agent') : request()->header('User-Agent');
+        $tipoEquipo = 'Desconocido';
 
+        if (stripos($userAgent, 'Mobile') !== false) {
+            $tipoEquipo = 'Celular';
+        } elseif (stripos($userAgent, 'Tablet') !== false) {
+            $tipoEquipo = 'Tablet';
+        } elseif (stripos($userAgent, 'Laptop') !== false || stripos($userAgent, 'Macintosh') !== false) {
+            $tipoEquipo = 'Laptop';
+        } elseif (stripos($userAgent, 'Windows') !== false || stripos($userAgent, 'Linux') !== false) {
+            $tipoEquipo = 'Computador de Escritorio';
+        }
+        $nombreUsuarioEquipo = get_current_user() . ' en ' . $tipoEquipo;
 
+        $fecha = now();
+        $codigo_auditoria = strtoupper($tabla . '_' . $campo . '_' . $tipo );
+        DB::table('cpu_auditoria')->insert([
+            'aud_user' => $usuario,
+            'aud_tabla' => $tabla,
+            'aud_campo' => $campo,
+            'aud_dataold' => $dataOld,
+            'aud_datanew' => $dataNew,
+            'aud_tipo' => $tipo,
+            'aud_fecha' => $fecha,
+            'aud_ip' => $ioConcatenadas,
+            'aud_tipoauditoria' => $this->getTipoAuditoria($tipo),
+            'aud_descripcion' => $descripcion,
+            'aud_nombreequipo' => $nombreequipo,
+            'aud_descrequipo' => $nombreUsuarioEquipo,
+            'aud_codigo' => $codigo_auditoria,
+            'created_at' => now(),
+            'updated_at' => now(),
 
+        ]);
+    }
+
+    private function getTipoAuditoria($tipo)
+    {
+        switch ($tipo) {
+            case 'CONSULTA':
+                return 1;
+            case 'INSERCION':
+                return 3;
+            case 'MODIFICACION':
+                return 2;
+            case 'ELIMINACION':
+                return 4;
+            case 'LOGIN':
+                return 5;
+            case 'LOGOUT':
+                return 6;
+            case 'DESACTIVACION':
+                return 7;
+            default:
+                return 0;
+        }
+    }
 }

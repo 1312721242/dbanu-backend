@@ -15,6 +15,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Log;
 
 class AuthController extends Controller
 {
@@ -28,7 +29,8 @@ class AuthController extends Controller
 
         if (!Auth::attempt($credentials)) {
             // Devolver un mensaje de error cuando las credenciales son incorrectas
-            return response()->json(['message' => 'Las credenciales proporcionadas son incorrectas.'], 401);
+            // return response()->json(['message' => 'Las credenciales proporcionadas son incorrectas.'], 401);
+            return response()->json(['message' => 'Las credenciales proporcionadas son incorrectas.'], 422);
         }
 
         $user = Auth::user();
@@ -85,6 +87,9 @@ class AuthController extends Controller
             ->where('fecha_inicio_habil_login', '<=', now())
             ->where('fecha_fin_habil_login', '>=', now())
             ->exists();
+
+            Log::info('Fecha actual: ' . now());
+
 
         if (!$periodoHabilitado) {
             // Devolver un mensaje de error cuando el periodo no está habilitado para login
@@ -160,7 +165,7 @@ class AuthController extends Controller
         $userData['carrera'] = $carreraNombre;
 
         // Auditoría
-        $this->auditar('auth', 'loginApp', '', $ciudadano->email, 'LOGIN', "LOGIN DE USUARIO APP: {$ciudadano->email}");
+        // $this->auditar('auth', 'loginApp', '', $ciudadano->email, 'LOGIN', "LOGIN DE USUARIO APP: {$ciudadano->email}");
 
         return response()->json($userData);
     }

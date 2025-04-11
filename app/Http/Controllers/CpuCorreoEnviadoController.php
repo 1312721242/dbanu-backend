@@ -13,7 +13,22 @@ class CpuCorreoEnviadoController extends Controller
     public function enviarCorreoAtencionAdmisionSalud(Request $request)
     {
         // Obtener los datos necesarios desde el array validado
-        $email_paciente = 'p1311836587@dn.uleam.edu.ec';
+        // $email_paciente = 'p1311836587@dn.uleam.edu.ec';
+        $email_paciente = DB::table('cpu_datos_estudiantes')
+            ->where('id_persona', $request['id_paciente'])
+            ->value('email_institucional');
+
+        if (!$email_paciente) {
+            $email_paciente = DB::table('cpu_datos_empleados')
+                ->where('id_persona', $request['id_paciente'])
+                ->value('emailinstitucional');
+        }
+
+        if (!$email_paciente) {
+            $email_paciente = DB::table('cpu_datos_usuarios_externos')
+                ->where('id_persona', $request['id_paciente'])
+                ->value('email');
+        }
         $nombres_paciente = DB::table('cpu_personas')
             ->where('id', $request->input('id_paciente'))
             ->value('nombres');

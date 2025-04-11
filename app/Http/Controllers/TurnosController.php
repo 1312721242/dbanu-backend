@@ -59,7 +59,7 @@ class TurnosController extends Controller
             }
         }
         //auditar
-        $this->auditar('turnos', 'agregarTurnos', '', $response, 'INSERCION', 'Agregación de turnos');
+        $this->auditar('turnos', 'agregarTurnos', '', json_encode($response), 'INSERCION', 'Agregación de turnos');
 
         return response()->json($response);
     }

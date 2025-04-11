@@ -17,6 +17,8 @@ class CpuConsumoFuncionarioComunidad extends Model
         'identificacion',
         'tipo_alimento',
         'monto_facturado',
+        'id_sede',
+        'id_facultad',
     ];
 
     public function funcionario()

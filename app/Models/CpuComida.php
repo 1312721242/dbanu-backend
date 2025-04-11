@@ -15,6 +15,8 @@ class CpuComida extends Model
         'id_tipo_comida',
         'descripcion',
         'precio',
+        'id_sede',
+        'id_facultad',
     ];
 
     protected $appends = [
@@ -25,6 +27,18 @@ class CpuComida extends Model
     public function tipoComida()
     {
         return $this->belongsTo(CpuTipoComida::class, 'id_tipo_comida');
+    }
+
+    // Relación con sede (muchos a uno)
+    public function sede()
+    {
+        return $this->belongsTo(CpuSede::class, 'id_sede');
+    }
+
+    // Relación con sede (muchos a uno)
+    public function facultad()
+    {
+        return $this->belongsTo(CpuFacultad::class, 'id_facultad');
     }
 
     // Atributo adicional para la descripción del tipo de comida

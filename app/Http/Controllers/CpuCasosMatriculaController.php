@@ -12,6 +12,7 @@ use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Log;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Cache;
+
 class CpuCasosMatriculaController extends Controller
 {
     public function __construct()
@@ -106,17 +107,17 @@ class CpuCasosMatriculaController extends Controller
         $idLegalizacion = $casoMatricula->id_legalizacion_matricula;
         $idNuevaSecretaria = $request->input('id_secretaria'); // Se asume que la nueva secretaria viene en el request
 
-        $casoExistente = CpuCasosMatricula::where('id_legalizacion_matricula', $idLegalizacion)
-            ->where('id_secretaria', '!=', $idNuevaSecretaria) // Verifica que sea una secretaria diferente
-            ->whereHas('legalizacionMatricula', function ($query) use ($periodo) {
-                $query->where('id_periodo', $periodo); // Mismo periodo
-            })->first();
+        // $casoExistente = CpuCasosMatricula::where('id_legalizacion_matricula', $idLegalizacion)
+        //     ->where('id_secretaria', '!=', $idNuevaSecretaria) // Verifica que sea una secretaria diferente
+        //     ->whereHas('legalizacionMatricula', function ($query) use ($periodo) {
+        //         $query->where('id_periodo', $periodo); // Mismo periodo
+        //     })->first();
 
-        // Si ya existe un caso, actualizar con la nueva secretaria
-        if ($casoExistente) {
-            $casoExistente->id_secretaria = $idNuevaSecretaria;
-            $casoExistente->save();
-        }
+        // // Si ya existe un caso, actualizar con la nueva secretaria
+        // if ($casoExistente) {
+        //     $casoExistente->id_secretaria = $idNuevaSecretaria;
+        //     $casoExistente->save();
+        // }
 
         // Continuar con el resto del código...
 
@@ -213,15 +214,15 @@ class CpuCasosMatriculaController extends Controller
 
             $observacion = '';
             if ($casoMatricula->legalizacionMatricula->estado_identificacion == 11) {
-                $observacion .= "El documento de identificación presenta inconvenientes. ";
+                $observacion .= "El documento de identificación presenta inconvenientes.";
             }
             if ($casoMatricula->legalizacionMatricula->estado_titulo == 11) {
-                $observacion .= "El documento de título o acta de grado presenta inconvenientes. ";
+                $observacion .= "El documento de título o acta de grado presenta inconvenientes.";
             }
             if ($casoMatricula->legalizacionMatricula->estado_cupo == 11) {
-                $observacion .= "El documento de aceptación de cupo presenta inconvenientes. ";
+                $observacion .= "El documento de aceptación de cupo presenta inconveniente.";
             }
-            $cuerpo = "La legalización de matrícula para el/la ciudadano/a {$casoMatricula->legalizacionMatricula->nombres} {$casoMatricula->legalizacionMatricula->apellidos} con número de identificación {$casoMatricula->legalizacionMatricula->cedula} en la sede {$casoMatricula->legalizacionMatricula->sede->nombre_sede} y carrera {$casoMatricula->legalizacionMatricula->carrera->name} presenta las siguientes novedades: {$observacion} Por favor, ingrese a la aplicación de matricula de nivelación de la Uleam y corrija los documentos necesarios a brevedad.";
+            $cuerpo = "La legalización de matrícula para el/la ciudadano/a {$casoMatricula->legalizacionMatricula->nombres} {$casoMatricula->legalizacionMatricula->apellidos} con número de identificación {$casoMatricula->legalizacionMatricula->cedula} en la sede {$casoMatricula->legalizacionMatricula->sede->nombre_sede} y carrera {$casoMatricula->legalizacionMatricula->carrera->name} presenta las siguientes novedades: {$observacion} Por favor, ingrese a la aplicación de matricula de nivelación de la Uleam y corrija los documentos necesarios a la brevedad posible a través del siguiente enlace: https://dbanu.uleam.edu.ec/estudiantes.";
         }
 
         // Obtener el email del usuario
@@ -239,17 +240,59 @@ class CpuCasosMatriculaController extends Controller
         $subject = $asunto;
         $body = $cuerpo;
 
-        try {
-            Mail::raw($body, function ($message) use ($recipient, $subject) {
-                $message->to($recipient)
-                    ->subject($subject);
-            });
+        // try {
+        //     Mail::raw($body, function ($message) use ($recipient, $subject) {
+        //         $message->to($recipient)
+        //             ->subject($subject);
+        //     });
 
-            // El correo se envió correctamente
+        //     // El correo se envió correctamente
+        //     return response()->json(['message' => 'Correo enviado correctamente'], 200);
+        // } catch (\Exception $e) {
+        //     // Error al enviar el correo
+        //     return response()->json(['message' => 'Error al enviar el correo: ' . $e->getMessage()], 500);
+        // }
+
+        $persona = [
+            "destinatarios" => $recipient,
+            "cc" => "",
+            "cco" => "",
+            "asunto" => $subject,
+            "cuerpo" => $body
+        ];
+
+        // Codificar los datos
+        $datosCodificados = json_encode($persona);
+
+        // URL de destino (Azure Logic App)
+        $url = "https://prod-44.westus.logic.azure.com:443/workflows/4046dc46113a4d8bb5da374ef1ee3e32/triggers/manual/paths/invoke?api-version=2016-06-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=lA40KwffEyLqEjVA4uyHaWAHblO77vk2jXYEkjUG08s";
+
+        // Inicializar cURL
+        $ch = curl_init($url);
+
+        // Configurar cURL
+        curl_setopt_array($ch, array(
+            CURLOPT_CUSTOMREQUEST => "POST",
+            CURLOPT_POSTFIELDS => $datosCodificados,
+            CURLOPT_HTTPHEADER => array(
+                'Content-Type: application/json',
+                'Content-Length: ' . strlen($datosCodificados),
+            ),
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_SSL_VERIFYPEER => false,
+            CURLOPT_SSL_VERIFYHOST => false,
+        ));
+
+        // Ejecutar cURL
+        $resultado = curl_exec($ch);
+        $codigoRespuesta = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+
+        // Procesar respuesta
+        if ($codigoRespuesta === 200) {
             return response()->json(['message' => 'Correo enviado correctamente'], 200);
-        } catch (\Exception $e) {
-            // Error al enviar el correo
-            return response()->json(['message' => 'Error al enviar el correo: ' . $e->getMessage()], 500);
+        } else {
+            return response()->json(['message' => "Error al enviar el correo. Código de respuesta: $codigoRespuesta"], 500);
         }
 
         // Auditoría
@@ -465,7 +508,7 @@ class CpuCasosMatriculaController extends Controller
         $nombreUsuarioEquipo = get_current_user() . ' en ' . $tipoEquipo;
 
         $fecha = now();
-        $codigo_auditoria = strtoupper($tabla . '_' . $campo . '_' . $tipo );
+        $codigo_auditoria = strtoupper($tabla . '_' . $campo . '_' . $tipo);
         DB::table('cpu_auditoria')->insert([
             'aud_user' => $usuario,
             'aud_tabla' => $tabla,

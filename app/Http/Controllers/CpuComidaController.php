@@ -5,31 +5,114 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\CpuComida;
 use Illuminate\Support\Facades\DB;
+
 class CpuComidaController extends Controller
 {
-    public function index()
+    // public function index()
+    // {
+    //     $comidas = CpuComida::with('tipoComida')->get()->map(function ($comida) {
+    //         return [
+    //             'id_comida' => $comida->id,
+    //             'id_tipo_comida' => $comida->id_tipo_comida,
+    //             'descripcion_comida' => $comida->descripcion,
+    //             'descripcion_tipo_comida' => $comida->tipoComida->descripcion,
+    //             'precio' => $comida->precio,
+    //             'id_sede' => $comida->id_sede,
+    //             'nombre_sede' => $comida->sede->nombre_sede ?? null,
+    //             'id_facultad' => $comida->id_facultad,
+    //             'fac_nombre' => $comida->facultad->fac_nombre ?? null,
+    //         ];
+    //     });
+
+    //     // Auditoría
+    //     $this->auditar('cpu_comida', 'id', '', '', 'CONSULTA', "CONSULTA DE COMIDAS");
+
+    //     return response()->json($comidas);
+    // }
+
+    public function index(Request $request)
     {
-        $comidas = CpuComida::with('tipoComida')->get()->map(function ($comida) {
+        $query = CpuComida::with(['tipoComida', 'sede', 'facultad']);
+
+        // Solo aplicar filtros si el usuario NO es admin
+        if ($request->usr_tipo != 1) {
+            if ($request->has('id_sede')) {
+                $query->where('id_sede', $request->id_sede);
+            }
+
+            if ($request->has('id_facultad')) {
+                $query->where('id_facultad', $request->id_facultad);
+            }
+        }
+
+        $comidas = $query->get()->map(function ($comida) {
             return [
                 'id_comida' => $comida->id,
                 'id_tipo_comida' => $comida->id_tipo_comida,
                 'descripcion_comida' => $comida->descripcion,
                 'descripcion_tipo_comida' => $comida->tipoComida->descripcion,
                 'precio' => $comida->precio,
+                'id_sede' => $comida->id_sede,
+                'nombre_sede' => $comida->sede->nombre_sede ?? null,
+                'id_facultad' => $comida->id_facultad,
+                'fac_nombre' => $comida->facultad->fac_nombre ?? null,
             ];
         });
 
-        // Auditoría
         $this->auditar('cpu_comida', 'id', '', '', 'CONSULTA', "CONSULTA DE COMIDAS");
 
         return response()->json($comidas);
     }
 
-    public function indexTipoComida()
-    {
-        $comidas = CpuComida::with('tipoComida')->get();
 
-        // Agrupar las comidas por tipo de comida
+    // public function indexTipoComida()
+    // {
+    //     $comidas = CpuComida::with('tipoComida')->get();
+
+    //     // Agrupar las comidas por tipo de comida
+    //     $comidasAgrupadas = $comidas->groupBy('tipoComida.descripcion');
+
+    //     // Formatear la respuesta
+    //     $response = [];
+    //     foreach ($comidasAgrupadas as $tipoComida => $comidas) {
+    //         $comidasFormateadas = $comidas->map(function ($comida) {
+    //             return [
+    //                 'id_comida' => $comida->id,
+    //                 'descripcion_comida' => $comida->descripcion,
+    //                 'precio' => $comida->precio,
+    //             ];
+    //         })->toArray();
+
+    //         $response[] = [
+    //             'tipo_comida' => $tipoComida,
+    //             'comidas' => $comidasFormateadas,
+    //         ];
+    //     }
+
+    //     // Auditoría
+    //     $this->auditar('cpu_comida', 'id', '', '', 'CONSULTA', "CONSULTA DE COMIDAS");
+
+    //     return response()->json($response);
+    // }
+
+    public function indexTipoComida(Request $request)
+    {
+        $query = CpuComida::with('tipoComida');
+
+        // Aplicar filtros si el usuario NO es admin
+        if ($request->usr_tipo != 1) {
+            if ($request->has('id_sede')) {
+                $query->where('id_sede', $request->id_sede);
+            }
+
+            if ($request->has('id_facultad')) {
+                $query->where('id_facultad', $request->id_facultad);
+            }
+        }
+
+        $comidas = $query->get();
+
+        // Agrupar por tipo de comida
         $comidasAgrupadas = $comidas->groupBy('tipoComida.descripcion');
 
         // Formatear la respuesta
@@ -50,11 +133,10 @@ class CpuComidaController extends Controller
         }
 
         // Auditoría
-        $this->auditar('cpu_comida', 'id', '', '', 'CONSULTA', "CONSULTA DE COMIDAS");
+        $this->auditar('cpu_comida', 'id', '', '', 'CONSULTA', "CONSULTA DE COMIDAS AGRUPADAS POR TIPO");
 
         return response()->json($response);
     }
-
 
     public function store(Request $request)
     {
@@ -62,6 +144,8 @@ class CpuComidaController extends Controller
             'id_tipo_comida' => 'required|exists:cpu_tipo_comida,id',
             'descripcion' => 'required|string|max:255',
             'precio' => 'required|numeric',
+            'id_sede' => 'required|numeric',
+            'id_facultad' => 'required|numeric',
         ]);
 
         $comida = CpuComida::create($request->all());
@@ -79,18 +163,18 @@ class CpuComidaController extends Controller
     }
 
     public function update(Request $request, $id)
-{
-    $request->validate([
-        'id_tipo_comida' => 'required|exists:cpu_tipo_comida,id',
-        'descripcion' => 'required|string|max:255',
-        'precio' => 'required|numeric',
-    ]);
+    {
+        $request->validate([
+            'id_tipo_comida' => 'required|exists:cpu_tipo_comida,id',
+            'descripcion' => 'required|string|max:255',
+            'precio' => 'required|numeric',
+        ]);
 
-    $comida = CpuComida::findOrFail($id);
-    $comida->update($request->all());
+        $comida = CpuComida::findOrFail($id);
+        $comida->update($request->all());
 
-    return response()->json($comida, 200);
-}
+        return response()->json($comida, 200);
+    }
 
     public function destroy($id)
     {
@@ -124,7 +208,7 @@ class CpuComidaController extends Controller
         $nombreUsuarioEquipo = get_current_user() . ' en ' . $tipoEquipo;
 
         $fecha = now();
-        $codigo_auditoria = strtoupper($tabla . '_' . $campo . '_' . $tipo );
+        $codigo_auditoria = strtoupper($tabla . '_' . $campo . '_' . $tipo);
         DB::table('cpu_auditoria')->insert([
             'aud_user' => $usuario,
             'aud_tabla' => $tabla,

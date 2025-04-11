@@ -143,7 +143,7 @@ class CpuLegalizacionMatriculaController extends Controller
 
             $casoMatricula->save();
         }
-        $this->auditar('cpu_legalizacion_matricula', 'uploadPdf', '', $uploadedFiles, 'INSERCION', 'Subida de archivos de legalización de matrícula');
+        $this->auditar('cpu_legalizacion_matricula', 'uploadPdf', '', json_encode($uploadedFiles), 'INSERCION', 'Subida de archivos de legalización de matrícula');
 
         return response()->json(["mensaje" => "Archivos subidos correctamente", "files" => $uploadedFiles]);
     }
@@ -174,7 +174,7 @@ class CpuLegalizacionMatriculaController extends Controller
             'copia_aceptacion_cupo' => url('Files/' .  $user->copia_aceptacion_cupo),
             'estado_cupo' => $user->estado_cupo,
         ];
-        $this->auditar('cpu_legalizacion_matricula', 'getPersonData', '', $personData, 'CONSULTA', 'Consulta de datos de la persona');
+        // $this->auditar('cpu_legalizacion_matricula', 'getPersonData', '', $personData, 'CONSULTA', 'Consulta de datos de la persona');
         return response()->json($personData);
     }
 

@@ -210,7 +210,7 @@ class CpuAtencionesFisioterapiaContoller extends Controller
                     // Lógica adicional si la validación es exitosa
                     $derivacionData['ate_id'] = $atencion->id;
                     $derivacionData['id_funcionario_que_derivo'] = $request->input('id_funcionario');
-                    $derivacionData['fecha_derivacion'] = Carbon::now();
+                    $derivacionData['fecha_derivacion'] = $request->input('fecha_para_atencion');
                     $derivacion = CpuDerivacion::create($derivacionData);
 
                     // ⚠️ Aquí ya tenemos el nuevo id de la derivación recién creada
@@ -218,7 +218,7 @@ class CpuAtencionesFisioterapiaContoller extends Controller
 
                     // Actualizar el estado del turno relacionado
                     $turno = CpuTurno::findOrFail($derivacionData['id_turno_asignado']);
-                    $turno->estado = 2; // Actualiza el estado del turno a 2
+                    $turno->estado = 7; // Actualiza el estado del turno a 2
                     $turno->save();
 
                     // ✅ Enviar correo de atención al paciente

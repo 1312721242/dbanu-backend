@@ -47,7 +47,7 @@ class CpuTextosMensajesController extends Controller
             CpuTextosMensajes::where('id', $id)
                 ->update(['texto' => $nuevoTexto]);
         }
-        $this->auditar('cpu_textos_mensajes', 'editarTextosFuncionTres', '', $datos, 'MODIFICACION', 'Actualización de textos de la función 3');
+        $this->auditar('cpu_textos_mensajes', 'editarTextosFuncionTres', '', json_encode($datos), 'MODIFICACION', 'Actualización de textos de la función 3');
         return response()->json(['mensaje' => 'Textos actualizados con éxito.']);
     }
 

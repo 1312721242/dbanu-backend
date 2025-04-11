@@ -34,7 +34,7 @@ class CpuMatriculaConfiguracionController extends Controller
             ['id' => $request->id], // Keys to find
             $validatedData // Values to fill or update
         );
-        $this->auditar('cpu_matricula_configuracion', 'store', '', $configuracion, 'INSERCION', 'Creación de configuración de matrícula');
+        $this->auditar('cpu_matricula_configuracion', 'store', '', json_encode($configuracion), 'INSERCION', 'Creación de configuración de matrícula');
         return response()->json($configuracion, 200);
     }
 

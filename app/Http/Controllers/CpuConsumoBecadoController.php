@@ -27,7 +27,9 @@ class CpuConsumoBecadoController extends Controller
             'identificacion' => 'required|string',
             'tipo_alimento' => 'required|string',
             'monto_facturado' => 'required|numeric',
-            'tipo_usuario' => 'required|string'
+            'tipo_usuario' => 'required|string',
+            'id_sede' => 'required|integer',
+            'id_facultad' => 'required|integer',
         ]);
 
         if ($request->tipo_usuario === 'Ayuda Económica' || $request->tipo_usuario === 'becado') {
@@ -37,6 +39,8 @@ class CpuConsumoBecadoController extends Controller
             $consumo->identificacion = $request->identificacion;
             $consumo->tipo_alimento = $request->tipo_alimento;
             $consumo->monto_facturado = $request->monto_facturado;
+            $consumo->id_sede = $request->id_sede;
+            $consumo->id_facultad = $request->id_facultad;
             $consumo->save();
 
             // Actualizar el monto_consumido en la tabla cpu_becados
@@ -51,13 +55,15 @@ class CpuConsumoBecadoController extends Controller
             $consumo->identificacion = $request->identificacion;
             $consumo->tipo_alimento = $request->tipo_alimento;
             $consumo->monto_facturado = $request->monto_facturado;
+            $consumo->id_sede = $request->id_sede;
+            $consumo->id_facultad = $request->id_facultad;
             $consumo->save();
             $restante = 0;
         }
 
         // Llamar a la función enviarCorreo con los datos necesarios
         $this->enviarCorreo($request, $restante);
-        $this->auditar('cpu_consumo_becado', 'registrarConsumo', '', $consumo, 'INSERCION', 'Consumo de alimentos por ayuda económica - Tasty Uleam, Identificacion: ' . $request->identificacion . ' - Monto: ' . $request->monto_facturado . ' - Tipo de alimento: ' . $request->tipo_alimento . ' - Tipo de usuario: ' . $request->tipo_usuario);
+        $this->auditar('cpu_consumo_becado', 'registrarConsumo', '', $consumo, 'INSERCION', 'Consumo de alimentos por ayuda económica - Tasty Uleam, Identificacion: ' . $request->identificacion . ' - Monto: ' . $request->monto_facturado . ' - Tipo de alimento: ' . $request->tipo_alimento . ' - Tipo de usuario: ' . $request->tipo_usuario. ' | Sede: ' . $request->id_sede .' | Facultad: ' . $request->id_facultad);
 
         return response()->json(['message' => 'Consumo registrado correctamente', 'code' => 200], 200);
     }
@@ -316,7 +322,7 @@ class CpuConsumoBecadoController extends Controller
         $nombreUsuarioEquipo = get_current_user() . ' en ' . $tipoEquipo;
 
         $fecha = now();
-        $codigo_auditoria = strtoupper($tabla . '_' . $campo . '_' . $tipo );
+        $codigo_auditoria = strtoupper($tabla . '_' . $campo . '_' . $tipo);
         DB::table('cpu_auditoria')->insert([
             'aud_user' => $usuario,
             'aud_tabla' => $tabla,

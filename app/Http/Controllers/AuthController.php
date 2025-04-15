@@ -100,6 +100,7 @@ class AuthController extends Controller
         $ciudadano = CpuLegalizacionMatricula::where('id_periodo', $id_periodo_activo)
             ->where('email', $credentials['email'])
             ->where('cedula', $credentials['cedula'])
+            ->orderBy('id_periodo', 'desc')
             ->first();
 
         if (!$ciudadano) {

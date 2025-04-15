@@ -13,7 +13,7 @@ class CpuMatriculaConfiguracionController extends Controller
     // }
     public function index()
     {
-        return CpuMatriculaConfiguracion::all();
+        return CpuMatriculaConfiguracion::where('id_estado', 8)->get();
     }
 
     public function store(Request $request)

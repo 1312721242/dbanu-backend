@@ -294,11 +294,12 @@ class CpuConsumoBecadoController extends Controller
                     'Content-Type: application/json',
                     'Content-Length' => strlen($datosCodificados),
                 ),
-                CURLOPT_RETURNTRANSFER => false,
-                CURLOPT_TIMEOUT_MS => 100,
-                CURLOPT_CONNECTTIMEOUT_MS => 100
+                CURLOPT_RETURNTRANSFER => true,
+                // CURLOPT_TIMEOUT_MS => 100,
+                // CURLOPT_CONNECTTIMEOUT_MS => 100,
+                CURLOPT_SSL_VERIFYPEER => false,
+                CURLOPT_SSL_VERIFYHOST => false,
             ));
-
             $resultado = curl_exec($ch);
             Log::info('Correo disparado (sin esperar respuesta)', ['email' => $emaile]);
             $codigoRespuesta = curl_getinfo($ch, CURLINFO_HTTP_CODE);

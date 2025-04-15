@@ -272,9 +272,9 @@ class CpuConsumoBecadoController extends Controller
             $detallesAlimentos .= "</ul>";
 
             if ($tipo_usuario === 'Ayuda Económica') {
-                $cuerpoCorreo = "<p>Estimado(a) $apellidosd $nombresd; La EPE Uleam, registra el consumo de los siguientes alimentos: $detallesAlimentos Del total de \$$monto_otorgadod dólares, aún tiene disponible \$$restanted dólares. Saludos cordiales.</p>";
+                $cuerpoCorreo = "<p>Estimado(a) $apellidosd $nombresd; La EP Uleam, registra el consumo de los siguientes alimentos: $detallesAlimentos Del total de \$$monto_otorgadod dólares, aún tiene disponible \$$restanted dólares. Saludos cordiales.</p>";
             } else {
-                $cuerpoCorreo = "<p>Estimado(a) $apellidosd $nombresd; La EPE Uleam, registra el consumo de los siguientes alimentos: $detallesAlimentos Saludos cordiales.</p>";
+                $cuerpoCorreo = "<p>Estimado(a) $apellidosd $nombresd; La EP Uleam, registra el consumo de los siguientes alimentos: $detallesAlimentos Saludos cordiales.</p>";
             }
 
             $persona = [

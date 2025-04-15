@@ -22,6 +22,8 @@ use Endroid\QrCode\QrCode as EndroidQrCode;
 use Carbon\Carbon; // Asegúrate de importar Carbon
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Http;
+
 class CpuBecadoController extends Controller
 {
 
@@ -43,29 +45,79 @@ class CpuBecadoController extends Controller
         return response()->json(['message' => 'No se encontró el o la estudiante'], 404);
     }
 
-    public function consultarPorCodigoTarjeta($codigoTarjeta)
-    {
-        $currentDate = Carbon::now()->toDateString(); // Obtener solo la parte de la fecha (YYYY-MM-DD)
+    // public function consultarPorCodigoTarjeta($codigoTarjeta)
+    // {
+    //     $currentDate = Carbon::now()->toDateString(); // Obtener solo la parte de la fecha (YYYY-MM-DD)
 
-        // Buscar en CpuBecado
-        $becado = CpuBecado::where('codigo_tarjeta', $codigoTarjeta)
+    //     // Buscar en CpuBecado
+    //     $becado = CpuBecado::where('codigo_tarjeta', $codigoTarjeta)
+    //         ->where('fecha_inicio_valido', '<=', $currentDate)
+    //         ->where('fecha_fin_valido', '>=', $currentDate)
+    //         ->where('id_estado', 8)
+    //         ->select('id', 'identificacion', 'periodo', 'nombres', 'apellidos', 'sexo', 'email', 'telefono', 'beca', 'tipo_beca_otorgada', 'monto_otorgado', 'monto_consumido', 'codigo_tarjeta', 'fecha_inicio_valido', 'fecha_fin_valido', 'carrera', 'id_estado')
+    //         ->first();
+
+    //     if ($becado) {
+    //         // Obtener el valor consumido en la fecha actual
+    //         $valorConsumidoHoy = CpuConsumoBecado::where('id_becado', $becado->id)
+    //             ->whereDate('created_at', $currentDate)
+    //             ->sum('monto_facturado');
+
+    //         // Log::info('Registro encontrado en CpuBecado');
+
+    //         // Auditoría
+    //         $this->auditar('cpu_becado', 'identificacion', '', '', 'CONSULTA', "CONSULTA DE BECADOS POR CODIGO DE TARJETA: {$codigoTarjeta}");
+
+    //         return response()->json([
+    //             'becado' => $becado,
+    //             'valor_consumido_hoy' => $valorConsumidoHoy,
+    //             'valor_consumido_total' => $becado->monto_consumido
+    //         ]);
+    //     }
+
+    //     // Si no se encuentra en CpuBecado, buscar en CpuClientesTasty (cpu_funcionario_comunidad)
+    //     // Log::info('Buscando en CpuClientesTasty (cpu_funcionario_comunidad)');
+
+    //     $funcionario = CpuClientesTasty::where('codigo_tarjeta', $codigoTarjeta)
+    //         ->where('fecha_inicio_valido', '<=', $currentDate)
+    //         ->where('fecha_fin_valido', '>=', $currentDate)
+    //         ->where('id_estado', 8)
+    //         ->select('id', 'identificacion', 'nombres', 'apellidos', 'email', 'telefono', 'unidad_facultad_direccion', 'cargo_puesto', 'codigo_tarjeta', 'fecha_inicio_valido', 'fecha_fin_valido')
+    //         ->first();
+
+    //     if ($funcionario) {
+    //         // Log::info('Registro encontrado en CpuClientesTasty (cpu_funcionario_comunidad)');
+
+    //         return response()->json([
+    //             'funcionario' => $funcionario
+    //         ]);
+    //     }
+
+    //     // Log::info('No se encontró un registro válido para el código de tarjeta');
+
+    //     return response()->json(['message' => 'No se encontró un registro válido para el código de tarjeta'], 204);
+    // }
+
+
+    public function consultarPorCodigoTarjeta($codigo)
+    {
+        $currentDate = Carbon::now()->toDateString();
+        $tipoIdentificacion = preg_match('/^00+/', $codigo) ? 'T' : 'C';
+        // Log::info("🔎 Iniciando búsqueda local para código: {$codigo} (Tipo: {$tipoIdentificacion})");
+
+        // 1. Buscar primero en cpu_becado
+        $becado = CpuBecado::where('codigo_tarjeta', $codigo)
             ->where('fecha_inicio_valido', '<=', $currentDate)
             ->where('fecha_fin_valido', '>=', $currentDate)
             ->where('id_estado', 8)
-            ->select('id', 'identificacion', 'periodo', 'nombres', 'apellidos', 'sexo', 'email', 'telefono', 'beca', 'tipo_beca_otorgada', 'monto_otorgado', 'monto_consumido', 'codigo_tarjeta', 'fecha_inicio_valido', 'fecha_fin_valido', 'carrera', 'id_estado')
             ->first();
 
         if ($becado) {
-            // Obtener el valor consumido en la fecha actual
             $valorConsumidoHoy = CpuConsumoBecado::where('id_becado', $becado->id)
                 ->whereDate('created_at', $currentDate)
                 ->sum('monto_facturado');
 
-            // Log::info('Registro encontrado en CpuBecado');
-
-            // Auditoría
-            $this->auditar('cpu_becado', 'identificacion', '', '', 'CONSULTA', "CONSULTA DE BECADOS POR CODIGO DE TARJETA: {$codigoTarjeta}");
-
+            // Log::info("✅ Usuario encontrado en tabla cpu_becado: {$becado->identificacion}");
             return response()->json([
                 'becado' => $becado,
                 'valor_consumido_hoy' => $valorConsumidoHoy,
@@ -73,28 +125,94 @@ class CpuBecadoController extends Controller
             ]);
         }
 
-        // Si no se encuentra en CpuBecado, buscar en CpuClientesTasty (cpu_funcionario_comunidad)
-        // Log::info('Buscando en CpuClientesTasty (cpu_funcionario_comunidad)');
-
-        $funcionario = CpuClientesTasty::where('codigo_tarjeta', $codigoTarjeta)
-            ->where('fecha_inicio_valido', '<=', $currentDate)
-            ->where('fecha_fin_valido', '>=', $currentDate)
-            ->where('id_estado', 8)
-            ->select('id', 'identificacion', 'nombres', 'apellidos', 'email', 'telefono', 'unidad_facultad_direccion', 'cargo_puesto', 'codigo_tarjeta', 'fecha_inicio_valido', 'fecha_fin_valido')
-            ->first();
-
+        // 2. Buscar en cpu_funcionario_comunidad
+        $funcionario = CpuClientesTasty::where('codigo_tarjeta', $codigo)->first();
         if ($funcionario) {
-            // Log::info('Registro encontrado en CpuClientesTasty (cpu_funcionario_comunidad)');
-
-            return response()->json([
-                'funcionario' => $funcionario
-            ]);
+            $diasSinActualizar = Carbon::parse($funcionario->updated_at)->diffInDays(now());
+            if ($diasSinActualizar <= 30) {
+                Log::info("📌 Funcionario encontrado y actualizado recientemente ({$diasSinActualizar} días): {$funcionario->identificacion}");
+                return response()->json(['funcionario' => $funcionario]);
+            }
+            // Log::info("⏳ Funcionario encontrado pero con datos antiguos ({$diasSinActualizar} días), se consultará la API.");
+        } else {
+            // Log::info("ℹ No se encontró en cpu_funcionario_comunidad localmente. Se consultará la API.");
         }
 
-        // Log::info('No se encontró un registro válido para el código de tarjeta');
+        // 3. Obtener token de Azure
+        try {
+            $tokenResponse = Http::asForm()->post('https://login.microsoftonline.com/31a17900-7589-4cfc-b11a-f4e83c27b8ed/oauth2/v2.0/token', [
+                'grant_type' => 'client_credentials',
+                'client_id' => '06772b06-a35c-4240-ac76-cb457f1314e4',
+                'client_secret' => 'uBL8Q~XKyGvLkM1~sVL14-UHgIXV-BHo-7p9adgt',
+                'scope' => 'https://service.flow.microsoft.com//.default'
+            ]);
 
-        return response()->json(['message' => 'No se encontró un registro válido para el código de tarjeta'], 404);
+            if ($tokenResponse->failed()) {
+                // Log::error("❌ Error al obtener token de Azure: " . $tokenResponse->body());
+                return response()->json(['error' => 'Error al autenticar con Azure'], 500);
+            }
+
+            $accessToken = $tokenResponse->json()['access_token'];
+            // Log::info("🔐 Token de acceso obtenido correctamente.");
+        } catch (\Exception $e) {
+            // Log::error("❌ Excepción al obtener token Azure: " . $e->getMessage());
+            return response()->json(['error' => 'Error al autenticar con Azure'], 500);
+        }
+
+        // 4. Consultar API externa
+        try {
+            $url = "https://prod-181.westus.logic.azure.com/workflows/c7da91845e08486f8e746efea7e72fe5/triggers/manual/paths/invoke/id/{$codigo}/{$tipoIdentificacion}?api-version=2016-06-01";
+            $azureResponse = Http::withHeaders([
+                'Authorization' => "Bearer {$accessToken}"
+            ])->get($url);
+
+            // Log::info("🌐 Llamada a API externa: {$url}");
+            // Log::info("📥 Respuesta Azure: " . $azureResponse->status() . ' - ' . $azureResponse->body());
+
+            if ($azureResponse->status() === 204) {
+                // Log::warning("⚠ No se encontró información en la API externa para {$codigo}.");
+                return response()->json(['message' => 'No se encontró información en la API externa.'], 204);
+            }
+
+            if ($azureResponse->failed()) {
+                // Log::error("❌ Error al consultar API externa: " . $azureResponse->body());
+                return response()->json(['error' => 'Error al consultar API externa.'], 500);
+            }
+
+            $data = $azureResponse->json();
+            $identificacion = $data['identificacion'];
+
+            $datosComunes = [
+                'identificacion' => $identificacion,
+                'nombres' => $data['nombres'],
+                'apellidos' => $data['apellidos'],
+                'email' => $data['correo'],
+                'unidad_facultad_direccion' => $data['unidadOrganizativaAbreviatura'],
+                'cargo_puesto' => $data['tipoUsuario'],
+                'codigo_tarjeta' => $data['numeroTarjeta'],
+                'updated_at' => now(),
+                'fecha_inicio_valido' => now(),
+                'fecha_fin_valido' => now()->addYear(),
+                'id_estado' => 8
+            ];
+
+            $funcionarioExistente = CpuClientesTasty::where('identificacion', $identificacion)->first();
+
+            if ($funcionarioExistente) {
+                $funcionarioExistente->update($datosComunes);
+                // Log::info("🛠 Datos actualizados en cpu_funcionario_comunidad para ID: {$funcionarioExistente->id}");
+            } else {
+                $funcionarioExistente = CpuClientesTasty::create($datosComunes);
+                // Log::info("🆕 Nuevo registro creado en cpu_funcionario_comunidad con ID: {$funcionarioExistente->id}");
+            }
+
+            return response()->json(['funcionario' => $funcionarioExistente]);
+        } catch (\Exception $e) {
+            Log::error("❌ Excepción en la lógica de consulta o inserción: " . $e->getMessage());
+            return response()->json(['error' => 'Error inesperado en la consulta'], 500);
+        }
     }
+
 
     public function importarExcel(Request $request)
     {
@@ -156,8 +274,7 @@ class CpuBecadoController extends Controller
                         'numero_matricula' => $row[31] ?? null,
                     ]);
                     $imported++;
-                }
-                catch (\Exception $e) {
+                } catch (\Exception $e) {
                     // Guardar información del error
                     $errors[] = [
                         'fila' => $key + 1,
@@ -174,7 +291,6 @@ class CpuBecadoController extends Controller
 
             // Auditoría
             $this->auditar('cpu_becado', 'identificacion', '', '', 'INSERCION', "IMPORTACION DE BECADOS POR EXCEL");
-
         } catch (\Exception $e) {
             return response()->json(['message' => 'Error en la importación: ' . $e->getMessage(), 'errors' => 1], 422);
         }
@@ -387,70 +503,70 @@ class CpuBecadoController extends Controller
         return response()->json(['message' => 'No se encontró el registro con esa identificación'], 404);
     }
 
-      //funcion para auditar
-      private function auditar($tabla, $campo, $dataOld, $dataNew, $tipo, $descripcion, $request = null)
-      {
-          $usuario = $request && !is_string($request) ? $request->user()->name : auth()->user()->name;
-          $ip = $request && !is_string($request) ? $request->ip() : request()->ip();
-          $ipv4 = gethostbyname(gethostname());
-          $publicIp = file_get_contents('http://ipecho.net/plain');
-          $ioConcatenadas = 'IP LOCAL: ' . $ip . '  --IPV4: ' . $ipv4 . '  --IP PUBLICA: ' . $publicIp;
-          $nombreequipo = gethostbyaddr($ip);
-          $userAgent = $request && !is_string($request) ? $request->header('User-Agent') : request()->header('User-Agent');
-          $tipoEquipo = 'Desconocido';
+    //funcion para auditar
+    private function auditar($tabla, $campo, $dataOld, $dataNew, $tipo, $descripcion, $request = null)
+    {
+        $usuario = $request && !is_string($request) ? $request->user()->name : auth()->user()->name;
+        $ip = $request && !is_string($request) ? $request->ip() : request()->ip();
+        $ipv4 = gethostbyname(gethostname());
+        $publicIp = file_get_contents('http://ipecho.net/plain');
+        $ioConcatenadas = 'IP LOCAL: ' . $ip . '  --IPV4: ' . $ipv4 . '  --IP PUBLICA: ' . $publicIp;
+        $nombreequipo = gethostbyaddr($ip);
+        $userAgent = $request && !is_string($request) ? $request->header('User-Agent') : request()->header('User-Agent');
+        $tipoEquipo = 'Desconocido';
 
-          if (stripos($userAgent, 'Mobile') !== false) {
-              $tipoEquipo = 'Celular';
-          } elseif (stripos($userAgent, 'Tablet') !== false) {
-              $tipoEquipo = 'Tablet';
-          } elseif (stripos($userAgent, 'Laptop') !== false || stripos($userAgent, 'Macintosh') !== false) {
-              $tipoEquipo = 'Laptop';
-          } elseif (stripos($userAgent, 'Windows') !== false || stripos($userAgent, 'Linux') !== false) {
-              $tipoEquipo = 'Computador de Escritorio';
-          }
-          $nombreUsuarioEquipo = get_current_user() . ' en ' . $tipoEquipo;
+        if (stripos($userAgent, 'Mobile') !== false) {
+            $tipoEquipo = 'Celular';
+        } elseif (stripos($userAgent, 'Tablet') !== false) {
+            $tipoEquipo = 'Tablet';
+        } elseif (stripos($userAgent, 'Laptop') !== false || stripos($userAgent, 'Macintosh') !== false) {
+            $tipoEquipo = 'Laptop';
+        } elseif (stripos($userAgent, 'Windows') !== false || stripos($userAgent, 'Linux') !== false) {
+            $tipoEquipo = 'Computador de Escritorio';
+        }
+        $nombreUsuarioEquipo = get_current_user() . ' en ' . $tipoEquipo;
 
-          $fecha = now();
-          $codigo_auditoria = strtoupper($tabla . '_' . $campo . '_' . $tipo );
-          DB::table('cpu_auditoria')->insert([
-              'aud_user' => $usuario,
-              'aud_tabla' => $tabla,
-              'aud_campo' => $campo,
-              'aud_dataold' => $dataOld,
-              'aud_datanew' => $dataNew,
-              'aud_tipo' => $tipo,
-              'aud_fecha' => $fecha,
-              'aud_ip' => $ioConcatenadas,
-              'aud_tipoauditoria' => $this->getTipoAuditoria($tipo),
-              'aud_descripcion' => $descripcion,
-              'aud_nombreequipo' => $nombreequipo,
-              'aud_descrequipo' => $nombreUsuarioEquipo,
-              'aud_codigo' => $codigo_auditoria,
-              'created_at' => now(),
-              'updated_at' => now(),
+        $fecha = now();
+        $codigo_auditoria = strtoupper($tabla . '_' . $campo . '_' . $tipo);
+        DB::table('cpu_auditoria')->insert([
+            'aud_user' => $usuario,
+            'aud_tabla' => $tabla,
+            'aud_campo' => $campo,
+            'aud_dataold' => $dataOld,
+            'aud_datanew' => $dataNew,
+            'aud_tipo' => $tipo,
+            'aud_fecha' => $fecha,
+            'aud_ip' => $ioConcatenadas,
+            'aud_tipoauditoria' => $this->getTipoAuditoria($tipo),
+            'aud_descripcion' => $descripcion,
+            'aud_nombreequipo' => $nombreequipo,
+            'aud_descrequipo' => $nombreUsuarioEquipo,
+            'aud_codigo' => $codigo_auditoria,
+            'created_at' => now(),
+            'updated_at' => now(),
 
-          ]);
-      }
+        ]);
+    }
 
-      private function getTipoAuditoria($tipo)
-      {
-          switch ($tipo) {
-              case 'CONSULTA':
-                  return 1;
-              case 'INSERCION':
-                  return 3;
-              case 'MODIFICACION':
-                  return 2;
-              case 'ELIMINACION':
-                  return 4;
-              case 'LOGIN':
-                  return 5;
-              case 'LOGOUT':
-                  return 6;
-              case 'DESACTIVACION':
-                  return 7;
-              default:
-                  return 0;
-          }
-      }
+    private function getTipoAuditoria($tipo)
+    {
+        switch ($tipo) {
+            case 'CONSULTA':
+                return 1;
+            case 'INSERCION':
+                return 3;
+            case 'MODIFICACION':
+                return 2;
+            case 'ELIMINACION':
+                return 4;
+            case 'LOGIN':
+                return 5;
+            case 'LOGOUT':
+                return 6;
+            case 'DESACTIVACION':
+                return 7;
+            default:
+                return 0;
+        }
+    }
 }

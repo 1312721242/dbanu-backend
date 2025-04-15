@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\CpuBecado; // Importa el modelo CpuBecado
 use App\Models\CpuConsumoBecado;
 use App\Models\CpuConsumoFuncionarioComunidad;
+use App\Models\CpuFuncionarioComunidad;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Log;
@@ -63,7 +64,7 @@ class CpuConsumoBecadoController extends Controller
 
         // Llamar a la función enviarCorreo con los datos necesarios
         $this->enviarCorreo($request, $restante);
-        $this->auditar('cpu_consumo_becado', 'registrarConsumo', '', $consumo, 'INSERCION', 'Consumo de alimentos por ayuda económica - Tasty Uleam, Identificacion: ' . $request->identificacion . ' - Monto: ' . $request->monto_facturado . ' - Tipo de alimento: ' . $request->tipo_alimento . ' - Tipo de usuario: ' . $request->tipo_usuario. ' | Sede: ' . $request->id_sede .' | Facultad: ' . $request->id_facultad);
+        $this->auditar('cpu_consumo_becado', 'registrarConsumo', '', $consumo, 'INSERCION', 'Consumo de alimentos por ayuda económica - Tasty Uleam, Identificacion: ' . $request->identificacion . ' - Monto: ' . $request->monto_facturado . ' - Tipo de alimento: ' . $request->tipo_alimento . ' - Tipo de usuario: ' . $request->tipo_usuario . ' | Sede: ' . $request->id_sede . ' | Facultad: ' . $request->id_facultad);
 
         return response()->json(['message' => 'Consumo registrado correctamente', 'code' => 200], 200);
     }
@@ -229,74 +230,100 @@ class CpuConsumoBecadoController extends Controller
 
     public function enviarCorreo(Request $request, $restanted)
     {
-        // Obtener los datos necesarios, ajusta esto según tus necesidades
-        // $emaile = $request->input("email");
-        $emaile = "p1311836587@dn.uleam.edu.ec"; // Asumiendo que quieras cambiar esto por $request->input("email") más tarde
-        $nombresd = $request->input("nombres");
-        $apellidosd = $request->input("apellidos");
-        $monto_otorgadod = $request->input('monto_otorgado');
-        // $restanted = $restante->input('restante');
-        $tipo_alimentos = json_decode($request->input('tipo_alimento'), true);
-        $monto_facturadod = $request->input('monto_facturado');
-        $tipo_usuario = $request->input('tipo_usuario');
+        try {
+            Log::info('Datos recibidos en enviarCorreo', [
+                'request_all' => $request->all(),
+                'restante' => $restanted
+            ]);
 
-        // Construir la lista de alimentos
-        $detallesAlimentos = "<ul>";
-        foreach ($tipo_alimentos as $alimento) {
-            $detallesAlimentos .= "<li>" . htmlspecialchars($alimento['descripcion']) . " - Cantidad: " . $alimento['cantidad'] . ", Precio: $" . number_format($alimento['precio'], 2) . "</li>";
-        }
-        $detallesAlimentos .= "</ul>";
+            $identificacion = $request->input('identificacion');
+            $nombresd = $request->input("nombres");
+            $apellidosd = $request->input("apellidos");
+            $monto_otorgadod = $request->input('monto_otorgado');
+            $tipo_alimentos = json_decode($request->input('tipo_alimento'), true);
+            $monto_facturadod = $request->input('monto_facturado');
+            $tipo_usuario = $request->input('tipo_usuario');
 
-        // Crear cuerpo del correo basado en el tipo de usuario
-        if ($tipo_usuario === 'Ayuda Económica') {
-            $cuerpoCorreo = "<p>Estimado(a) $apellidosd $nombresd; La EPE Uleam, registra el consumo de los siguientes alimentos: $detallesAlimentos Del total de \$$monto_otorgadod dólares, aún tiene disponible \$$restanted dólares. Saludos cordiales.</p>";
-        } else {
-            $cuerpoCorreo = "<p>Estimado(a) $apellidosd $nombresd; La EPE Uleam, registra el consumo de los siguientes alimentos: $detallesAlimentos Saludos cordiales.</p>";
-        }
+            // Buscar email por identificación
+            $emaile = null;
 
-        $persona = [
-            "destinatarios" => $emaile,
-            "cc" => "",
-            "cco" => "",
-            "asunto" => "Consumo de alimentos por ayuda económica - Tasty Uleam",
-            "cuerpo" => $cuerpoCorreo
-        ];
+            $funcionario = CpuFuncionarioComunidad::where('identificacion', $identificacion)->first();
+            if ($funcionario && $funcionario->email) {
+                $emaile = $funcionario->email;
+            } else {
+                $becado = CpuBecado::where('identificacion', $identificacion)->first();
+                if ($becado && $becado->email) {
+                    $emaile = $becado->email;
+                }
+            }
 
-        // Codificar los datos
-        $datosCodificados = json_encode($persona);
+            if (!$emaile) {
+                Log::warning('No se encontró email ni en funcionarios ni en becados', ['identificacion' => $identificacion]);
+                return; // No continúa si no hay email
+            }
 
-        // URL de destino
-        $url = "https://prod-44.westus.logic.azure.com:443/workflows/4046dc46113a4d8bb5da374ef1ee3e32/triggers/manual/paths/invoke?api-version=2016-06-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=lA40KwffEyLqEjVA4uyHaWAHblO77vk2jXYEkjUG08s";
+            // Construcción del cuerpo del correo
+            $detallesAlimentos = "<ul>";
+            foreach ($tipo_alimentos as $alimento) {
+                $detallesAlimentos .= "<li>" . htmlspecialchars($alimento['descripcion']) . " - Cantidad: " . $alimento['cantidad'] . ", Precio: $" . number_format($alimento['precio'], 2) . "</li>";
+            }
+            $detallesAlimentos .= "</ul>";
 
-        // Inicializar cURL
-        $ch = curl_init($url);
+            if ($tipo_usuario === 'Ayuda Económica') {
+                $cuerpoCorreo = "<p>Estimado(a) $apellidosd $nombresd; La EPE Uleam, registra el consumo de los siguientes alimentos: $detallesAlimentos Del total de \$$monto_otorgadod dólares, aún tiene disponible \$$restanted dólares. Saludos cordiales.</p>";
+            } else {
+                $cuerpoCorreo = "<p>Estimado(a) $apellidosd $nombresd; La EPE Uleam, registra el consumo de los siguientes alimentos: $detallesAlimentos Saludos cordiales.</p>";
+            }
 
-        // Configurar opciones de cURL
-        curl_setopt_array($ch, array(
-            CURLOPT_CUSTOMREQUEST => "POST",
-            CURLOPT_POSTFIELDS => $datosCodificados,
-            CURLOPT_HTTPHEADER => array(
-                'Content-Type: application/json',
-                'Content-Length: ' . strlen($datosCodificados),
-                'Personalizado: ¡Hola mundo!',
-            ),
-            CURLOPT_RETURNTRANSFER => true,
-        ));
+            $persona = [
+                "destinatarios" => $emaile,
+                "cc" => "",
+                "cco" => "",
+                "asunto" => "Consumo de alimentos por ayuda económica - Tasty Uleam",
+                "cuerpo" => $cuerpoCorreo
+            ];
 
-        // Realizar la solicitud cURL
-        $resultado = curl_exec($ch);
-        $codigoRespuesta = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        curl_close($ch);
+            $datosCodificados = json_encode($persona);
+            $url = "https://prod-44.westus.logic.azure.com:443/workflows/4046dc46113a4d8bb5da374ef1ee3e32/triggers/manual/paths/invoke?api-version=2016-06-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=lA40KwffEyLqEjVA4uyHaWAHblO77vk2jXYEkjUG08s";
 
-        // Procesar la respuesta
-        if ($codigoRespuesta === 200) {
-            $respuestaDecodificada = json_decode($resultado);
-            return response()->json(['message' => 'Solicitud enviada correctamente'], 200);
-        } else {
-            // Manejar errores
-            return response()->json(['error' => "Error consultando. Código de respuesta: $codigoRespuesta"], $codigoRespuesta);
+            $ch = curl_init($url);
+            curl_setopt_array($ch, array(
+                CURLOPT_CUSTOMREQUEST => "POST",
+                CURLOPT_POSTFIELDS => $datosCodificados,
+                CURLOPT_HTTPHEADER => array(
+                    'Content-Type: application/json',
+                    'Content-Length' => strlen($datosCodificados),
+                ),
+                CURLOPT_RETURNTRANSFER => false,
+                CURLOPT_TIMEOUT_MS => 100,
+                CURLOPT_CONNECTTIMEOUT_MS => 100
+            ));
+
+            $resultado = curl_exec($ch);
+            Log::info('Correo disparado (sin esperar respuesta)', ['email' => $emaile]);
+            $codigoRespuesta = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            $curlError = curl_error($ch);
+            curl_close($ch);
+
+            if ($codigoRespuesta === 200) {
+                Log::info('Correo enviado correctamente', ['email' => $emaile]);
+            } else {
+                Log::warning('Error al enviar correo', [
+                    'status' => $codigoRespuesta,
+                    'curl_error' => $curlError,
+                    'respuesta' => $resultado,
+                    'email' => $emaile
+                ]);
+            }
+        } catch (\Exception $e) {
+            Log::error('Excepción al enviar correo', [
+                'message' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+                'request' => $request->all()
+            ]);
         }
     }
+
 
     //funcion para auditar
     private function auditar($tabla, $campo, $dataOld, $dataNew, $tipo, $descripcion, $request = null)

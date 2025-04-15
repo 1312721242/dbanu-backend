@@ -19,6 +19,7 @@ class CpuConsumoFuncionarioComunidad extends Model
         'monto_facturado',
         'id_sede',
         'id_facultad',
+        'forma_pago'
     ];
 
     public function funcionario()

@@ -30,6 +30,7 @@ class CpuConsumoBecadoController extends Controller
             'tipo_usuario' => 'required|string',
             'id_sede' => 'required|integer',
             'id_facultad' => 'required|integer',
+
         ]);
 
         if ($request->tipo_usuario === 'Ayuda Económica' || $request->tipo_usuario === 'becado') {
@@ -57,6 +58,7 @@ class CpuConsumoBecadoController extends Controller
             $consumo->monto_facturado = $request->monto_facturado;
             $consumo->id_sede = $request->id_sede;
             $consumo->id_facultad = $request->id_facultad;
+            $consumo->forma_pago = $request->forma_pago;
             $consumo->save();
             $restante = 0;
         }

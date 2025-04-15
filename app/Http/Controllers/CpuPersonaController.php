@@ -414,6 +414,7 @@ class CpuPersonaController extends Controller
         $persona->load(['datosEstudiantes']);
         return response()->json([$persona]);
     }
+}
 
     private function generarCodigoPersona($cedula, $nombres)
     {

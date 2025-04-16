@@ -71,56 +71,134 @@ class CpuConsumoBecadoController extends Controller
         return response()->json(['message' => 'Consumo registrado correctamente', 'code' => 200], 200);
     }
 
+    // public function registrosPorFechas($fechaInicio, $fechaFin, Request $request)
+    // {
+    //     $tipo = $request->query('tipo', 'Todos');
+
+    //     $fechaInicio = Carbon::parse($fechaInicio);
+    //     $fechaFin = Carbon::parse($fechaFin);
+
+    //     if ($fechaInicio->isSameDay($fechaFin)) {
+    //         $fechaFin->setTime(23, 59, 59);
+    //     }
+
+    //     $origen = is_array($tipo) ? $tipo['origen'] : $tipo;
+
+    //     if ($origen === 'Personal Uleam/Otro') {
+    //         // Buscar en CpuConsumoFuncionarioComunidad
+    //         $registrosFuncionarios = CpuConsumoFuncionarioComunidad::whereBetween('created_at', [$fechaInicio, $fechaFin])->get();
+    //         $registros = $registrosFuncionarios;
+    //     } elseif ($origen === 'Ayuda Económica') {
+    //         // Buscar en CpuConsumoBecado
+    //         $registros = CpuConsumoBecado::whereBetween('created_at', [$fechaInicio, $fechaFin])->get();
+    //     } else {
+    //         // Buscar en ambas tablas
+    //         $registrosBecados = CpuConsumoBecado::whereBetween('created_at', [$fechaInicio, $fechaFin])->get();
+    //         $registrosFuncionarios = CpuConsumoFuncionarioComunidad::whereBetween('created_at', [$fechaInicio, $fechaFin])->get();
+    //         $registros = $registrosBecados->concat($registrosFuncionarios);
+    //     }
+
+    //     // Agrupar y calcular totales por tipo de alimento
+    //     $total_por_tipo = $registros->groupBy('tipo_alimento')
+    //         ->map(function ($items) {
+    //             return [
+    //                 'total' => $items->count(),
+    //                 'valor_vendido' => $items->sum('monto_facturado'),
+    //             ];
+    //         });
+
+    //     // Calcular totales globales
+    //     $total_global = [
+    //         'total_registros' => $registros->count(),
+    //         'total_monto' => $registros->sum('monto_facturado'),
+    //     ];
+    //     $this->auditar('cpu_consumo_becado', 'registrosPorFechas', '', '', 'CONSULTA', 'Consulta de consumo de alimentos por ayuda económica - Tasty Uleam');
+
+    //     return response()->json([
+    //         'fecha_inicio' => $fechaInicio->toDateString(),
+    //         'fecha_fin' => $fechaFin->toDateString(),
+    //         'total_por_tipo' => $total_por_tipo,
+    //         'total_global' => $total_global,
+    //     ]);
+    // }
+
     public function registrosPorFechas($fechaInicio, $fechaFin, Request $request)
     {
-        $tipo = $request->query('tipo', 'Todos');
+        try {
+            $tipo = $request->query('tipo', 'Todos');
 
-        $fechaInicio = Carbon::parse($fechaInicio);
-        $fechaFin = Carbon::parse($fechaFin);
+            $fechaInicio = Carbon::parse($fechaInicio);
+            $fechaFin = Carbon::parse($fechaFin);
 
-        if ($fechaInicio->isSameDay($fechaFin)) {
-            $fechaFin->setTime(23, 59, 59);
+            if ($fechaInicio->isSameDay($fechaFin)) {
+                $fechaFin->setTime(23, 59, 59);
+            }
+
+            $origen = is_array($tipo) ? $tipo['origen'] : $tipo;
+
+            if ($origen === 'Personal Uleam/Otro') {
+                $registrosFuncionarios = CpuConsumoFuncionarioComunidad::whereBetween('created_at', [$fechaInicio, $fechaFin])->get();
+                $registros = $registrosFuncionarios;
+
+                $resumen_por_forma_pago = $registrosFuncionarios->groupBy('forma_pago')->map(function ($items, $forma) {
+                    return [
+                        'forma_pago' => $forma,
+                        'total' => round($items->sum('monto_facturado'), 2),
+                        'cantidad' => $items->count()
+                    ];
+                })->values();
+            } elseif ($origen === 'Ayuda Económica') {
+                $registros = CpuConsumoBecado::whereBetween('created_at', [$fechaInicio, $fechaFin])->get();
+
+                $resumen_por_forma_pago = collect([[
+                    'forma_pago' => 'Ayuda Económica',
+                    'total' => round($registros->sum('monto_facturado'), 2),
+                    'cantidad' => $registros->count()
+                ]]);
+            } else {
+                $registrosBecados = CpuConsumoBecado::whereBetween('created_at', [$fechaInicio, $fechaFin])->get();
+                $registrosFuncionarios = CpuConsumoFuncionarioComunidad::whereBetween('created_at', [$fechaInicio, $fechaFin])->get();
+
+                $registros = $registrosBecados->concat($registrosFuncionarios);
+
+                $resumen_por_forma_pago = $registros->groupBy(function ($item) {
+                    return $item instanceof CpuConsumoBecado ? 'Ayuda Económica' : $item->forma_pago;
+                })->map(function ($items, $forma) {
+                    return [
+                        'forma_pago' => $forma,
+                        'total' => round($items->sum('monto_facturado'), 2),
+                        'cantidad' => $items->count()
+                    ];
+                })->values();
+            }
+
+            $total_global = [
+                'total_registros' => $registros->count(),
+                'total_monto' => round($registros->sum('monto_facturado'), 2)
+            ];
+
+            $this->auditar(
+                'cpu_consumo_becado',
+                'registrosPorFechas',
+                '',
+                '',
+                'CONSULTA',
+                "Consulta de consumo de alimentos entre fechas: $fechaInicio a $fechaFin"
+            );
+
+            return response()->json([
+                'fecha_inicio' => $fechaInicio->toDateString(),
+                'fecha_fin' => $fechaFin->toDateString(),
+                'total_por_forma_pago' => $resumen_por_forma_pago,
+                'total_global' => $total_global,
+            ]);
+        } catch (\Exception $e) {
+            // \Log::error('❌ Error en registrosPorFechas: ' . $e->getMessage());
+            return response()->json(['error' => 'Error al procesar la solicitud'], 500);
         }
-
-        $origen = is_array($tipo) ? $tipo['origen'] : $tipo;
-
-        if ($origen === 'Personal Uleam/Otro') {
-            // Buscar en CpuConsumoFuncionarioComunidad
-            $registrosFuncionarios = CpuConsumoFuncionarioComunidad::whereBetween('created_at', [$fechaInicio, $fechaFin])->get();
-            $registros = $registrosFuncionarios;
-        } elseif ($origen === 'Ayuda Económica') {
-            // Buscar en CpuConsumoBecado
-            $registros = CpuConsumoBecado::whereBetween('created_at', [$fechaInicio, $fechaFin])->get();
-        } else {
-            // Buscar en ambas tablas
-            $registrosBecados = CpuConsumoBecado::whereBetween('created_at', [$fechaInicio, $fechaFin])->get();
-            $registrosFuncionarios = CpuConsumoFuncionarioComunidad::whereBetween('created_at', [$fechaInicio, $fechaFin])->get();
-            $registros = $registrosBecados->concat($registrosFuncionarios);
-        }
-
-        // Agrupar y calcular totales por tipo de alimento
-        $total_por_tipo = $registros->groupBy('tipo_alimento')
-            ->map(function ($items) {
-                return [
-                    'total' => $items->count(),
-                    'valor_vendido' => $items->sum('monto_facturado'),
-                ];
-            });
-
-        // Calcular totales globales
-        $total_global = [
-            'total_registros' => $registros->count(),
-            'total_monto' => $registros->sum('monto_facturado'),
-        ];
-        $this->auditar('cpu_consumo_becado', 'registrosPorFechas', '', '', 'CONSULTA', 'Consulta de consumo de alimentos por ayuda económica - Tasty Uleam');
-
-        return response()->json([
-            'fecha_inicio' => $fechaInicio->toDateString(),
-            'fecha_fin' => $fechaFin->toDateString(),
-            'total_por_tipo' => $total_por_tipo,
-            'total_global' => $total_global,
-        ]);
     }
+
+
 
     // Buscar solo por fechas
     public function detalleRegistros($fechaInicio, $fechaFin, Request $request)
@@ -203,6 +281,7 @@ class CpuConsumoBecadoController extends Controller
                         'identificacion' => $group->first()->identificacion,
                         'tipo_alimento' => $group->first()->tipo_alimento,
                         'monto_facturado' => $group->sum('monto_facturado'),  // Suma de montos facturados
+                        'forma_pago' => $group->first()->forma_pago,
                     ];
                 })->values();
         } else {
@@ -214,6 +293,7 @@ class CpuConsumoBecadoController extends Controller
                     'identificacion' => $registro->identificacion,
                     'tipo_alimento' => $registro->tipo_alimento,
                     'monto_facturado' => $registro->monto_facturado,
+                    'forma_pago' => $registro->forma_pago,
                 ];
             });
         }
@@ -272,8 +352,10 @@ class CpuConsumoBecadoController extends Controller
             $detallesAlimentos .= "</ul>";
 
             if ($tipo_usuario === 'Ayuda Económica') {
+                $asuntoCorreo = "Consumo de alimentos por ayuda económica - Tasty Uleam";
                 $cuerpoCorreo = "<p>Estimado(a) $apellidosd $nombresd; La EP Uleam, registra el consumo de los siguientes alimentos: $detallesAlimentos Del total de \$$monto_otorgadod dólares, aún tiene disponible \$$restanted dólares. Saludos cordiales.</p>";
             } else {
+                $asuntoCorreo = "Consumo de alimentos - Tasty Uleam";
                 $cuerpoCorreo = "<p>Estimado(a) $apellidosd $nombresd; La EP Uleam, registra el consumo de los siguientes alimentos: $detallesAlimentos Saludos cordiales.</p>";
             }
 
@@ -281,7 +363,7 @@ class CpuConsumoBecadoController extends Controller
                 "destinatarios" => $emaile,
                 "cc" => "",
                 "cco" => "",
-                "asunto" => "Consumo de alimentos por ayuda económica - Tasty Uleam",
+                "asunto" => $asuntoCorreo,
                 "cuerpo" => $cuerpoCorreo
             ];
 

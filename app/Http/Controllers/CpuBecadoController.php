@@ -480,7 +480,8 @@ class CpuBecadoController extends Controller
         ]);
 
         // Intentar encontrar el becado por identificación primero
-        $becado = CpuBecado::where('identificacion', $identificacion)->first();
+        // $becado = CpuBecado::where('identificacion', $identificacion)->first();
+        $becado = CpuBecado::where('id', $identificacion)->first();
 
         if ($becado) {
             $becado->codigo_tarjeta = $request->input('codigo_tarjeta');

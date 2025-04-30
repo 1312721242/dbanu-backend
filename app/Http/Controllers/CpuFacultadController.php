@@ -133,4 +133,25 @@ class CpuFacultadController extends Controller
         return response()->json($facultades);
     }
 
+
+    // Start of Selection
+    // Start of Selection
+    public function consultarFacultadesPorNombreTasty($id_sede, $id_facultad, $usr_tipo)
+    {
+        if ($usr_tipo == 20) {
+            $facultades = DB::table('cpu_facultad')
+                ->where('id_sede', $id_sede)
+                ->where('fac_nombre', 'LIKE', 'Tasty%')
+                ->get();
+        } else {
+            $facultades = DB::table('cpu_facultad')
+                ->where('id_sede', $id_sede)
+                ->where('fac_nombre', 'LIKE', '%Tasty%')
+                // ->where('id', '=', $id_facultad)
+                ->get();
+        }
+
+        return response()->json($facultades);
+    }
+
 }

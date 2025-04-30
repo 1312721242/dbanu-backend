@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class CpuCorreoEnviadoController extends Controller
 {
@@ -954,11 +955,10 @@ class CpuCorreoEnviadoController extends Controller
             );
         } else {
             // Manejar errores
-            return response()->json(['error' => "Error consultando. Código de respuesta: $codigoRespuesta"], $codigoRespuesta);
+            if ($codigoRespuesta !== 200) {
+                Log::error("Error al enviar correo paciente. Código de respuesta: $codigoRespuesta");
+            }
         }
-
-        // Devolver una respuesta
-        return response()->json(['message' => 'Solicitud enviada correctamente'], 200);
     }
 
     public function enviarCorreoFuncionario(array $validatedData, $tipo)
@@ -1029,11 +1029,10 @@ class CpuCorreoEnviadoController extends Controller
             );
         } else {
             // Manejar errores
-            return response()->json(['error' => "Error consultando. Código de respuesta: $codigoRespuesta"], $codigoRespuesta);
+            if ($codigoRespuesta !== 200) {
+                Log::error("Error al enviar correo funcionario. Código de respuesta: $codigoRespuesta");
+            }
         }
-
-        // Devolver una respuesta
-        return response()->json(['message' => 'Solicitud enviada correctamente'], 200);
     }
 
     public function registrarCorreoEnviado($destinatarios, $conCopia, $asunto, $cuerpo, $idPaciente, $idFuncionarioDerivado, $idFuncionarioAtendio)

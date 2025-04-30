@@ -143,7 +143,7 @@ class CpuDerivacionController extends Controller
                 'cpu_derivaciones.id_estado_derivacion',
                 'users.email as funcionario_email',
                 'users.usr_sede as id_sede',
-                DB::raw('COALESCE(cpu_datos_estudiantes.email_institucional, cpu_datos_empleados.emailinstitucional) as email_paciente')
+                DB::raw('COALESCE(cpu_datos_estudiantes.email_institucional, cpu_datos_empleados.emailinstitucional, cpu_datos_usuarios_externos.email) as email_paciente')
             )
             ->join('cpu_personas', 'cpu_personas.id', '=', 'cpu_derivaciones.id_paciente')
             ->join('users', 'users.id', '=', 'cpu_derivaciones.id_funcionario_que_derivo')
@@ -153,6 +153,7 @@ class CpuDerivacionController extends Controller
             ->leftJoin('cpu_datos_empleados', 'cpu_personas.id', '=', 'cpu_datos_empleados.id_persona')
             ->leftJoin('users as deriva_sede', 'users.usr_sede', '=', 'cpu_derivaciones.id_funcionario_que_derivo')
             ->leftJoin('cpu_atenciones', 'cpu_atenciones.id', '=', 'cpu_derivaciones.ate_id')
+            ->leftJoin('cpu_datos_usuarios_externos', 'cpu_personas.id', '=', 'cpu_datos_usuarios_externos.id_persona')
             ->distinct(); // Asegurar que los registros sean únicos
 
         // Agregar las condiciones según el doctor_id
@@ -246,7 +247,7 @@ class CpuDerivacionController extends Controller
         return response()->json(['success' => true, 'derivacion' => $derivacion]);
     }
 
-    public function Reagendar(Request $request)
+    public function reagendar(Request $request)
     {
         $validatedData = $request->validate([
             // Validación de los campos que se enviarán

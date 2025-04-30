@@ -67,7 +67,6 @@ use App\Models\CpuAtencionFisioterapia;
 
 // Autenticación
 Route::get('credencial-pdf/{identificacion}/{periodo}', [CpuBecadoController::class, 'generarCredencialPDF']);
-
 Route::post('/login', [AuthController::class, 'login']);
 Route::post('/loginapp', [AuthController::class, 'loginApp']);
 Route::post('/logout', [AuthController::class, 'logout'])->middleware('auth:sanctum');
@@ -392,7 +391,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('/derivaciones/filtrar', [CpuDerivacionController::class, 'getDerivacionesByDoctorAndDate']);
     Route::get('/derivaciones/all', [CpuDerivacionController::class, 'getDerivacionesAll']);
     Route::post('/derivaciones/update', [CpuDerivacionController::class, 'updateDerivacion']);
-    Route::post('/reagendar', [CpuDerivacionController::class, 'Reagendar']);
+    Route::post('/reagendar', [CpuDerivacionController::class, 'reagendar']);
     Route::put('/derivaciones/no-asistio/{id}', [CpuDerivacionController::class, 'noAsistioCita']);
 
     //datos del valor de consumo por dia para becas

@@ -153,6 +153,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::delete('/eliminar-facultad/{id}', [CpuFacultadController::class, 'eliminarFacultad']);
     Route::get('/consultar-facultades', [CpuFacultadController::class, 'consultarFacultades']);
     Route::get('/consultar-facultades-sede/{id_sede}', [CpuFacultadController::class, 'consultarFacultadesporSede']);
+    Route::get('/consultar-facultades-tasty/{id_sede}/{id_facultad}/{usr_tipo}', [CpuFacultadController::class, 'consultarFacultadesPorNombreTasty']);
 
     // años
     Route::post('/agregar-year', [CpuYearController::class, 'agregarYear']);

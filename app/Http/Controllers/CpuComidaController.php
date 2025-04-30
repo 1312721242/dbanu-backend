@@ -8,9 +8,24 @@ use Illuminate\Support\Facades\DB;
 
 class CpuComidaController extends Controller
 {
-    // public function index()
+
+
+    // public function index(Request $request)
     // {
-    //     $comidas = CpuComida::with('tipoComida')->get()->map(function ($comida) {
+    //     $query = CpuComida::with(['tipoComida', 'sede', 'facultad']);
+
+    //     // Solo aplicar filtros si el usuario NO es admin
+    //     if ($request->usr_tipo != 1) {
+    //         if ($request->has('id_sede')) {
+    //             $query->where('id_sede', $request->id_sede);
+    //         }
+
+    //         if ($request->has('id_facultad')) {
+    //             $query->where('id_facultad', $request->id_facultad);
+    //         }
+    //     }
+
+    //     $comidas = $query->get()->map(function ($comida) {
     //         return [
     //             'id_comida' => $comida->id,
     //             'id_tipo_comida' => $comida->id_tipo_comida,
@@ -24,25 +39,30 @@ class CpuComidaController extends Controller
     //         ];
     //     });
 
-    //     // Auditoría
     //     $this->auditar('cpu_comida', 'id', '', '', 'CONSULTA', "CONSULTA DE COMIDAS");
 
     //     return response()->json($comidas);
     // }
 
+
     public function index(Request $request)
     {
         $query = CpuComida::with(['tipoComida', 'sede', 'facultad']);
 
-        // Solo aplicar filtros si el usuario NO es admin
-        if ($request->usr_tipo != 1) {
-            if ($request->has('id_sede')) {
-                $query->where('id_sede', $request->id_sede);
-            }
+        // Si el usuario es tipo 1 (Administrador) => trae todo
+        if ($request->usr_tipo == 1) {
+            // No se aplican filtros
+        }
 
-            if ($request->has('id_facultad')) {
-                $query->where('id_facultad', $request->id_facultad);
-            }
+        // Si el usuario es tipo 20 => trae todos los registros de su sede (todas las facultades)
+        elseif ($request->usr_tipo == 20 && $request->has('id_sede')) {
+            $query->where('id_sede', $request->id_sede);
+        }
+
+        // Si el usuario es tipo 6 => trae registros de su sede y su facultad
+        elseif ($request->usr_tipo == 6 && $request->has('id_sede') && $request->has('id_facultad')) {
+            $query->where('id_sede', $request->id_sede)
+                  ->where('id_facultad', $request->id_facultad);
         }
 
         $comidas = $query->get()->map(function ($comida) {
@@ -65,35 +85,6 @@ class CpuComidaController extends Controller
     }
 
 
-    // public function indexTipoComida()
-    // {
-    //     $comidas = CpuComida::with('tipoComida')->get();
-
-    //     // Agrupar las comidas por tipo de comida
-    //     $comidasAgrupadas = $comidas->groupBy('tipoComida.descripcion');
-
-    //     // Formatear la respuesta
-    //     $response = [];
-    //     foreach ($comidasAgrupadas as $tipoComida => $comidas) {
-    //         $comidasFormateadas = $comidas->map(function ($comida) {
-    //             return [
-    //                 'id_comida' => $comida->id,
-    //                 'descripcion_comida' => $comida->descripcion,
-    //                 'precio' => $comida->precio,
-    //             ];
-    //         })->toArray();
-
-    //         $response[] = [
-    //             'tipo_comida' => $tipoComida,
-    //             'comidas' => $comidasFormateadas,
-    //         ];
-    //     }
-
-    //     // Auditoría
-    //     $this->auditar('cpu_comida', 'id', '', '', 'CONSULTA', "CONSULTA DE COMIDAS");
-
-    //     return response()->json($response);
-    // }
 
     public function indexTipoComida(Request $request)
     {

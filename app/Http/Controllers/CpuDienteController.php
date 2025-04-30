@@ -34,7 +34,7 @@ class CpuDienteController extends Controller
                 'infantil' => $arcada['infantil'] ?? []
             ]
         ];
-        $this->auditar('cpu_diente', 'buscarPorPaciente', '', $respuesta, 'CONSULTA', 'Consulta de diente por paciente', $id_paciente);
+        // $this->auditar('cpu_diente', 'buscarPorPaciente', '', $respuesta, 'CONSULTA', 'Consulta de diente por paciente', $id_paciente);
         return response()->json($respuesta, 200);
     }
 

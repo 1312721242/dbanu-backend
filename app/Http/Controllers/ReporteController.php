@@ -387,7 +387,7 @@ class ReporteController extends Controller
             ->leftJoin('cpu_datos_medicos as dm', 'p.id', '=', 'dm.id_persona')
             ->leftJoin('users as u', 'at.id_funcionario', '=', 'u.id')
             ->leftJoin('cpu_userrole as ur', 'u.usr_tipo', '=', 'ur.id_userrole')
-            ->leftJoin('cpu_tipo_usuario as tu', 'p.id_tipo_usuario', '=', 'tu.id')
+            ->leftJoin('cpu_tipo_usuario as tu', 'at.id_tipo_usuario', '=', 'tu.id')
             ->select(
                 'at.id',
                 'at.id_persona',

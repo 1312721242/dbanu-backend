@@ -24,7 +24,7 @@ class CpuConsumoBecadoController extends Controller
     {
         $request->validate([
             'id' => 'required|integer',
-            'periodo' => 'required|string',
+            'periodo' => 'nullable|string',
             'identificacion' => 'required|string',
             'tipo_alimento' => 'required|string',
             'monto_facturado' => 'required|numeric',
@@ -53,7 +53,7 @@ class CpuConsumoBecadoController extends Controller
         } else {
             $consumo = new CpuConsumoFuncionarioComunidad();
             $consumo->id_funcionario_comunidad = $request->id;
-            $consumo->periodo = $request->periodo;
+            // $consumo->periodo = $request->periodo;
             $consumo->identificacion = $request->identificacion;
             $consumo->tipo_alimento = $request->tipo_alimento;
             $consumo->monto_facturado = $request->monto_facturado;

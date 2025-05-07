@@ -9,42 +9,6 @@ use Illuminate\Support\Facades\DB;
 class CpuComidaController extends Controller
 {
 
-
-    // public function index(Request $request)
-    // {
-    //     $query = CpuComida::with(['tipoComida', 'sede', 'facultad']);
-
-    //     // Solo aplicar filtros si el usuario NO es admin
-    //     if ($request->usr_tipo != 1) {
-    //         if ($request->has('id_sede')) {
-    //             $query->where('id_sede', $request->id_sede);
-    //         }
-
-    //         if ($request->has('id_facultad')) {
-    //             $query->where('id_facultad', $request->id_facultad);
-    //         }
-    //     }
-
-    //     $comidas = $query->get()->map(function ($comida) {
-    //         return [
-    //             'id_comida' => $comida->id,
-    //             'id_tipo_comida' => $comida->id_tipo_comida,
-    //             'descripcion_comida' => $comida->descripcion,
-    //             'descripcion_tipo_comida' => $comida->tipoComida->descripcion,
-    //             'precio' => $comida->precio,
-    //             'id_sede' => $comida->id_sede,
-    //             'nombre_sede' => $comida->sede->nombre_sede ?? null,
-    //             'id_facultad' => $comida->id_facultad,
-    //             'fac_nombre' => $comida->facultad->fac_nombre ?? null,
-    //         ];
-    //     });
-
-    //     $this->auditar('cpu_comida', 'id', '', '', 'CONSULTA', "CONSULTA DE COMIDAS");
-
-    //     return response()->json($comidas);
-    // }
-
-
     public function index(Request $request)
     {
         $query = CpuComida::with(['tipoComida', 'sede', 'facultad']);
@@ -83,8 +47,6 @@ class CpuComidaController extends Controller
 
         return response()->json($comidas);
     }
-
-
 
     public function indexTipoComida(Request $request)
     {

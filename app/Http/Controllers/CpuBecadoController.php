@@ -106,7 +106,10 @@ class CpuBecadoController extends Controller
         // Log::info("🔎 Iniciando búsqueda local para código: {$codigo} (Tipo: {$tipoIdentificacion})");
 
         // 1. Buscar primero en cpu_becado
-        $becado = CpuBecado::where('codigo_tarjeta', $codigo)
+        $becado = CpuBecado::where(function ($query) use ($codigo) {
+            $query->where('codigo_tarjeta', $codigo)
+                  ->orWhere('identificacion', $codigo);
+        })
             ->where('fecha_inicio_valido', '<=', $currentDate)
             ->where('fecha_fin_valido', '>=', $currentDate)
             ->where('id_estado', 8)
@@ -126,7 +129,11 @@ class CpuBecadoController extends Controller
         }
 
         // 2. Buscar en cpu_funcionario_comunidad
-        $funcionario = CpuClientesTasty::where('codigo_tarjeta', $codigo)->first();
+        // $funcionario = CpuClientesTasty::where('codigo_tarjeta', $codigo)->first();
+        // 2. Buscar en cpu_funcionario_comunidad por tarjeta o cédula
+            $funcionario = CpuClientesTasty::where('codigo_tarjeta', $codigo)
+            ->orWhere('identificacion', $codigo)
+            ->first();
         if ($funcionario) {
             $diasSinActualizar = Carbon::parse($funcionario->updated_at)->diffInDays(now());
             if ($diasSinActualizar <= 30) {
@@ -140,7 +147,7 @@ class CpuBecadoController extends Controller
 
         // 3. Obtener token de Azure
         try {
-            $tokenResponse = Http::asForm()->post('https://login.microsoftonline.com/31a17900-7589-4cfc-b11a-f4e83c27b8ed/oauth2/v2.0/token', [
+            $tokenResponse = Http::withOptions(['verify' => false])->asForm()->post('https://login.microsoftonline.com/31a17900-7589-4cfc-b11a-f4e83c27b8ed/oauth2/v2.0/token', [
                 'grant_type' => 'client_credentials',
                 'client_id' => '06772b06-a35c-4240-ac76-cb457f1314e4',
                 'client_secret' => 'uBL8Q~XKyGvLkM1~sVL14-UHgIXV-BHo-7p9adgt',
@@ -164,7 +171,7 @@ class CpuBecadoController extends Controller
             $url = "https://prod-181.westus.logic.azure.com/workflows/c7da91845e08486f8e746efea7e72fe5/triggers/manual/paths/invoke/id/{$codigo}/{$tipoIdentificacion}?api-version=2016-06-01";
             $azureResponse = Http::withHeaders([
                 'Authorization' => "Bearer {$accessToken}"
-            ])->get($url);
+            ])->withoutVerifying()->get($url);
 
             // Log::info("🌐 Llamada a API externa: {$url}");
             // Log::info("📥 Respuesta Azure: " . $azureResponse->status() . ' - ' . $azureResponse->body());

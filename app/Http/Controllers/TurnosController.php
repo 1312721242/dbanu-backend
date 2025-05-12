@@ -11,6 +11,61 @@ use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\DB;
 class TurnosController extends Controller
 {
+    // public function agregarTurnos(Request $request)
+    // {
+    //     $user = Auth::user();
+    //     $area = $user->usr_tipo; // Obtener el área del usuario autenticado
+    //     $doctor = $user->id; // Obtener el ID del doctor del usuario autenticado
+    //     $turnos = $request->input('turnos');
+    //     $response = [
+    //         'agregados' => 0,
+    //         'omitidos' => 0,
+    //     ];
+
+    //     if ($turnos) {
+    //         foreach ($turnos as $turno) {
+    //             $fechaTurno = $turno['fechaTurno'];
+    //             $horaTurno = $turno['horaTurno'];
+    //             // $estadoTurno = $turno['estado'];
+
+    //             $turnoExistente = CpuTurno::where('id_medico', $doctor)
+    //                 ->where('fehca_turno', $fechaTurno)
+    //                 ->where('hora', $horaTurno)
+    //                 ->whereNotBetween('estado', [3, 5])
+    //                 ->first();
+
+    //             if ($turnoExistente) {
+    //                 $response['omitidos']++;
+    //             } else {
+    //                 try {
+    //                     $insert = CpuTurno::create([
+    //                         'id_medico' => $doctor,
+    //                         'fehca_turno' => $fechaTurno,
+    //                         'hora' => $horaTurno,
+    //                         'estado' => 1,
+    //                         'area' => $area,
+    //                         'via_atencion' => 1,
+    //                         'usr_date_creacion' => now()
+    //                     ]);
+
+    //                     if ($insert) {
+    //                         $response['agregados']++;
+    //                     } else {
+    //                         $response['omitidos']++;
+    //                     }
+    //                 } catch (\Exception $e) {
+    //                     $response['omitidos']++;
+    //                 }
+    //             }
+    //         }
+    //     }
+    //     //auditar
+    //     $this->auditar('turnos', 'agregarTurnos', '', json_encode($response), 'INSERCION', 'Agregación de turnos');
+
+    //     return response()->json($response);
+    // }
+
+    // Start of Selection
     public function agregarTurnos(Request $request)
     {
         $user = Auth::user();
@@ -30,7 +85,7 @@ class TurnosController extends Controller
                 $turnoExistente = CpuTurno::where('id_medico', $doctor)
                     ->where('fehca_turno', $fechaTurno)
                     ->where('hora', $horaTurno)
-                    ->where('estado', 1)
+                    ->whereNotBetween('estado', [3, 5])
                     ->first();
 
                 if ($turnoExistente) {
@@ -60,6 +115,9 @@ class TurnosController extends Controller
         }
         //auditar
         $this->auditar('turnos', 'agregarTurnos', '', json_encode($response), 'INSERCION', 'Agregación de turnos');
+
+        // Agregar log para ver los datos que llegan
+        Log::info('Datos recibidos en agregarTurnos: ' . json_encode($request->all()));
 
         return response()->json($response);
     }

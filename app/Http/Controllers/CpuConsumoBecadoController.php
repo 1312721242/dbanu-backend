@@ -31,7 +31,7 @@ class CpuConsumoBecadoController extends Controller
             'tipo_usuario' => 'required|string',
             'id_sede' => 'required|integer',
             'id_facultad' => 'required|integer',
-
+            'id_user' => 'required|integer',
         ]);
 
         if ($request->tipo_usuario === 'Ayuda Económica' || $request->tipo_usuario === 'becado') {
@@ -43,6 +43,7 @@ class CpuConsumoBecadoController extends Controller
             $consumo->monto_facturado = $request->monto_facturado;
             $consumo->id_sede = $request->id_sede;
             $consumo->id_facultad = $request->id_facultad;
+            $consumo->id_user = $request->id_user;
             $consumo->save();
 
             // Actualizar el monto_consumido en la tabla cpu_becados
@@ -60,6 +61,7 @@ class CpuConsumoBecadoController extends Controller
             $consumo->id_sede = $request->id_sede;
             $consumo->id_facultad = $request->id_facultad;
             $consumo->forma_pago = $request->forma_pago;
+            $consumo->id_user = $request->id_user;
             $consumo->save();
             $restante = 0;
         }
@@ -70,57 +72,6 @@ class CpuConsumoBecadoController extends Controller
 
         return response()->json(['message' => 'Consumo registrado correctamente', 'code' => 200], 200);
     }
-
-    // public function registrosPorFechas($fechaInicio, $fechaFin, Request $request)
-    // {
-    //     $tipo = $request->query('tipo', 'Todos');
-
-    //     $fechaInicio = Carbon::parse($fechaInicio);
-    //     $fechaFin = Carbon::parse($fechaFin);
-
-    //     if ($fechaInicio->isSameDay($fechaFin)) {
-    //         $fechaFin->setTime(23, 59, 59);
-    //     }
-
-    //     $origen = is_array($tipo) ? $tipo['origen'] : $tipo;
-
-    //     if ($origen === 'Personal Uleam/Otro') {
-    //         // Buscar en CpuConsumoFuncionarioComunidad
-    //         $registrosFuncionarios = CpuConsumoFuncionarioComunidad::whereBetween('created_at', [$fechaInicio, $fechaFin])->get();
-    //         $registros = $registrosFuncionarios;
-    //     } elseif ($origen === 'Ayuda Económica') {
-    //         // Buscar en CpuConsumoBecado
-    //         $registros = CpuConsumoBecado::whereBetween('created_at', [$fechaInicio, $fechaFin])->get();
-    //     } else {
-    //         // Buscar en ambas tablas
-    //         $registrosBecados = CpuConsumoBecado::whereBetween('created_at', [$fechaInicio, $fechaFin])->get();
-    //         $registrosFuncionarios = CpuConsumoFuncionarioComunidad::whereBetween('created_at', [$fechaInicio, $fechaFin])->get();
-    //         $registros = $registrosBecados->concat($registrosFuncionarios);
-    //     }
-
-    //     // Agrupar y calcular totales por tipo de alimento
-    //     $total_por_tipo = $registros->groupBy('tipo_alimento')
-    //         ->map(function ($items) {
-    //             return [
-    //                 'total' => $items->count(),
-    //                 'valor_vendido' => $items->sum('monto_facturado'),
-    //             ];
-    //         });
-
-    //     // Calcular totales globales
-    //     $total_global = [
-    //         'total_registros' => $registros->count(),
-    //         'total_monto' => $registros->sum('monto_facturado'),
-    //     ];
-    //     $this->auditar('cpu_consumo_becado', 'registrosPorFechas', '', '', 'CONSULTA', 'Consulta de consumo de alimentos por ayuda económica - Tasty Uleam');
-
-    //     return response()->json([
-    //         'fecha_inicio' => $fechaInicio->toDateString(),
-    //         'fecha_fin' => $fechaFin->toDateString(),
-    //         'total_por_tipo' => $total_por_tipo,
-    //         'total_global' => $total_global,
-    //     ]);
-    // }
 
     public function registrosPorFechas($fechaInicio, $fechaFin, Request $request)
     {
@@ -225,54 +176,85 @@ class CpuConsumoBecadoController extends Controller
         Log::info('Tipo Reporte: ' . $tipoReporte);
 
         if ($origen === 'Personal Uleam/Otro') {
-            // $valor = $tipo['valor'];
+            $registrosFuncionariosQuery = CpuConsumoFuncionarioComunidad::whereBetween('cpu_consumo_funcionario_comunidad.created_at', [$fechaInicio, $fechaFin])
+                ->join('cpu_funcionario_comunidad', 'cpu_consumo_funcionario_comunidad.id_funcionario_comunidad', '=', 'cpu_funcionario_comunidad.id')
+                ->leftJoin('users', 'cpu_consumo_funcionario_comunidad.id_user', '=', 'users.id')
+                ->leftJoin('cpu_sede', 'cpu_consumo_funcionario_comunidad.id_sede', '=', 'cpu_sede.id')
+                ->leftJoin('cpu_facultad', 'cpu_consumo_funcionario_comunidad.id_facultad', '=', 'cpu_facultad.id');
 
-            if ($tipoPersonal === 'Todos') {
-                // Buscar solo en CpuConsumoFuncionarioComunidad y unir con CpuClientesTasty
-                $registrosFuncionarios = CpuConsumoFuncionarioComunidad::whereBetween('cpu_consumo_funcionario_comunidad.created_at', [$fechaInicio, $fechaFin])
-                    ->join('cpu_funcionario_comunidad', 'cpu_consumo_funcionario_comunidad.id_funcionario_comunidad', '=', 'cpu_funcionario_comunidad.id')
-                    ->select('cpu_consumo_funcionario_comunidad.*', 'cpu_funcionario_comunidad.nombres', 'cpu_funcionario_comunidad.apellidos', 'cpu_funcionario_comunidad.cargo_puesto')
-                    ->get();
-            } else {
-                // Buscar solo en CpuConsumoFuncionarioComunidad donde cargo_puesto coincide y unir con CpuClientesTasty
-                $registrosFuncionarios = CpuConsumoFuncionarioComunidad::whereBetween('cpu_consumo_funcionario_comunidad.created_at', [$fechaInicio, $fechaFin])
-                    ->join('cpu_funcionario_comunidad', 'cpu_consumo_funcionario_comunidad.id_funcionario_comunidad', '=', 'cpu_funcionario_comunidad.id')
-                    ->where('cpu_funcionario_comunidad.cargo_puesto', $valor)
-                    ->select('cpu_consumo_funcionario_comunidad.*', 'cpu_funcionario_comunidad.nombres', 'cpu_funcionario_comunidad.apellidos', 'cpu_funcionario_comunidad.cargo_puesto')
-                    ->get();
+            if ($tipoPersonal !== 'Todos') {
+                $registrosFuncionariosQuery->where('cpu_funcionario_comunidad.cargo_puesto', $valor);
             }
 
-            $registros = $registrosFuncionarios;
+            $registros = $registrosFuncionariosQuery->select(
+                'cpu_consumo_funcionario_comunidad.*',
+                'cpu_funcionario_comunidad.nombres',
+                'cpu_funcionario_comunidad.apellidos',
+                'cpu_funcionario_comunidad.cargo_puesto',
+                'users.name as nombre_usuario',
+                'cpu_sede.nombre_sede',
+                'cpu_facultad.fac_nombre as nombre_facultad'
+            )
+                ->get();
         } elseif ($origen === 'Ayuda Económica') {
-            // Buscar solo en CpuConsumoBecado y unir con CpuBecado
             $registros = CpuConsumoBecado::whereBetween('cpu_consumo_becado.created_at', [$fechaInicio, $fechaFin])
                 ->join('cpu_becados', 'cpu_consumo_becado.id_becado', '=', 'cpu_becados.id')
-                ->select('cpu_consumo_becado.*', 'cpu_becados.nombres', 'cpu_becados.apellidos')
-                ->get()->map(function ($registro) {
+                ->leftJoin('users', 'cpu_consumo_becado.id_user', '=', 'users.id')
+                ->leftJoin('cpu_sede', 'cpu_consumo_becado.id_sede', '=', 'cpu_sede.id')
+                ->leftJoin('cpu_facultad', 'cpu_consumo_becado.id_facultad', '=', 'cpu_facultad.id')
+                ->select(
+                    'cpu_consumo_becado.*',
+                    'cpu_becados.nombres',
+                    'cpu_becados.apellidos',
+                    'users.name as nombre_usuario',
+                    'cpu_sede.nombre_sede',
+                    'cpu_facultad.fac_nombre as nombre_facultad'
+                )
+                ->get()
+                ->map(function ($registro) {
                     $registro->cargo_puesto = 'Ayuda Económica';
                     return $registro;
                 });
         } else {
-            // Buscar en ambas tablas y unir con CpuClientesTasty y CpuBecado
             $registrosBecados = CpuConsumoBecado::whereBetween('cpu_consumo_becado.created_at', [$fechaInicio, $fechaFin])
                 ->join('cpu_becados', 'cpu_consumo_becado.id_becado', '=', 'cpu_becados.id')
-                ->select('cpu_consumo_becado.*', 'cpu_becados.nombres', 'cpu_becados.apellidos')
-                ->get()->map(function ($registro) {
+                ->leftJoin('users', 'cpu_consumo_becado.id_user', '=', 'users.id')
+                ->leftJoin('cpu_sede', 'cpu_consumo_becado.id_sede', '=', 'cpu_sede.id')
+                ->leftJoin('cpu_facultad', 'cpu_consumo_becado.id_facultad', '=', 'cpu_facultad.id')
+                ->select(
+                    'cpu_consumo_becado.*',
+                    'cpu_becados.nombres',
+                    'cpu_becados.apellidos',
+                    'users.name as nombre_usuario',
+                    'cpu_sede.nombre_sede',
+                    'cpu_facultad.fac_nombre as nombre_facultad'
+                )
+                ->get()
+                ->map(function ($registro) {
                     $registro->cargo_puesto = 'Ayuda Económica';
                     return $registro;
                 });
 
             $registrosFuncionarios = CpuConsumoFuncionarioComunidad::whereBetween('cpu_consumo_funcionario_comunidad.created_at', [$fechaInicio, $fechaFin])
                 ->join('cpu_funcionario_comunidad', 'cpu_consumo_funcionario_comunidad.id_funcionario_comunidad', '=', 'cpu_funcionario_comunidad.id')
-                ->select('cpu_consumo_funcionario_comunidad.*', 'cpu_funcionario_comunidad.nombres', 'cpu_funcionario_comunidad.apellidos', 'cpu_funcionario_comunidad.cargo_puesto')
+                ->leftJoin('users', 'cpu_consumo_funcionario_comunidad.id_user', '=', 'users.id')
+                ->leftJoin('cpu_sede', 'cpu_consumo_funcionario_comunidad.id_sede', '=', 'cpu_sede.id')
+                ->leftJoin('cpu_facultad', 'cpu_consumo_funcionario_comunidad.id_facultad', '=', 'cpu_facultad.id')
+                ->select(
+                    'cpu_consumo_funcionario_comunidad.*',
+                    'cpu_funcionario_comunidad.nombres',
+                    'cpu_funcionario_comunidad.apellidos',
+                    'cpu_funcionario_comunidad.cargo_puesto',
+                    'users.name as nombre_usuario',
+                    'cpu_sede.nombre_sede',
+                    'cpu_facultad.fac_nombre as nombre_facultad'
+                )
                 ->get();
 
             $registros = $registrosBecados->concat($registrosFuncionarios);
         }
 
-        // Mapear los detalles de los registros
         if (($origen === 'Ayuda Económica' || $origen === 'Todos' || $origen === 'Personal Uleam/Otro') && ($valor === 'Consolidado' || $tipoReporte === 'Consolidado')) {
-            // Aquí, asumimos que quieres agrupar por la identificación del individuo y sumar los montos facturados
             $detalles = $registros->groupBy('identificacion')
                 ->map(function ($group) {
                     return [
@@ -280,12 +262,14 @@ class CpuConsumoBecadoController extends Controller
                         'cargo_puesto' => $group->first()->cargo_puesto ?? 'Desconocido',
                         'identificacion' => $group->first()->identificacion,
                         'tipo_alimento' => $group->first()->tipo_alimento,
-                        'monto_facturado' => $group->sum('monto_facturado'),  // Suma de montos facturados
+                        'monto_facturado' => $group->sum('monto_facturado'),
                         'forma_pago' => $group->first()->forma_pago,
+                        'nombre_usuario' => $group->first()->nombre_usuario ?? 'Desconocido',
+                        'nombre_sede' => $group->first()->nombre_sede ?? 'Desconocida',
+                        'nombre_facultad' => $group->first()->nombre_facultad ?? 'Desconocida',
                     ];
                 })->values();
         } else {
-            // Lógica original de mapeo si no se requiere consolidación
             $detalles = $registros->map(function ($registro) {
                 return [
                     'nombres_completos' => $registro->apellidos . ' ' . $registro->nombres,
@@ -294,12 +278,13 @@ class CpuConsumoBecadoController extends Controller
                     'tipo_alimento' => $registro->tipo_alimento,
                     'monto_facturado' => $registro->monto_facturado,
                     'forma_pago' => $registro->forma_pago,
+                    'nombre_usuario' => $registro->nombre_usuario ?? 'Desconocido',
+                    'nombre_sede' => $registro->nombre_sede ?? 'Desconocida',
+                    'nombre_facultad' => $registro->nombre_facultad ?? 'Desconocida',
                 ];
             });
         }
 
-        // Log de los detalles que se devuelven
-        // Log::info('Detalles devueltos en detalleRegistros:', ['detalles' => $detalles]);
         $this->auditar('cpu_consumo_becado', 'detalleRegistros', '', '', 'CONSULTA', 'Consulta de consumo de alimentos por ayuda económica - Tasty Uleam');
 
         return response()->json([
@@ -308,6 +293,8 @@ class CpuConsumoBecadoController extends Controller
             'detalles' => $detalles,
         ]);
     }
+
+
 
 
     public function enviarCorreo(Request $request, $restanted)

@@ -366,8 +366,8 @@ class ReporteController extends Controller
 
     public function getTotalAtencionesPorFecha(Request $request)
     {
-        $fechaInicio = $request->input('fechaInicio');
-        $fechaFin = $request->input('fechaFin');
+        $fechaInicio = Carbon::parse($request->input('fechaInicio'))->startOfDay()->toDateTimeString();
+        $fechaFin = Carbon::parse($request->input('fechaFin'))->endOfDay()->toDateTimeString();
         $usr_tipo = $request->input('usr_tipo');
         $usr_id = $request->input('usr_id');
 

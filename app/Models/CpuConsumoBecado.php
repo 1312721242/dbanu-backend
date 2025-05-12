@@ -19,7 +19,14 @@ class CpuConsumoBecado extends Model
         'monto_facturado',
         'id_sede',
         'id_facultad',
+        'id_programa',
+        'id_user',
     ];
+
+    public function user()
+    {
+        return $this->belongsTo(User::class, 'id_user', 'id');
+    }
 
     public $timestamps = true;
 }

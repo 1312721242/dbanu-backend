@@ -19,12 +19,18 @@ class CpuConsumoFuncionarioComunidad extends Model
         'monto_facturado',
         'id_sede',
         'id_facultad',
-        'forma_pago'
+        'forma_pago',
+        'id_user',
     ];
 
     public function funcionario()
     {
         return $this->belongsTo(CpuClientesTasty::class, 'id_funcionario_comunidad', 'id');
+    }
+
+    public function user()
+    {
+        return $this->belongsTo(User::class, 'id_user', 'id');
     }
 
     public $timestamps = true;

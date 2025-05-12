@@ -11,6 +11,7 @@ use App\Http\Controllers\CpuFacultadController;
 use App\Http\Controllers\CpuCarreraController;
 use App\Http\Controllers\UsuarioController; // Agregado el controlador de Usuario
 use App\Http\Controllers\CpuProfesionController;
+use App\Http\Controllers\SecretariasMatriculasControllers;
 use App\Http\Controllers\CpuEstadosController;
 use App\Http\Controllers\CpuUsermenuController;
 use App\Http\Controllers\CpuUserfunctionController;
@@ -221,11 +222,17 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::post('cambiar-password-app', [UsuarioController::class, 'cambiarPasswordApp']);
     Route::get('funcionarios/{id}', [UsuarioController::class, 'obtenerInformacion']);
     Route::post('cambiar-contrasena', [UsuarioController::class, 'cambiarContrasena']);
+   
+   
     //profesiones
     Route::post('/agregar-profesion', [CpuProfesionController::class, 'agregarProfesion']);
     Route::put('/modificar-profesion/{id}', [CpuProfesionController::class, 'modificarProfesion']);
     Route::delete('/eliminar-profesion/{id}', [CpuProfesionController::class, 'eliminarProfesion']);
-    Route::get('/consultar-profesiones', [CpuProfesionController::class, 'consultarProfesiones']);
+    Route::get('/consultar-profesion', [CpuProfesionController::class, 'consultarProfesiones']);
+
+    //Secretaria  Matriculas
+    Route::get('/consultar-secretaria-matricula', [SecretariasMatriculasControllers::class, 'consultarSecretariasMatriculas']);
+
 
     //estados
     Route::post('/agregar-estado', [CpuEstadosController::class, 'agregarEstado']);

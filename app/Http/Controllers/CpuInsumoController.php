@@ -93,5 +93,12 @@ class CpuInsumoController extends Controller
                 return 0;
         }
     }
+
+    public function consultarInsumos()
+    {
+        $data = DB::select('SELECT * FROM public.view_insumos');
+        return response()->json($data);
+    }
+
 }
 

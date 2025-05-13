@@ -232,6 +232,8 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
     //Secretaria  Matriculas
     Route::get('/consultar-secretaria-matricula', [SecretariasMatriculasControllers::class, 'consultarSecretariasMatriculas']);
+    Route::post('/agregar-secretaria-matricula', [SecretariasMatriculasControllers::class, 'agregarSecretariaMatricula']);
+
 
 
     //estados
@@ -430,6 +432,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     //INSUMOS
 
     Route::get('/cpu-insumos', [CpuInsumoController::class, 'getInsumos']);
+    Route::get('/get-insumo', [CpuInsumoController::class, 'consultarInsumos']);
 
 
     //apis para busqueda de cie11

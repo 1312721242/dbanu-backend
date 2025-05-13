@@ -123,7 +123,6 @@ class CpuProfesionController extends Controller
     public function consultarProfesiones()
     {
         $profesiones = DB::table('cpu_profesion')->get();
-
         return response()->json($profesiones);
     }
 }

@@ -433,6 +433,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
     Route::get('/cpu-insumos', [CpuInsumoController::class, 'getInsumos']);
     Route::get('/get-insumo', [CpuInsumoController::class, 'consultarInsumos']);
+    Route::get('/get-tipo-insumo', [CpuInsumoController::class, 'consultarTiposInsumos']);
 
 
     //apis para busqueda de cie11

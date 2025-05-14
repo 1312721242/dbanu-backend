@@ -100,5 +100,13 @@ class CpuInsumoController extends Controller
         return response()->json($data);
     }
 
+    public function consultarTiposInsumos()
+    {
+        $data = DB::select('SELECT * FROM public.view_tipos_insumos');
+        return response()->json($data);
+    }
+
+    
+
 }
 

@@ -237,6 +237,8 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
     //Productos
     Route::get('/get-producto', [ProductosControllers::class, 'consultarProductos']);
+    Route::post('/guardar-producto', [ProductosControllers::class, 'saveProductos']);
+
     
 
 

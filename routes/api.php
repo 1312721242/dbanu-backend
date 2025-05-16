@@ -64,6 +64,7 @@ use App\Http\Controllers\CpuTerapiaLenguajeController;
 use App\Http\Controllers\CpuTipoBecaController;
 use App\Http\Controllers\CpuTramiteController;
 use App\Http\Controllers\ReporteController;
+use App\Http\Controllers\ProductosControllers;
 use App\Models\CpuAtencionFisioterapia;
 
 // Autenticación
@@ -234,6 +235,9 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('/consultar-secretaria-matricula', [SecretariasMatriculasControllers::class, 'consultarSecretariasMatriculas']);
     Route::post('/agregar-secretaria-matricula', [SecretariasMatriculasControllers::class, 'agregarSecretariaMatricula']);
 
+    //Productos
+    Route::get('/get-producto', [ProductosControllers::class, 'consultarProductos']);
+    
 
 
     //estados

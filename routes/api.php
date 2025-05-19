@@ -65,6 +65,8 @@ use App\Http\Controllers\CpuTipoBecaController;
 use App\Http\Controllers\CpuTramiteController;
 use App\Http\Controllers\ReporteController;
 use App\Http\Controllers\ProductosControllers;
+use App\Http\Controllers\ProveedoresControllers;
+use App\Http\Controllers\CategoriaActivosControllers;
 use App\Models\CpuAtencionFisioterapia;
 
 // Autenticación
@@ -240,8 +242,15 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::post('/guardar-producto', [ProductosControllers::class, 'saveProductos']);
     Route::put('/modificar-producto/{id}', [ProductosControllers::class, 'modificarProductos']);
 
-    
+     //Proveedores
+     Route::get('/get-proveedor', [ProveedoresControllers::class, 'consultarProveedores']);
+     Route::post('/guardar-proveedor', [ProveedoresControllers::class, 'guardarProveedores']);
+     Route::put('/modificar-proveedor/{id}', [ProveedoresControllers::class, 'modificarProveedores']);
 
+      //Categoria de Activos
+      Route::get('/get-categoria-activo', [CategoriaActivosControllers::class, 'consultarCategoriaActivos']);
+      Route::post('/guardar-categoria-activo', [CategoriaActivosControllers::class, 'guardarCategoriaActivos']);
+      Route::put('/modificar-categoria-activo/{id}', [CategoriaActivosControllers::class, 'modificarProveedores']);
 
     //estados
     Route::post('/agregar-estado', [CpuEstadosController::class, 'agregarEstado']);

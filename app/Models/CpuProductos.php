@@ -9,8 +9,6 @@ class CpuProductos extends Model
 {
     use HasFactory;
     protected $fillable = [
-        'pro_id',
-        'pro_id_categoria',
         'pro_descripcion',
         'pro_codigo',
         'pro_estado',

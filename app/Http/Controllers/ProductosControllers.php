@@ -33,15 +33,17 @@ class ProductosControllers extends Controller
         if ($validator->fails()) {
             return response()->json(['error' => $validator->errors()], 400);
         }
-        $id = DB::table('cpu_productos')->insertGetId([
+        $id = DB::table('cpu_productos')->insert([
+            'pro_id_categoria' => $data['select-tipo'],
             'pro_descripcion' => $data['txt-descripcion'],
             'pro_codigo' => $data['txt-codigo'],
             'pro_estado' => $data['select-estado'],
-            'pro_tipo' => $data['txt-tipo'],
+            'pro_tipo' => $data['select-tipo'],
+            'pro_unidad_medida' => $data['select-unidad-medida']
         ]);
-        return  $id;
 
-        
+        $id = DB::table('cpu_productos')->latest('pro_id')->first()->pro_id;
+
         /*$fecha = now();
         $codigo_auditoria = strtoupper($tabla . '_' . $campo . '_' . $tipo );
         DB::table('cpu_auditoria')->insert([
@@ -63,7 +65,54 @@ class ProductosControllers extends Controller
 
         ]);*/
 
-        return response()->json(['success' => true, 'message' => 'Profesión agregada correctamente']);
+        return response()->json(['success' => true, 'message' => 'Proveedor agregado correctamente']);
+    }
+
+     public function modificarProductos(Request $request, $id)
+    {
+        log::info('data', $request->all()); 
+        $data = $request->all();
+        $validator = Validator::make($request->all(), [
+             'txt-descripcion' => 'required|string|max:500',
+            'txt-codigo' => 'required|string|max:500'
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['error' => $validator->errors()], 400);
+        }
+
+        $facultadNombre = $request->input('fac_nombre');
+        $usuario = $request->user()->name;
+        $ip = $request->ip();
+        $nombreequipo = gethostbyaddr($ip);
+        $fecha = now();
+
+        DB::table('cpu_productos')
+        ->where('pro_id', $id)  
+        ->update([              
+            'pro_id_categoria' => $data['select-tipo'],
+            'pro_descripcion' => $data['txt-descripcion'],
+            'pro_codigo' => $data['txt-codigo'],
+            'pro_estado' => $data['select-estado'],
+            'pro_tipo' => $data['select-tipo'],
+            'pro_unidad_medida' => $data['select-unidad-medida']
+        ]);
+
+        /*DB::table('cpu_auditoria')->insert([
+            'aud_user' => $usuario,
+            'aud_tabla' => 'cpu_facultad',
+            'aud_campo' => 'fac_nombre',
+            'aud_dataold' => '',
+            'aud_datanew' => $facultadNombre,
+            'aud_tipo' => 'MODIFICACION',
+            'aud_fecha' => $fecha,
+            'aud_ip' => $ip,
+            'aud_tipoauditoria' => 2,
+            'aud_descripcion' => "MODIFICACION DE FACULTAD $facultadNombre",
+            'aud_nombreequipo' => $nombreequipo,
+        ]);*/
+
+        return response()->json(['success' => true, 'message' => 'Producto modificado correctamente']);
     }
 
     

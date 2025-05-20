@@ -250,7 +250,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
       //Categoria de Activos
       Route::get('/get-categoria-activo', [CategoriaActivosControllers::class, 'consultarCategoriaActivos']);
       Route::post('/guardar-categoria-activo', [CategoriaActivosControllers::class, 'guardarCategoriaActivos']);
-      Route::put('/modificar-categoria-activo/{id}', [CategoriaActivosControllers::class, 'modificarProveedores']);
+      Route::put('/modificar-categoria-activo/{id}', [CategoriaActivosControllers::class, 'modificarCategoriaActivos']);
 
     //estados
     Route::post('/agregar-estado', [CpuEstadosController::class, 'agregarEstado']);

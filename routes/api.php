@@ -67,6 +67,7 @@ use App\Http\Controllers\ReporteController;
 use App\Http\Controllers\ProductosControllers;
 use App\Http\Controllers\ProveedoresControllers;
 use App\Http\Controllers\CategoriaActivosControllers;
+use App\Http\Controllers\IngresosControllers;
 use App\Models\CpuAtencionFisioterapia;
 
 // Autenticación
@@ -248,9 +249,12 @@ Route::middleware(['auth:sanctum'])->group(function () {
      Route::put('/modificar-proveedor/{id}', [ProveedoresControllers::class, 'modificarProveedores']);
 
       //Categoria de Activos
-      Route::get('/get-categoria-activo', [CategoriaActivosControllers::class, 'consultarCategoriaActivos']);
-      Route::post('/guardar-categoria-activo', [CategoriaActivosControllers::class, 'guardarCategoriaActivos']);
-      Route::put('/modificar-categoria-activo/{id}', [CategoriaActivosControllers::class, 'modificarCategoriaActivos']);
+    Route::get('/get-categoria-activo', [CategoriaActivosControllers::class, 'consultarCategoriaActivos']);
+    Route::post('/guardar-categoria-activo', [CategoriaActivosControllers::class, 'guardarCategoriaActivos']);
+    Route::put('/modificar-categoria-activo/{id}', [CategoriaActivosControllers::class, 'modificarCategoriaActivos']);
+
+         //Ingresos
+    Route::get('/get-ingreso', [IngresosControllers::class, 'consultarIngresos']);
 
     //estados
     Route::post('/agregar-estado', [CpuEstadosController::class, 'agregarEstado']);

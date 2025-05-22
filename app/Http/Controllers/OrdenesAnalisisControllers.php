@@ -1,12 +1,12 @@
 <?php
 
 namespace App\Http\Controllers;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Http\Request;
 
-class IngresosControllers extends Controller
+class OrdenesAnalisisControllers extends Controller
 {
     public function __construct()
     {
@@ -18,5 +18,4 @@ class IngresosControllers extends Controller
         $data = DB::select('SELECT * FROM public.view_ordenes_analisis');
         return response()->json($data);
     }
-
 }

@@ -69,6 +69,7 @@ use App\Http\Controllers\ProveedoresControllers;
 use App\Http\Controllers\CategoriaActivosControllers;
 use App\Http\Controllers\IngresosControllers;
 use App\Http\Controllers\ApiControllers;
+use App\Http\Controllers\OrdenesAnalisisControllers;
 use App\Models\CpuAtencionFisioterapia;
 
 // Autenticación
@@ -548,6 +549,11 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
      //API 
     Route::get('/api-o', [ApiControllers::class, 'ApiConsultarTiposAnalisis']);
+
+    //AORDEN DE ANALISIS
+    Route::get('/get-orden-analisis', [OrdenesAnalisisControllers::class, 'ConsultarOrdenAnalisis']);
+
+    
 
 });
 

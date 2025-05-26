@@ -549,10 +549,12 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::post('/guardar-ingreso-activo', [IngresosControllers::class, 'guardarIngresos']);
 
      //API 
-    Route::get('/api-o', [ApiControllers::class, 'ApiConsultarTiposAnalisis']);
+    Route::get('/api-tipo-analisis', [ApiControllers::class, 'ApiConsultarTiposAnalisis']);
 
     //AORDEN DE ANALISIS
     Route::get('/get-orden-analisis', [OrdenesAnalisisControllers::class, 'ConsultarOrdenAnalisis']);
+    
+    Route::post('/guardar-orden-analisis', [OrdenesAnalisisControllers::class, 'GuardarOrdenAnalisis']);
 
     
 

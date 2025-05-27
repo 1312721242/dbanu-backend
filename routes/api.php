@@ -553,6 +553,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
     //AORDEN DE ANALISIS
     Route::get('/get-orden-analisis', [OrdenesAnalisisControllers::class, 'ConsultarOrdenAnalisis']);
+    Route::get('/get-orden-analisis-cedula/{cedula}', [OrdenesAnalisisControllers::class, 'ConsultarOrdenAnalisisCedula']);
     
     Route::post('/guardar-orden-analisis', [OrdenesAnalisisControllers::class, 'GuardarOrdenAnalisis']);
 

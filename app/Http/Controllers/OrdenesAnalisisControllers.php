@@ -19,9 +19,16 @@ class OrdenesAnalisisControllers extends Controller
         return response()->json($data);
     }
 
+    public function ConsultarOrdenAnalisisCedula($cedula)
+    {
+        $data = DB::select('SELECT * FROM public.view_ordenes_analisis WHERE cedula = ?', [$cedula]);
+        return response()->json($data);
+    }
+
     public function GuardarOrdenAnalisis(Request $request)
     {
-        log::info('data', $request->all());
+        log::info('data Orden de Analisis', $request->all());
+
         $data = $request->all();
 
         /*$validator = Validator::make($request->all(), [
@@ -37,9 +44,10 @@ class OrdenesAnalisisControllers extends Controller
         }*/
 
         $id = DB::table('cpu_ordenes_analisis')->insert([
-            'oa_id_paciente' => 32,
+            'oa_cedula' =>$data['datosOrden']['cedula'],
+            'oa_id_paciente' =>$data['datosOrden']['id_paciente'],
             'oa_id_estado' => 8,
-            'oa_detalle_orden_analisis' => json_encode($data),
+            'oa_detalle_orden_analisis' => json_encode($data['detalleEstudios']),
             'oa_created_at' => now(),
             'oa_updated_at' => now(),
         ]);

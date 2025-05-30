@@ -70,6 +70,7 @@ use App\Http\Controllers\CategoriaActivosControllers;
 use App\Http\Controllers\IngresosControllers;
 use App\Http\Controllers\ApiControllers;
 use App\Http\Controllers\OrdenesAnalisisControllers;
+use App\Http\Controllers\TiposAnalisisControllers;
 use App\Models\CpuAtencionFisioterapia;
 
 // Autenticación
@@ -554,10 +555,12 @@ Route::middleware(['auth:sanctum'])->group(function () {
     //AORDEN DE ANALISIS
     Route::get('/get-orden-analisis', [OrdenesAnalisisControllers::class, 'ConsultarOrdenAnalisis']);
     Route::get('/get-orden-analisis-cedula/{cedula}', [OrdenesAnalisisControllers::class, 'ConsultarOrdenAnalisisCedula']);
-    
     Route::post('/guardar-orden-analisis', [OrdenesAnalisisControllers::class, 'GuardarOrdenAnalisis']);
 
-    
+
+    //TIPOS DE ANALISIS
+    Route::get('/get-tipo-analisis',[TiposAnalisisControllers::class, 'ConsultarTiposAnalisisOrion']);
+    Route::get('/get-tipo-analisis/{id}', [TiposAnalisisControllers::class, 'ConsultarTiposAnalisisOrionId']);
 
 });
 

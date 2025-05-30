@@ -11,14 +11,14 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Http;
 use GuzzleHttp\Client;
 
-class ApiControllers extends Controller
+class ApiOrionControllers extends Controller
 {
-    public function __construct()
+   public function __construct()
     {
         $this->middleware('auth:api');
     }
     
-    public function ApiConsultarTiposAnalisis()
+    public function AOConsultarTiposAnalisis()
     {
         $client = new Client();
         $allData = [];
@@ -56,46 +56,5 @@ class ApiControllers extends Controller
                 'error' => $e->getMessage(),
             ], 500);
         }
-    }
-
-
-/**
-     * Display a listing of the resource.
-     */
-    public function index()
-    {
-        //
-    }
-
-    /**
-     * Store a newly created resource in storage.
-     */
-    public function store(Request $request)
-    {
-        //
-    }
-
-    /**
-     * Display the specified resource.
-     */
-    public function show(string $id)
-    {
-        //
-    }
-
-    /**
-     * Update the specified resource in storage.
-     */
-    public function update(Request $request, string $id)
-    {
-        //
-    }
-
-    /**
-     * Remove the specified resource from storage.
-     */
-    public function destroy(string $id)
-    {
-        //
     }
 }

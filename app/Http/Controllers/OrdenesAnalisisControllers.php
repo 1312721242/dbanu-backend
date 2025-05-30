@@ -43,6 +43,8 @@ class OrdenesAnalisisControllers extends Controller
             return response()->json(['error' => $validator->errors()], 400);
         }*/
 
+       
+
         $id = DB::table('cpu_ordenes_analisis')->insert([
             'oa_cedula' =>$data['datosOrden']['cedula'],
             'oa_id_paciente' =>$data['datosOrden']['id_paciente'],

@@ -5,6 +5,17 @@ namespace App\Http\Controllers;
 use App\Models\CpuInsumo;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Crypt;
+use Illuminate\Support\Facades\URL;
+use Session;
+
 class CpuInsumoController extends Controller
 {
     public function getInsumos()
@@ -106,7 +117,129 @@ class CpuInsumoController extends Controller
         return response()->json($data);
     }
 
-    
+    public function consultarInsumosPorTipo($id_tipo_insumo)
+    {
+        $data = DB::select('SELECT * FROM public.view_insumos WHERE id_tipo_insumo = ?', [$id_tipo_insumo]);
+        return response()->json($data);
+    }
+
+    public function saveInsumos(Request $request)
+    {
+        log::info('data', $request->all());
+        $data = $request->all();
+        $userId = $data['id_usuario'];
+        
+        $validator = Validator::make($request->all(), [
+            'txt-descripcion' => 'required|string|max:500',
+            'txt-codigo' => 'required|string|max:500'
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['error' => $validator->errors()], 400);
+        }
+
+        $id_in = DB::table('cpu_insumo')->insert([
+            'id_tipo_insumo' => $data['select-tipo'],
+            'ins_descripcion' => $data['txt-descripcion'],
+            'codigo' => $data['txt-codigo'],
+            'id_estado' => $data['select-estado'],
+            'unidad_medida' => $data['select-unidad-medida'],
+            'created_at' => now(),
+            'updated_at' => now(),
+            'id_usuario' => $userId,
+        ]);
+
+        $id = DB::table('cpu_insumo')->latest('id')->first()->id;
+
+        $id_m = DB::table('cpu_movimientos_inventarios')->insert([
+                'mi_id_producto' =>$id_in,
+                'mi_cantidad' => 0,
+                'mi_stock_anterior' => 0,
+                'mi_stock_actual' => 0,
+                'mi_tipo_transaccion' => 1,
+                'mi_fecha' => now(),
+                'mi_created_at' => now(),
+                'mi_updated_at' => now(),
+                'mi_user_id' =>  $userId,
+                'mi_id_encabezado' => 0
+            ]);
+
+
+        /*$fecha = now();
+        $codigo_auditoria = strtoupper($tabla . '_' . $campo . '_' . $tipo );
+        DB::table('cpu_auditoria')->insert([
+            'aud_user' => $usuario,
+            'aud_tabla' => $tabla,
+            'aud_campo' => $campo,
+            'aud_dataold' => $dataOld,
+            'aud_datanew' => $dataNew,
+            'aud_tipo' => $tipo,
+            'aud_fecha' => $fecha,
+            'aud_ip' => $ioConcatenadas,
+            'aud_tipoauditoria' => $this->getTipoAuditoria($tipo),
+            'aud_descripcion' => $descripcion,
+            'aud_nombreequipo' => $nombreequipo,
+            'aud_descrequipo' => $nombreUsuarioEquipo,
+            'aud_codigo' => $codigo_auditoria,
+            'created_at' => now(),
+            'updated_at' => now(),
+
+        ]);*/
+
+        return response()->json(['success' => true, 'message' => 'Insumo agregado correctamente']);
+    }
+
+       public function modificarInsumo(Request $request, $id)
+    {
+        log::info('data', $request->all()); 
+        $data = $request->all();
+        $userId = Session::get('user_id');
+
+        $validator = Validator::make($request->all(), [
+             'txt-descripcion' => 'required|string|max:500',
+            'txt-codigo' => 'required|string|max:500'
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['error' => $validator->errors()], 400);
+        }
+
+        $facultadNombre = $request->input('fac_nombre');
+        $usuario = $request->user()->name;
+        $ip = $request->ip();
+        $nombreequipo = gethostbyaddr($ip);
+        $fecha = now();
+
+
+        $id_in = DB::table('cpu_insumo')
+        ->where('id', $id)  
+        ->update([              
+            'id_tipo_insumo' => $data['select-tipo'],
+            'ins_descripcion' => $data['txt-descripcion'],
+            'codigo' => $data['txt-codigo'],
+            'id_estado' => $data['select-estado'],
+            'unidad_medida' => $data['select-unidad-medida'],
+            'updated_at' => now(),
+            'id_usuario' => $userId
+        ]);
+
+        
+        /*DB::table('cpu_auditoria')->insert([
+            'aud_user' => $usuario,
+            'aud_tabla' => 'cpu_facultad',
+            'aud_campo' => 'fac_nombre',
+            'aud_dataold' => '',
+            'aud_datanew' => $facultadNombre,
+            'aud_tipo' => 'MODIFICACION',
+            'aud_fecha' => $fecha,
+            'aud_ip' => $ip,
+            'aud_tipoauditoria' => 2,
+            'aud_descripcion' => "MODIFICACION DE FACULTAD $facultadNombre",
+            'aud_nombreequipo' => $nombreequipo,
+        ]);*/
+
+        return response()->json(['success' => true, 'message' => 'Insumo modificado correctamente']);
+    }
 
 }
 

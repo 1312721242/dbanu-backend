@@ -430,6 +430,9 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('/cpu-insumos', [CpuInsumoController::class, 'getInsumos']);
     Route::get('/get-insumo', [CpuInsumoController::class, 'consultarInsumos']);
     Route::get('/get-tipo-insumo', [CpuInsumoController::class, 'consultarTiposInsumos']);
+    Route::post('/guardar-insumo', [CpuInsumoController::class, 'saveInsumos']);
+    Route::put('/modificar-insumo/{id}', [CpuInsumoController::class, 'modificarInsumo']);
+
 
 
     //apis para busqueda de cie11
@@ -532,8 +535,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
     //Productos
     Route::get('/get-producto', [ProductosControllers::class, 'consultarProductos']);
-    Route::post('/guardar-producto', [ProductosControllers::class, 'saveProductos']);
-    Route::put('/modificar-producto/{id}', [ProductosControllers::class, 'modificarProductos']);
+    
 
      //Proveedores
      Route::get('/get-proveedor', [ProveedoresControllers::class, 'consultarProveedores']);

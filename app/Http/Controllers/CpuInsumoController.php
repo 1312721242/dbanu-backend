@@ -151,6 +151,8 @@ class CpuInsumoController extends Controller
 
         $id = DB::table('cpu_insumo')->latest('id')->first()->id;
 
+        $this->auditar('cpu_insumo', 'saveInsumos', '',json_encode($data), 'INSERCION', 'Guardar insumos');
+
         $id_m = DB::table('cpu_movimientos_inventarios')->insert([
                 'mi_id_producto' =>$id_in,
                 'mi_cantidad' => 0,
@@ -164,6 +166,18 @@ class CpuInsumoController extends Controller
                 'mi_id_encabezado' => 0
             ]);
 
+       /* $this->auditar('cpu_movimientos_inventarios', 'saveInsumos', '', [
+                'mi_id_producto' =>$id_in,
+                'mi_cantidad' => 0,
+                'mi_stock_anterior' => 0,
+                'mi_stock_actual' => 0,
+                'mi_tipo_transaccion' => 1,
+                'mi_fecha' => now(),
+                'mi_created_at' => now(),
+                'mi_updated_at' => now(),
+                'mi_user_id' =>  $userId,
+                'mi_id_encabezado' => 0
+            ], 'INSERCION', 'Guardar movimient de inventario inicial');*/
 
         /*$fecha = now();
         $codigo_auditoria = strtoupper($tabla . '_' . $campo . '_' . $tipo );

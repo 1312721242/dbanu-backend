@@ -15,9 +15,16 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\URL;
 use Session;
+use App\Http\Controllers\AuditoriaControllers;
 
 class CpuInsumoController extends Controller
 {
+    public function __construct()
+    {
+        $this->middleware('auth:api');
+        $this->auditoriaController = new AuditoriaControllers();
+    }
+
     public function getInsumos()
     {
         $insumosMedicos = CpuInsumo::where('id_tipo_insumo', '!=', 1)
@@ -128,7 +135,7 @@ class CpuInsumoController extends Controller
         log::info('data', $request->all());
         $data = $request->all();
         $userId = $data['id_usuario'];
-        
+
         $validator = Validator::make($request->all(), [
             'txt-descripcion' => 'required|string|max:500',
             'txt-codigo' => 'required|string|max:500'
@@ -150,8 +157,11 @@ class CpuInsumoController extends Controller
         ]);
 
         $id = DB::table('cpu_insumo')->latest('id')->first()->id;
+        
+        $descripcionAuditoria = 'Se guardo el insumo: ' . $data['txt-descripcion'] . ' con codigo: ' . $data['txt-codigo']. ' y ID: ' . $id;
+        $this->auditoriaController->auditar('cpu_insumo', 'saveInsumos', '',json_encode($data), 'INSERT', $descripcionAuditoria);;
 
-        $this->auditar('cpu_insumo', 'saveInsumos', '',json_encode($data), 'INSERCION', 'Guardar insumos');
+       // $this->auditar('cpu_insumo', 'saveInsumos', '',json_encode($data), 'INSERCION', 'Guardar insumos');
 
         $id_m = DB::table('cpu_movimientos_inventarios')->insert([
                 'mi_id_producto' =>$id_in,
@@ -165,40 +175,8 @@ class CpuInsumoController extends Controller
                 'mi_user_id' =>  $userId,
                 'mi_id_encabezado' => 0
             ]);
-
-       /* $this->auditar('cpu_movimientos_inventarios', 'saveInsumos', '', [
-                'mi_id_producto' =>$id_in,
-                'mi_cantidad' => 0,
-                'mi_stock_anterior' => 0,
-                'mi_stock_actual' => 0,
-                'mi_tipo_transaccion' => 1,
-                'mi_fecha' => now(),
-                'mi_created_at' => now(),
-                'mi_updated_at' => now(),
-                'mi_user_id' =>  $userId,
-                'mi_id_encabezado' => 0
-            ], 'INSERCION', 'Guardar movimient de inventario inicial');*/
-
-        /*$fecha = now();
-        $codigo_auditoria = strtoupper($tabla . '_' . $campo . '_' . $tipo );
-        DB::table('cpu_auditoria')->insert([
-            'aud_user' => $usuario,
-            'aud_tabla' => $tabla,
-            'aud_campo' => $campo,
-            'aud_dataold' => $dataOld,
-            'aud_datanew' => $dataNew,
-            'aud_tipo' => $tipo,
-            'aud_fecha' => $fecha,
-            'aud_ip' => $ioConcatenadas,
-            'aud_tipoauditoria' => $this->getTipoAuditoria($tipo),
-            'aud_descripcion' => $descripcion,
-            'aud_nombreequipo' => $nombreequipo,
-            'aud_descrequipo' => $nombreUsuarioEquipo,
-            'aud_codigo' => $codigo_auditoria,
-            'created_at' => now(),
-            'updated_at' => now(),
-
-        ]);*/
+        
+        $response_a = $auditoriaController->auditar('cpu_movimientos_inventarios', 'saveInsumos', '',json_encode($data), 'INSERT', 'Guardar movimiento de inventario inicial');;
 
         return response()->json(['success' => true, 'message' => 'Insumo agregado correctamente']);
     }
@@ -237,20 +215,8 @@ class CpuInsumoController extends Controller
             'id_usuario' => $userId
         ]);
 
-        
-        /*DB::table('cpu_auditoria')->insert([
-            'aud_user' => $usuario,
-            'aud_tabla' => 'cpu_facultad',
-            'aud_campo' => 'fac_nombre',
-            'aud_dataold' => '',
-            'aud_datanew' => $facultadNombre,
-            'aud_tipo' => 'MODIFICACION',
-            'aud_fecha' => $fecha,
-            'aud_ip' => $ip,
-            'aud_tipoauditoria' => 2,
-            'aud_descripcion' => "MODIFICACION DE FACULTAD $facultadNombre",
-            'aud_nombreequipo' => $nombreequipo,
-        ]);*/
+        $descripcionAuditoria = 'Se modifico el insumo: ' . $data['txt-descripcion'] . ' con codigo: ' . $data['txt-codigo']. ' y ID: ' . $id;
+        $this->auditoriaController->auditar('cpu_insumo', 'saveInsumos', '',json_encode($data), 'INSERT', $descripcionAuditoria);;
 
         return response()->json(['success' => true, 'message' => 'Insumo modificado correctamente']);
     }

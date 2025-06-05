@@ -13,6 +13,7 @@ class ProveedoresControllers extends Controller
     public function __construct()
     {
         $this->middleware('auth:api');
+        $this->auditoriaController = new AuditoriaControllers();
     }
 
     public function consultarProveedores()
@@ -44,34 +45,16 @@ class ProveedoresControllers extends Controller
             'prov_direccion' => $data['txt-direccion'],
             'prov_telefono' => $data['txt-telefono'],
             'prov_correo' => $data['txt-correo'],
-            'prov_id_usuario' => 1,
+            'prov_id_usuario' => $data['id_usuario'],
             'created_at' => now(),
             'updated_at' => now(),
             'prov_estado' => $data['select-estado']
         ]);
 
         $id = DB::table('cpu_proveedores')->latest('prov_id')->first()->prov_id;
-
-        /*$fecha = now();
-        $codigo_auditoria = strtoupper($tabla . '_' . $campo . '_' . $tipo );
-        DB::table('cpu_auditoria')->insert([
-            'aud_user' => $usuario,
-            'aud_tabla' => $tabla,
-            'aud_campo' => $campo,
-            'aud_dataold' => $dataOld,
-            'aud_datanew' => $dataNew,
-            'aud_tipo' => $tipo,
-            'aud_fecha' => $fecha,
-            'aud_ip' => $ioConcatenadas,
-            'aud_tipoauditoria' => $this->getTipoAuditoria($tipo),
-            'aud_descripcion' => $descripcion,
-            'aud_nombreequipo' => $nombreequipo,
-            'aud_descrequipo' => $nombreUsuarioEquipo,
-            'aud_codigo' => $codigo_auditoria,
-            'created_at' => now(),
-            'updated_at' => now(),
-
-        ]);*/
+        
+        $descripcionAuditoria = 'Se guardo el proveedor: ' . $data['txt-nombre'] . ' con RUC: ' . $data['txt-ruc']. ' y ID: ' . $id;
+        $this->auditoriaController->auditar('cpu_proveedores', 'guardarProveedores()', '',json_encode($data), 'INSERT', $descripcionAuditoria);;
 
         return response()->json(['success' => true, 'message' => 'Proveedor agregado correctamente']);
     }
@@ -107,26 +90,15 @@ class ProveedoresControllers extends Controller
             'prov_direccion' => $data['txt-direccion'],
             'prov_telefono' => $data['txt-telefono'],
             'prov_correo' => $data['txt-correo'],
-            'prov_id_usuario' => 1,
+            'prov_id_usuario' => $data['id_usuario'],
             'updated_at' => now(),
             'prov_estado' => $data['select-estado']
         ]);
 
-        /*DB::table('cpu_auditoria')->insert([
-            'aud_user' => $usuario,
-            'aud_tabla' => 'cpu_proveedores',
-            'aud_campo' => 'prov_ruc,prov_nombre,prov_direccion,prov_telefono,prov_correo,prov_id_usuario,updated_at,prov_estado',
-            'aud_dataold' => '',
-            'aud_datanew' => $data,
-            'aud_tipo' => 'MODIFICACION',
-            'aud_fecha' => $fecha,
-            'aud_ip' => $ip,
-            'aud_tipoauditoria' => 2,
-            'aud_descripcion' => "MODIFICACION DE PROVEEDOR $nombreAud_descripcion",
-            'aud_nombreequipo' => $nombreequipo,
-        ]);*/
+        $descripcionAuditoria = 'Se modifico el proveedor: ' . $data['txt-nombre'] . ' con RUC: ' . $data['txt-ruc']. ' y ID: ' . $id;
+        $this->auditoriaController->auditar('cpu_proveedores', 'modificarProveedores()', '',json_encode($data), 'UPDATE', $descripcionAuditoria);;
 
-        return response()->json(['success' => true, 'message' => 'Producto modificado correctamente']);
+        return response()->json(['success' => true, 'message' => 'Proveedor modificado correctamente']);
     }
 
 }

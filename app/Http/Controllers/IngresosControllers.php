@@ -34,7 +34,7 @@ class IngresosControllers extends Controller
             'encabezado.fecha_vencimiento' => 'required|date|after_or_equal:encabezado.fecha_emision',
 
             'detalleProductos' => 'required|array|min:1',
-            'detalleProductos.*.idProducto' => 'required|integer',
+            'detalleProductos.*.idInsumo' => 'required|integer',
             'detalleProductos.*.nombre' => 'required|string|max:255',
             'detalleProductos.*.cantidad' => 'required|numeric|min:1',
         ]);
@@ -60,15 +60,13 @@ class IngresosControllers extends Controller
         
         $data_detalle_producto = $data['detalleProductos'];
 
-        
-
         $stock_anterior =  DB::select('SELECT mi_stock_anterior FROM public.view_movimientos_inventarios');
 
         foreach ($data_detalle_producto as $value) {
-            $idProducto = $value['idProducto'];
+            $idInsumo = $value['idInsumo'];
 
             $stock_actual_anterior_anterior = DB::table('view_movimientos_inventarios')
-            ->where('mi_id_producto', $idProducto)
+            ->where('mi_id_producto', $idInsumo)
             ->orderBy('mi_created_at', 'desc')
             ->value('mi_stock_actual');
 
@@ -78,7 +76,7 @@ class IngresosControllers extends Controller
             $stock_actual = $stock_actual_anterior_anterior + $cantidad;
 
             $id = DB::table('cpu_movimientos_inventarios')->insert([
-                'mi_id_producto' =>$value['idProducto'],
+                'mi_id_producto' =>$value['idInsumo'],
                 'mi_cantidad' => $value['cantidad'],
                 'mi_stock_anterior' => $stock_anterior,
                 'mi_stock_actual' => $stock_actual,

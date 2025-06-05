@@ -16,6 +16,7 @@ class CategoriaActivosControllers extends Controller
     public function __construct()
     {
         $this->middleware('auth:api');
+        $this->auditoriaController = new AuditoriaControllers();
     }
 
     public function consultarCategoriaActivos()
@@ -40,7 +41,7 @@ class CategoriaActivosControllers extends Controller
         $id = DB::table('cpu_categorias_activos')->insert([
             'ca_descripcion' => $data['txt-descripcion'],
             'ca_created_at' => now(),
-            'ca_id_usuario' => 1,
+            'ca_id_usuario' => $data['id_usuario'],
             'ca_updated_at' => now(),
             'ca_parametros' => '',
             'ca_id_estado' => $data['select-estado'],
@@ -48,26 +49,8 @@ class CategoriaActivosControllers extends Controller
 
         $id = DB::table('cpu_categorias_activos')->latest('ca_id')->first()->ca_id;
 
-        /*$fecha = now();
-        $codigo_auditoria = strtoupper($tabla . '_' . $campo . '_' . $tipo );
-        DB::table('cpu_auditoria')->insert([
-            'aud_user' => $usuario,
-            'aud_tabla' => $tabla,
-            'aud_campo' => $campo,
-            'aud_dataold' => $dataOld,
-            'aud_datanew' => $dataNew,
-            'aud_tipo' => $tipo,
-            'aud_fecha' => $fecha,
-            'aud_ip' => $ioConcatenadas,
-            'aud_tipoauditoria' => $this->getTipoAuditoria($tipo),
-            'aud_descripcion' => $descripcion,
-            'aud_nombreequipo' => $nombreequipo,
-            'aud_descrequipo' => $nombreUsuarioEquipo,
-            'aud_codigo' => $codigo_auditoria,
-            'created_at' => now(),
-            'updated_at' => now(),
-
-        ]);*/
+        $descripcionAuditoria = 'Se guardo la categoria de activos: ' . $data['txt-descripcion'] . ' con ID: ' . $id;
+        $this->auditoriaController->auditar('cpu_categorias_activos', 'guardarCategoriaActivos()', '', json_encode($data), 'INSERT', $descripcionAuditoria);   
 
         return response()->json(['success' => true, 'message' => 'Proveedor agregado correctamente']);
     }
@@ -85,35 +68,17 @@ class CategoriaActivosControllers extends Controller
             return response()->json(['error' => $validator->errors()], 400);
         }
 
-        /*$usuario = $request->user()->name;
-        $ip = $request->ip();
-        $nombreequipo = gethostbyaddr($ip);
-        $fecha = now();
-        $nombreAud_descripcion= $data['txt-descripcion'];*/
-
         DB::table('cpu_categorias_activos')
         ->where('ca_id', $id)  
         ->update([              
             'ca_descripcion' => $data['txt-descripcion'],
-            'ca_id_usuario' => 1,
+            'ca_id_usuario' => $data['id_usuario'],
             'ca_updated_at' => now(),
             'ca_id_estado' => $data['select-estado'],
         ]);
 
-        /*DB::table('cpu_auditoria')->insert([
-            'aud_user' => $usuario,
-            'aud_tabla' => 'cpu_proveedores',
-            'aud_campo' => 'prov_ruc,prov_nombre,prov_direccion,prov_telefono,prov_correo,prov_id_usuario,updated_at,prov_estado',
-            'aud_dataold' => '',
-            'aud_datanew' => $data,
-            'aud_tipo' => 'MODIFICACION',
-            'aud_fecha' => $fecha,
-            'aud_ip' => $ip,
-            'aud_tipoauditoria' => 2,
-            'aud_descripcion' => "MODIFICACION DE PROVEEDOR $nombreAud_descripcion",
-            'aud_nombreequipo' => $nombreequipo,
-        ]);*/
-
+        $descripcionAuditoria = 'Se modifico la categoria de activos: ' . $data['txt-descripcion'] . ' con ID: ' . $id;
+        $this->auditoriaController->auditar('cpu_categorias_activos', 'modificarCategoriaActivos()', '', json_encode($data), 'UPDATE', $descripcionAuditoria);
         return response()->json(['success' => true, 'message' => 'Categoria de Activos modificado correctamente']);
     }
 }

@@ -52,7 +52,7 @@ class IngresosControllers extends Controller
             'ei_fecha_vencimiento' =>$data['encabezado']["fecha_vencimiento"],
             'ei_created_at' => now(),
             'ei_updated_at' => now(),
-            'ei_id_user' => 1,
+            'ei_id_user' => $data['encabezado']["id_usuario"],
             'ei_detalle_producto' => json_encode($data['detalleProductos'])
         ]);
 
@@ -60,13 +60,10 @@ class IngresosControllers extends Controller
         
         $data_detalle_producto = $data['detalleProductos'];
 
-        $stock_anterior =  DB::select('SELECT mi_stock_anterior FROM public.view_movimientos_inventarios');
-
         foreach ($data_detalle_producto as $value) {
             $idInsumo = $value['idInsumo'];
-
             $stock_actual_anterior_anterior = DB::table('view_movimientos_inventarios')
-            ->where('mi_id_producto', $idInsumo)
+            ->where('mi_id_insumo', $idInsumo)
             ->orderBy('mi_created_at', 'desc')
             ->value('mi_stock_actual');
 
@@ -75,8 +72,8 @@ class IngresosControllers extends Controller
 
             $stock_actual = $stock_actual_anterior_anterior + $cantidad;
 
-            $id = DB::table('cpu_movimientos_inventarios')->insert([
-                'mi_id_producto' =>$value['idInsumo'],
+            DB::table('cpu_movimientos_inventarios')->insert([
+                'mi_id_insumo' =>$value['idInsumo'],
                 'mi_cantidad' => $value['cantidad'],
                 'mi_stock_anterior' => $stock_anterior,
                 'mi_stock_actual' => $stock_actual,
@@ -84,31 +81,12 @@ class IngresosControllers extends Controller
                 'mi_fecha' => $data['encabezado']["fecha_emision"],
                 'mi_created_at' => now(),
                 'mi_updated_at' => now(),
-                'mi_user_id' => 1,
+                'mi_user_id' =>$data['encabezado']["id_usuario"],
                 'mi_id_encabezado' => $id 
             ]);
-        } 
-        
-        /*$fecha = now();
-        $codigo_auditoria = strtoupper($tabla . '_' . $campo . '_' . $tipo );
-        DB::table('cpu_auditoria')->insert([
-            'aud_user' => $usuario,
-            'aud_tabla' => $tabla,
-            'aud_campo' => $campo,
-            'aud_dataold' => $dataOld,
-            'aud_datanew' => $dataNew,
-            'aud_tipo' => $tipo,
-            'aud_fecha' => $fecha,
-            'aud_ip' => $ioConcatenadas,
-            'aud_tipoauditoria' => $this->getTipoAuditoria($tipo),
-            'aud_descripcion' => $descripcion,
-            'aud_nombreequipo' => $nombreequipo,
-            'aud_descrequipo' => $nombreUsuarioEquipo,
-            'aud_codigo' => $codigo_auditoria,
-            'created_at' => now(),
-            'updated_at' => now(),
-
-        ]);*/
+            echo "Total de filas: " . count($data_detalle_producto);
+        }
+       
         return response()->json(['success' => true, 'message' => 'Activos agregados correctamente']);
     }
 

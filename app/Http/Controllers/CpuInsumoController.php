@@ -145,7 +145,7 @@ class CpuInsumoController extends Controller
             return response()->json(['error' => $validator->errors()], 400);
         }
 
-        $id_in = DB::table('cpu_insumo')->insert([
+        $id_in = DB::table('cpu_insumo')->insertGetId([
             'id_tipo_insumo' => $data['select-tipo'],
             'ins_descripcion' => $data['txt-descripcion'],
             'codigo' => $data['txt-codigo'],
@@ -156,15 +156,13 @@ class CpuInsumoController extends Controller
             'id_usuario' => $userId,
         ]);
 
-        $id = DB::table('cpu_insumo')->latest('id')->first()->id;
-        
-        $descripcionAuditoria = 'Se guardo el insumo: ' . $data['txt-descripcion'] . ' con codigo: ' . $data['txt-codigo']. ' y ID: ' . $id;
-        $this->auditoriaController->auditar('cpu_insumo', 'saveInsumos', '',json_encode($data), 'INSERT', $descripcionAuditoria);;
+        $descripcionAuditoria = 'Se guardo el insumo: ' . $data['txt-descripcion'] . ' con codigo: ' . $data['txt-codigo']. ' y ID: ' . $id_in;
+        $this->auditoriaController->auditar('cpu_insumo', 'saveInsumos', '',json_encode($data), 'INSERT', $descripcionAuditoria);
 
        // $this->auditar('cpu_insumo', 'saveInsumos', '',json_encode($data), 'INSERCION', 'Guardar insumos');
 
-        $id_m = DB::table('cpu_movimientos_inventarios')->insert([
-                'mi_id_producto' =>$id_in,
+        DB::table('cpu_movimientos_inventarios')->insert([
+                'mi_id_insumo' =>$id_in,
                 'mi_cantidad' => 0,
                 'mi_stock_anterior' => 0,
                 'mi_stock_actual' => 0,
@@ -176,7 +174,9 @@ class CpuInsumoController extends Controller
                 'mi_id_encabezado' => 0
             ]);
         
-        $response_a = $auditoriaController->auditar('cpu_movimientos_inventarios', 'saveInsumos', '',json_encode($data), 'INSERT', 'Guardar movimiento de inventario inicial');;
+        $id_m = DB::table('cpu_movimientos_inventarios')->latest('mi_id')->first()->mi_id;
+        $descripcionAuditoria = 'Se guardo insumo: ' . $data['txt-descripcion'] . ' con codigo: ' . $data['txt-codigo']. ' y ID: ' . $id_m;
+        $this->auditoriaController->auditar('cpu_movimientos_inventarios', 'saveInsumos', '',json_encode($data), 'INSERT', $descripcionAuditoria);
 
         return response()->json(['success' => true, 'message' => 'Insumo agregado correctamente']);
     }

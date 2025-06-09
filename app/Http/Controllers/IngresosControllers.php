@@ -30,6 +30,7 @@ class IngresosControllers extends Controller
             'encabezado.n_comprobante' => 'required|string|max:100',
             'encabezado.tipo_adquisicion' => 'required|integer',
             'encabezado.id_proveedor' => 'required|integer',
+            'encabezado.n_ingreso' => 'required|integer',
             'encabezado.fecha_emision' => 'required|date',
             'encabezado.fecha_vencimiento' => 'required|date|after_or_equal:encabezado.fecha_emision',
 
@@ -45,6 +46,7 @@ class IngresosControllers extends Controller
 
         $id = DB::table('cpu_encabezados_ingresos')->insert([
             'ei_numero_comprobante' =>$data['encabezado']['n_comprobante'],
+            'ei_numero_ingreso' => $data['encabezado']["n_ingreso"],
             'ei_id_funcionario' => 1,
             'ei_tipo_adquisicion' => $data['encabezado']["tipo_adquisicion"],
             'ei_id_proveedor' => $data['encabezado']["id_proveedor"],
@@ -88,6 +90,22 @@ class IngresosControllers extends Controller
         }
        
         return response()->json(['success' => true, 'message' => 'Activos agregados correctamente']);
+    }
+
+    public function getIdNumeroIngreso()
+    {
+        $id = 0;
+        $id = DB::table('cpu_encabezados_ingresos')->latest('ei_id')->first()->ei_id;
+       if ($id) {
+            $id_numero_ingreso = str_pad($id, 6, '0', STR_PAD_LEFT);
+            $id_numero_ingreso = 'ULEAM-DBU-I-' . $id_numero_ingreso;
+            Log::info('ID generado: ' . $id_numero_ingreso);
+        }else {
+            Log::error('No se pudo obtener el ID del último ingreso.');
+            $id_numero_ingreso = 1;
+        }
+        return $id_numero_ingreso;
+        
     }
 
 }

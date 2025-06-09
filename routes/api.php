@@ -432,6 +432,8 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('/get-tipo-insumo', [CpuInsumoController::class, 'consultarTiposInsumos']);
     Route::post('/guardar-insumo', [CpuInsumoController::class, 'saveInsumos']);
     Route::put('/modificar-insumo/{id}', [CpuInsumoController::class, 'modificarInsumo']);
+    
+
 
 
 
@@ -550,6 +552,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
          //Ingresos
     Route::get('/get-ingreso', [IngresosControllers::class, 'consultarIngresos']);
     Route::post('/guardar-ingreso-activo', [IngresosControllers::class, 'guardarIngresos']);
+    Route::get('/get-nro-ingreso', [IngresosControllers::class, 'getIdNumeroIngreso']);
 
      //API 
     Route::get('/api-tipo-analisis', [ApiControllers::class, 'ApiConsultarTiposAnalisis']);

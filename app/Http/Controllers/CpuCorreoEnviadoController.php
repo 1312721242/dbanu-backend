@@ -130,19 +130,43 @@ class CpuCorreoEnviadoController extends Controller
     public function enviarCorreoAtencionAreaSaludPaciente(Request $request)
     {
         // Obtener los datos necesarios desde el array validado
-        $email_paciente = 'p1311836587@dn.uleam.edu.ec';
+        $email_paciente = 'junior.zamora@uleam.edu.ec';
 
         $paciente = DB::table('cpu_personas')
             ->where('id', $request->input('id_paciente'))
             ->first();
         $fecha_de_atencion = $request->input('fecha_hora_atencion');
         $motivo_atencion = $request->input('motivo_atencion');
-        $funcionario_atendio = DB::table('users')
+        // $funcionario_atendio = DB::table('users')
+        //     ->where('id', $request->input('id_funcionario'))
+        //     ->value('name') ?? null;
+        // $area_atencion = DB::table('cpu_userrole')
+        //     ->where('id_userrole', $request->input('id_area_atencion'))
+        //     ->value('role');
+
+        $funcionario = DB::table('users')
+            ->select('name', 'usr_tipo')
             ->where('id', $request->input('id_funcionario'))
-            ->value('name') ?? null;
-        $area_atencion = DB::table('cpu_userrole')
-            ->where('id_userrole', $request->input('id_area_atencion'))
-            ->value('role');
+            ->first();
+
+        $funcionario_atendio = $funcionario->name ?? null;
+        $usr_tipo_funcionario = $funcionario->usr_tipo ?? null;
+
+        $area_atencion = null;
+
+        if ($request->filled('id_area_atencion')) {
+            // Si viene id_area_atencion en el request, úsalo
+            $area_atencion = DB::table('cpu_userrole')
+                ->where('id_userrole', $request->input('id_area_atencion'))
+                ->value('role');
+        } elseif (!empty($usr_tipo_funcionario)) {
+            // Si no viene id_area_atencion, usa usr_tipo del funcionario
+            $area_atencion = DB::table('cpu_userrole')
+                ->where('id_userrole', $usr_tipo_funcionario)
+                ->value('role');
+        }
+
+
         $funcionario_derivado = DB::table('users')
             ->where('id', $request->input('id_doctor_al_que_derivan'))
             ->value('name') ?? null;
@@ -251,7 +275,7 @@ class CpuCorreoEnviadoController extends Controller
     public function enviarCorreoDerivacionAreaSaludPaciente(Request $request)
     {
         // Obtener los datos necesarios desde el array validado
-        $email_paciente = 'p1311836587@dn.uleam.edu.ec';
+        $email_paciente = 'junior.zamora@uleam.edu.ec';
 
         $paciente = DB::table('cpu_personas')
             ->where('id', $request->input('id_paciente'))
@@ -259,13 +283,34 @@ class CpuCorreoEnviadoController extends Controller
         // $email_paciente = $paciente->email;
         $fecha_de_atencion = $request->input('fecha_hora_atencion');
         $motivo_atencion = $request->input('motivo_atencion');
-        $funcionario_atendio = DB::table('users')
-            ->where('id', $request->input('id_funcionario'))
-            ->value('name') ?? null;
+        // $funcionario_atendio = DB::table('users')
+        //     ->where('id', $request->input('id_funcionario'))
+        //     ->value('name') ?? null;
         $email_funcionario = 'p1311836587@dn.uleam.edu.ec';
-        $area_atencion = DB::table('cpu_userrole')
-            ->where('id_userrole', $request->input('id_area_atencion'))
-            ->value('role');
+        // $area_atencion = DB::table('cpu_userrole')
+        //     ->where('id_userrole', $request->input('id_area_atencion'))
+        //     ->value('role');
+        $funcionario = DB::table('users')
+            ->select('name', 'usr_tipo')
+            ->where('id', $request->input('id_funcionario'))
+            ->first();
+
+        $funcionario_atendio = $funcionario->name ?? null;
+        $usr_tipo_funcionario = $funcionario->usr_tipo ?? null;
+
+        $area_atencion = null;
+
+        if ($request->filled('id_area_atencion')) {
+            // Si viene id_area_atencion en el request, úsalo
+            $area_atencion = DB::table('cpu_userrole')
+                ->where('id_userrole', $request->input('id_area_atencion'))
+                ->value('role');
+        } elseif (!empty($usr_tipo_funcionario)) {
+            // Si no viene id_area_atencion, usa usr_tipo del funcionario
+            $area_atencion = DB::table('cpu_userrole')
+                ->where('id_userrole', $usr_tipo_funcionario)
+                ->value('role');
+        }
         $funcionario_derivado = DB::table('users')
             ->where('id', $request->input('id_doctor_al_que_derivan'))
             ->value('name') ?? null;
@@ -458,18 +503,39 @@ class CpuCorreoEnviadoController extends Controller
     public function enviarCorreoDerivacionAreaSaludFuncionario(Request $request)
     {
         // Obtener los datos necesarios desde el array validado
-        $email_funcionario = 'p1311836587@dn.uleam.edu.ec';
+        $email_funcionario = 'junior.zamora@uleam.edu.ec';
         $nombres_funcionario = DB::table('cpu_personas')
             ->where('id', $request->input('id_funcionario'))
             ->value('nombres');
         $fecha_de_atencion = $request->input('fecha_hora_atencion');
         $motivo_atencion = $request->input('motivo_atencion');
-        $funcionario_atendio = DB::table('users')
+        // $funcionario_atendio = DB::table('users')
+        //     ->where('id', $request->input('id_funcionario'))
+        //     ->value('name') ?? null;
+        // $area_atencion = DB::table('cpu_userrole')
+        //     ->where('id_userrole', $request->input('id_area_atencion'))
+        //     ->value('role');
+        $funcionario = DB::table('users')
+            ->select('name', 'usr_tipo')
             ->where('id', $request->input('id_funcionario'))
-            ->value('name') ?? null;
-        $area_atencion = DB::table('cpu_userrole')
-            ->where('id_userrole', $request->input('id_area_atencion'))
-            ->value('role');
+            ->first();
+
+        $funcionario_atendio = $funcionario->name ?? null;
+        $usr_tipo_funcionario = $funcionario->usr_tipo ?? null;
+
+        $area_atencion = null;
+
+        if ($request->filled('id_area_atencion')) {
+            // Si viene id_area_atencion en el request, úsalo
+            $area_atencion = DB::table('cpu_userrole')
+                ->where('id_userrole', $request->input('id_area_atencion'))
+                ->value('role');
+        } elseif (!empty($usr_tipo_funcionario)) {
+            // Si no viene id_area_atencion, usa usr_tipo del funcionario
+            $area_atencion = DB::table('cpu_userrole')
+                ->where('id_userrole', $usr_tipo_funcionario)
+                ->value('role');
+        }
         $nombres_paciente = DB::table('cpu_personas')
             ->where('id', $request->input('id_paciente'))
             ->value('nombres');

@@ -513,6 +513,8 @@ Route::middleware(['auth:sanctum'])->group(function () {
     //API  - secretaria de direccion
     Route::post('/usuarios/externos/secretaria', [CpuPersonaController::class, 'store']);
 
+    // agregar mas rutas
+
 });
 
 // Route::put('/cpu-persona-update/{cedula}', [CpuPersonaController::class, 'update']);

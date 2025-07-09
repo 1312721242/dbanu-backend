@@ -15,6 +15,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Cache;
+
 use Illuminate\Support\Facades\Log;
 
 class AuthController extends Controller
@@ -51,6 +52,7 @@ class AuthController extends Controller
             'foto_perfil' => url('Perfiles/' . $user->foto_perfil), // Generar URL completa
         ];
 
+       
         if ($user->sede) {
             $userData['usr_sede'] = $user->sede->nombre_sede;
         }
@@ -207,7 +209,6 @@ class AuthController extends Controller
 
         // Auditoría
         $this->auditar('auth', 'me', '', $user->email, 'CONSULTA', "CONSULTA DE USUARIO: {$user->email}");
-
         return response()->json($userData);
     }
 

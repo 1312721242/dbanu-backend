@@ -197,13 +197,29 @@ class CpuAtencionPsicologiaController extends Controller
 
                 // Guardar el triaje siempre después de la derivación
                 $triaje = new CpuAtencionTriaje();
-                $triaje->id_atencion = $cpuAtencion->id; // Usar el ID de la derivación recién creada
-                $triaje->talla = $request->input('talla');
-                $triaje->peso = $request->input('peso');
-                $triaje->temperatura = $request->input('temperatura');
-                $triaje->presion_sistolica = $request->input('presion_sistolica');
-                $triaje->presion_diastolica = $request->input('presion_diastolica');
-                $triaje->save();
+                $talla = $request->input('talla');
+                $peso = $request->input('peso');
+                $temperatura = $request->input('temperatura');
+                $presionSistolica = $request->input('presion_sistolica');
+                $presionDiastolica = $request->input('presion_diastolica');
+
+                // Verifica si todos los campos de triaje tienen datos
+                if (
+                    $talla !== null && $talla !== '' &&
+                    $peso !== null && $peso !== '' &&
+                    $temperatura !== null && $temperatura !== '' &&
+                    $presionSistolica !== null && $presionSistolica !== '' &&
+                    $presionDiastolica !== null && $presionDiastolica !== ''
+                ) {
+                    $triaje = new CpuAtencionTriaje();
+                    $triaje->id_atencion = $cpuAtencion->id;
+                    $triaje->talla = $talla;
+                    $triaje->peso = $peso;
+                    $triaje->temperatura = $temperatura;
+                    $triaje->presion_sistolica = $presionSistolica;
+                    $triaje->presion_diastolica = $presionDiastolica;
+                    $triaje->save();
+                }
             }
 
             // Auditoría

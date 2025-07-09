@@ -11,6 +11,7 @@ use App\Http\Controllers\CpuFacultadController;
 use App\Http\Controllers\CpuCarreraController;
 use App\Http\Controllers\UsuarioController; // Agregado el controlador de Usuario
 use App\Http\Controllers\CpuProfesionController;
+use App\Http\Controllers\SecretariasMatriculasControllers;
 use App\Http\Controllers\CpuEstadosController;
 use App\Http\Controllers\CpuUsermenuController;
 use App\Http\Controllers\CpuUserfunctionController;
@@ -63,6 +64,13 @@ use App\Http\Controllers\CpuTerapiaLenguajeController;
 use App\Http\Controllers\CpuTipoBecaController;
 use App\Http\Controllers\CpuTramiteController;
 use App\Http\Controllers\ReporteController;
+use App\Http\Controllers\ProductosControllers;
+use App\Http\Controllers\ProveedoresControllers;
+use App\Http\Controllers\CategoriaActivosControllers;
+use App\Http\Controllers\IngresosControllers;
+use App\Http\Controllers\ApiControllers;
+use App\Http\Controllers\OrdenesAnalisisControllers;
+use App\Http\Controllers\TiposAnalisisControllers;
 use App\Models\CpuAtencionFisioterapia;
 
 // Autenticación
@@ -221,11 +229,8 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::post('cambiar-password-app', [UsuarioController::class, 'cambiarPasswordApp']);
     Route::get('funcionarios/{id}', [UsuarioController::class, 'obtenerInformacion']);
     Route::post('cambiar-contrasena', [UsuarioController::class, 'cambiarContrasena']);
-    //profesiones
-    Route::post('/agregar-profesion', [CpuProfesionController::class, 'agregarProfesion']);
-    Route::put('/modificar-profesion/{id}', [CpuProfesionController::class, 'modificarProfesion']);
-    Route::delete('/eliminar-profesion/{id}', [CpuProfesionController::class, 'eliminarProfesion']);
-    Route::get('/consultar-profesiones', [CpuProfesionController::class, 'consultarProfesiones']);
+
+
 
     //estados
     Route::post('/agregar-estado', [CpuEstadosController::class, 'agregarEstado']);
@@ -423,6 +428,13 @@ Route::middleware(['auth:sanctum'])->group(function () {
     //INSUMOS
 
     Route::get('/cpu-insumos', [CpuInsumoController::class, 'getInsumos']);
+    Route::get('/get-insumo', [CpuInsumoController::class, 'consultarInsumos']);
+    Route::get('/get-tipo-insumo', [CpuInsumoController::class, 'consultarTiposInsumos']);
+    Route::post('/guardar-insumo', [CpuInsumoController::class, 'saveInsumos']);
+    Route::put('/modificar-insumo/{id}', [CpuInsumoController::class, 'modificarInsumo']);
+
+
+
 
 
     //apis para busqueda de cie11
@@ -513,14 +525,54 @@ Route::middleware(['auth:sanctum'])->group(function () {
     //API  - secretaria de direccion
     Route::post('/usuarios/externos/secretaria', [CpuPersonaController::class, 'store']);
 
-    // agregar mas rutas
+    //profesiones
+    Route::post('/agregar-profesion', [CpuProfesionController::class, 'agregarProfesion']);
+    Route::put('/modificar-profesion/{id}', [CpuProfesionController::class, 'modificarProfesion']);
+    Route::delete('/eliminar-profesion/{id}', [CpuProfesionController::class, 'eliminarProfesion']);
+    Route::get('/consultar-profesion', [CpuProfesionController::class, 'consultarProfesiones']);
+
+    //Secretaria  Matriculas
+    Route::get('/consultar-secretaria-matricula', [SecretariasMatriculasControllers::class, 'consultarSecretariasMatriculas']);
+    Route::post('/agregar-secretaria-matricula', [SecretariasMatriculasControllers::class, 'agregarSecretariaMatricula']);
+
+    //Productos
+    Route::get('/get-producto', [ProductosControllers::class, 'consultarProductos']);
+
+
+     //Proveedores
+     Route::get('/get-proveedor', [ProveedoresControllers::class, 'consultarProveedores']);
+     Route::post('/guardar-proveedor', [ProveedoresControllers::class, 'guardarProveedores']);
+     Route::put('/modificar-proveedor/{id}', [ProveedoresControllers::class, 'modificarProveedores']);
+
+      //Categoria de Activos
+    Route::get('/get-categoria-activo', [CategoriaActivosControllers::class, 'consultarCategoriaActivos']);
+    Route::post('/guardar-categoria-activo', [CategoriaActivosControllers::class, 'guardarCategoriaActivos']);
+    Route::put('/modificar-categoria-activo/{id}', [CategoriaActivosControllers::class, 'modificarCategoriaActivos']);
+
+         //Ingresos
+    Route::get('/get-ingreso', [IngresosControllers::class, 'consultarIngresos']);
+    Route::post('/guardar-ingreso-activo', [IngresosControllers::class, 'guardarIngresos']);
+    Route::get('/get-nro-ingreso', [IngresosControllers::class, 'getIdNumeroIngreso']);
+
+     //API
+    Route::get('/api-tipo-analisis', [ApiControllers::class, 'ApiConsultarTiposAnalisis']);
+
+    //AORDEN DE ANALISIS
+    Route::get('/get-orden-analisis', [OrdenesAnalisisControllers::class, 'ConsultarOrdenAnalisis']);
+    Route::get('/get-orden-analisis-cedula/{cedula}', [OrdenesAnalisisControllers::class, 'ConsultarOrdenAnalisisCedula']);
+    Route::post('/guardar-orden-analisis', [OrdenesAnalisisControllers::class, 'GuardarOrdenAnalisis']);
+
+
+    //TIPOS DE ANALISIS
+    Route::get('/get-tipo-analisis',[TiposAnalisisControllers::class, 'ConsultarTiposAnalisisOrion']);
+    Route::get('/get-tipo-analisis/{id}', [TiposAnalisisControllers::class, 'ConsultarTiposAnalisisOrionId']);
 
 });
 
 // Route::put('/cpu-persona-update/{cedula}', [CpuPersonaController::class, 'update']);
 
 //MODULO DE TERAPIA DE LENGUAJE
-Route::post('/terapia-lenguaje', [CpuTerapiaLenguajeController::class, 'guardarConsultaTerapia']);
+Route::get('/terapia-lenguaje', [CpuTerapiaLenguajeController::class, 'guardarConsultaTerapia']);
 
 Route::get('/datos-medicos', [CpuDatosMedicosController::class, 'index']);
 Route::get('/roles/{id}', [RoleController::class, 'consultarRol']);

@@ -31,7 +31,7 @@ class ApiControllers extends Controller
                         'accept' => 'application/json',
                         'Authorization' => 'Bearer bQ2i2NlToNFmU4Z3uKDONpBtJEcUOKMvAWKPLijLX1DgP0WbPT8IvDZVswpn',
                     ],
-                    'verify' => false, 
+                    'verify' => false,
                 ]);
     
                 $data = json_decode($response->getBody(), true);

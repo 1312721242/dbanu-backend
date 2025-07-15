@@ -229,9 +229,9 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::post('cambiar-password-app', [UsuarioController::class, 'cambiarPasswordApp']);
     Route::get('funcionarios/{id}', [UsuarioController::class, 'obtenerInformacion']);
     Route::post('cambiar-contrasena', [UsuarioController::class, 'cambiarContrasena']);
-   
-   
-    
+
+
+
     //estados
     Route::post('/agregar-estado', [CpuEstadosController::class, 'agregarEstado']);
     Route::put('/modificar-estado/{id}', [CpuEstadosController::class, 'modificarEstado']);
@@ -432,7 +432,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('/get-tipo-insumo', [CpuInsumoController::class, 'consultarTiposInsumos']);
     Route::post('/guardar-insumo', [CpuInsumoController::class, 'saveInsumos']);
     Route::put('/modificar-insumo/{id}', [CpuInsumoController::class, 'modificarInsumo']);
-    
+
 
 
 
@@ -537,7 +537,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
     //Productos
     Route::get('/get-producto', [ProductosControllers::class, 'consultarProductos']);
-    
+
 
      //Proveedores
      Route::get('/get-proveedor', [ProveedoresControllers::class, 'consultarProveedores']);
@@ -554,7 +554,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::post('/guardar-ingreso-activo', [IngresosControllers::class, 'guardarIngresos']);
     Route::get('/get-nro-ingreso', [IngresosControllers::class, 'getIdNumeroIngreso']);
 
-     //API 
+     //API
     Route::get('/api-tipo-analisis', [ApiControllers::class, 'ApiConsultarTiposAnalisis']);
 
     //AORDEN DE ANALISIS

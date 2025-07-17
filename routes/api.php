@@ -210,13 +210,11 @@ Route::middleware(['auth:sanctum'])->group(function () {
     // Route::delete('/eliminar-fuente-informacion/{id}', [CpuFuenteInformacionController::class, 'eliminarFuenteSInformacion']);
     // Route::get('/consultar-fuente-informacion', [CpuFuenteInformacionController::class, 'consultarFuenteInformacion']);
 
-
     // Carrera
     Route::post('/agregar-carrera', [CpuCarreraController::class, 'agregarCarrera']);
     Route::put('/modificar-carrera/{id}', [CpuCarreraController::class, 'modificarCarrera']);
     Route::delete('/eliminar-carrera/{id}', [CpuCarreraController::class, 'eliminarCarrera']);
     Route::get('/consultar-carreras', [CpuCarreraController::class, 'consultarCarreras']);
-
 
     //administracion de usuarios
     Route::post('/agregar-usuario', [UsuarioController::class, 'agregarUsuario']);
@@ -229,8 +227,6 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::post('cambiar-password-app', [UsuarioController::class, 'cambiarPasswordApp']);
     Route::get('funcionarios/{id}', [UsuarioController::class, 'obtenerInformacion']);
     Route::post('cambiar-contrasena', [UsuarioController::class, 'cambiarContrasena']);
-
-
 
     //estados
     Route::post('/agregar-estado', [CpuEstadosController::class, 'agregarEstado']);
@@ -258,8 +254,6 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::post('/agregarFunciones', [CpuUserfunctionController::class, 'agregarFunciones']);
     Route::delete('/eliminarFuncionesUsuario/{id}', [CpuUserfunctionController::class, 'eliminarFuncionesUsuario']);
 
-
-
     //userrolefunction
     Route::post('/agregar-funcion-rol', [CpuUserrolefunctionController::class, 'agregarFuncion']);
     // Route::post('/agregar-userrolefuncion', [CpuUserrolefunctionController::class, 'agregarFuncion']);
@@ -278,7 +272,6 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
     // // Ruta para subir el archivo con la data de los asignados para que se matriculen
     Route::post('legalizacion-matricula/upload', [LegalizacionMatriculaSecretariaController::class, 'upload']);
-
 
     // Rutas para el controlador CpuMatriculaConfiguracionController
     Route::get('cpu_matricula_configuracion', [CpuMatriculaConfiguracionController::class, 'index']);
@@ -539,22 +532,22 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('/get-producto', [ProductosControllers::class, 'consultarProductos']);
 
 
-     //Proveedores
-     Route::get('/get-proveedor', [ProveedoresControllers::class, 'consultarProveedores']);
-     Route::post('/guardar-proveedor', [ProveedoresControllers::class, 'guardarProveedores']);
-     Route::put('/modificar-proveedor/{id}', [ProveedoresControllers::class, 'modificarProveedores']);
+    //Proveedores
+    Route::get('/get-proveedor', [ProveedoresControllers::class, 'consultarProveedores']);
+    Route::post('/guardar-proveedor', [ProveedoresControllers::class, 'guardarProveedores']);
+    Route::put('/modificar-proveedor/{id}', [ProveedoresControllers::class, 'modificarProveedores']);
 
-      //Categoria de Activos
+    //Categoria de Activos
     Route::get('/get-categoria-activo', [CategoriaActivosControllers::class, 'consultarCategoriaActivos']);
     Route::post('/guardar-categoria-activo', [CategoriaActivosControllers::class, 'guardarCategoriaActivos']);
     Route::put('/modificar-categoria-activo/{id}', [CategoriaActivosControllers::class, 'modificarCategoriaActivos']);
 
-         //Ingresos
+    //Ingresos
     Route::get('/get-ingreso', [IngresosControllers::class, 'consultarIngresos']);
     Route::post('/guardar-ingreso-activo', [IngresosControllers::class, 'guardarIngresos']);
     Route::get('/get-nro-ingreso', [IngresosControllers::class, 'getIdNumeroIngreso']);
 
-     //API
+    //API
     Route::get('/api-tipo-analisis', [ApiControllers::class, 'ApiConsultarTiposAnalisis']);
 
     //AORDEN DE ANALISIS
@@ -564,9 +557,8 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
 
     //TIPOS DE ANALISIS
-    Route::get('/get-tipo-analisis',[TiposAnalisisControllers::class, 'ConsultarTiposAnalisisOrion']);
+    Route::get('/get-tipo-analisis', [TiposAnalisisControllers::class, 'ConsultarTiposAnalisisOrion']);
     Route::get('/get-tipo-analisis/{id}', [TiposAnalisisControllers::class, 'ConsultarTiposAnalisisOrionId']);
-
 });
 
 // Route::put('/cpu-persona-update/{cedula}', [CpuPersonaController::class, 'update']);
@@ -576,3 +568,12 @@ Route::get('/terapia-lenguaje', [CpuTerapiaLenguajeController::class, 'guardarCo
 
 Route::get('/datos-medicos', [CpuDatosMedicosController::class, 'index']);
 Route::get('/roles/{id}', [RoleController::class, 'consultarRol']);
+
+
+// Carrera
+Route::post('/agregar-carrera', [CpuCarreraController::class, 'agregarCarrera']);
+Route::put('/modificar-carrera/{id}', [CpuCarreraController::class, 'modificarCarrera']);
+Route::delete('/eliminar-carrera/{id}', [CpuCarreraController::class, 'eliminarCarrera']);
+
+Route::get('/consultar-carreras', [CpuCarreraController::class, 'consultarCarreras']);
+Route::get('/get-carrera', [CpuCarreraController::class, 'getCarreras']);

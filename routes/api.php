@@ -339,7 +339,9 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
     Route::get('/obtener-cie10', [CpuAtencionPsicologiaController::class, 'obtenerCie10']);
     // routes/api.php
-    Route::post('/agregarTurnos', [TurnosController::class, 'agregarTurnos']);
+    //Route::post('/agregarTurnos', [TurnosController::class, 'agregarTurnos']);
+    Route::post('/generar-turno', [TurnosController::class, 'generarTurnos']);
+
     Route::post('/turnos', [TurnosController::class, 'listarTurnos']); // Cambiar a POST
     Route::post('/turnos/eliminar', [TurnosController::class, 'eliminarTurno']);
     // Listar turnos por funcionario

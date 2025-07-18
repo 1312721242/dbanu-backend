@@ -9,8 +9,16 @@ use Carbon\Carbon;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\DB;
+
+
 class TurnosController extends Controller
 {
+    public function __construct()
+    {
+        $this->middleware('auth:api');
+        $this->auditoriaController = new AuditoriaControllers();
+        $this->logController = new LogController();
+    }
     // public function agregarTurnos(Request $request)
     // {
     //     $user = Auth::user();
@@ -144,8 +152,8 @@ class TurnosController extends Controller
         } elseif ($ini == $fechaActual && $hasta > $fechaActual) {
             // Caso 2: Hoy desde la hora actual y días futuros desde cualquier hora
             Log::info("Consulta para hoy a partir de la hora actual y días futuros desde cualquier hora");
-            $turnosQuery->where(function($query) use ($ini, $hasta, $horaActual) {
-                $query->where(function($q) use ($ini, $horaActual) {
+            $turnosQuery->where(function ($query) use ($ini, $hasta, $horaActual) {
+                $query->where(function ($q) use ($ini, $horaActual) {
                     $q->where('fehca_turno', $ini)->where('hora', '>', $horaActual);
                 })->orWhere('fehca_turno', '>', $ini);
             });
@@ -158,7 +166,7 @@ class TurnosController extends Controller
         $turnos = $turnosQuery->get();
 
         // Formatear fechas y horas
-        $turnos = $turnos->map(function($turno) {
+        $turnos = $turnos->map(function ($turno) {
             $turno->fehca_turno = Carbon::parse($turno->fehca_turno)->format('Y-m-d');
             $turno->hora = Carbon::parse($turno->hora)->format('H:i:s');
             return $turno;
@@ -198,7 +206,7 @@ class TurnosController extends Controller
         Log::info("Parámetros de consulta: " . json_encode($turnosQuery->getBindings()));
 
         // Formatear las fechas y horas
-        $turnos = $turnos->map(function($turno) {
+        $turnos = $turnos->map(function ($turno) {
             $turno->fehca_turno = Carbon::parse($turno->fehca_turno)->format('Y-m-d');
             $turno->hora = Carbon::parse($turno->hora)->format('H:i:s');
             return $turno;
@@ -227,7 +235,6 @@ class TurnosController extends Controller
         } else {
             return response()->json(['success' => false], 404);
         }
-
     }
 
     public function reservarTurno(Request $request)
@@ -275,7 +282,7 @@ class TurnosController extends Controller
         $nombreUsuarioEquipo = get_current_user() . ' en ' . $tipoEquipo;
 
         $fecha = now();
-        $codigo_auditoria = strtoupper($tabla . '_' . $campo . '_' . $tipo );
+        $codigo_auditoria = strtoupper($tabla . '_' . $campo . '_' . $tipo);
         DB::table('cpu_auditoria')->insert([
             'aud_user' => $usuario,
             'aud_tabla' => $tabla,
@@ -315,6 +322,85 @@ class TurnosController extends Controller
                 return 7;
             default:
                 return 0;
+        }
+    }
+
+
+
+    public function generarTurnos(Request $request)
+    {
+        try {
+            $user = Auth::user();
+            $area = $user->usr_tipo;
+            $doctor = $user->id;
+
+            $datos = $request->all();
+
+            if (empty($datos)) {
+                return response()->json(['error' => 'No se enviaron datos de turnos'], 400);
+            }
+
+            $response = [
+                'agregados' => 0,
+                'total' => count($datos),
+            ];
+
+            DB::beginTransaction();
+
+            foreach ($datos as $index => $turno) {
+                $fecha_inicio = $turno['fecha_inicio'];
+                $fecha_fin = $turno['fecha_fin'];
+                $hora_inicio_atencion = $turno['hora_inicio_atencion'];
+                $hora_fin_atencion = $turno['hora_fin_atencion'];
+                $duracion_atencion = $turno['duracion_atencion'];
+                $hora_inicio_comida = $turno['hora_inicio_comida'];
+                $hora_fin_comida = $turno['hora_fin_comida'];
+                $hora_inicio_valoracion = $turno['hora_inicio_valoracion'];
+                $hora_fin_valoracion = $turno['hora_fin_valoracion'];
+                $duracion_valoracion = $turno['duracion_valoracion'];
+
+                DB::select("SELECT * FROM generar_turnos_cpu(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", [
+                    $doctor,
+                    $area,
+                    $fecha_inicio,
+                    $fecha_fin,
+                    $hora_inicio_atencion,
+                    $hora_inicio_comida,
+                    $hora_fin_comida,
+                    $hora_fin_atencion,
+                    $duracion_atencion,
+                    $hora_inicio_valoracion,
+                    $hora_fin_valoracion,
+                    $duracion_valoracion
+                ]);
+
+                $response['agregados'] += 1;
+            }
+
+            // Si todos fueron exitosos, confirmamos
+            DB::commit();
+
+            $nombreDoctor = DB::table('users')
+                ->where('id', $doctor)
+                ->value('name');
+
+            $descripcionAuditoria = 'Se generaron turnos dinamicamente a el Doctor : ' . $nombreDoctor.' con los siguientes parametros: ' . json_encode($response);
+            $this->auditoriaController->auditar('TurnosController', 'generarTurnos(Request $request)', '', json_encode($response), 'INSERT', $descripcionAuditoria);
+
+            return response()->json([
+                'message' => 'Turnos generados correctamente',
+                'resultado' => $response
+            ], 200);
+        } catch (\Exception $e) {
+            // Revertimos cualquier cambio
+            DB::rollBack();
+            $this->logController->saveLog('Nombre de Controlador: TurnosController, Nombre de Funcion: generarTurnos(Request $request)', 'Error al generar turnos: ' . $e->getMessage());
+
+            Log::error('Error al generar turnos: ' . $e->getMessage());
+            return response()->json([
+                'error' => 'No se pudieron generar los turnos',
+                'detalle' => $e->getMessage()
+            ], 500);
         }
     }
 }

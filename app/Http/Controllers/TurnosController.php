@@ -358,10 +358,11 @@ class TurnosController extends Controller
                 $hora_inicio_valoracion = $turno['hora_inicio_valoracion'];
                 $hora_fin_valoracion = $turno['hora_fin_valoracion'];
                 $duracion_valoracion = $turno['duracion_valoracion'];
+                $usr_tipo = $turno['usr_tipo']; 
 
-                DB::select("SELECT * FROM generar_turnos_cpu(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", [
+                $res = DB::select("SELECT * FROM generar_agenda(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", [
                     $doctor,
-                    $area,
+                    $usr_tipo,
                     $fecha_inicio,
                     $fecha_fin,
                     $hora_inicio_atencion,
@@ -377,22 +378,19 @@ class TurnosController extends Controller
                 $response['agregados'] += 1;
             }
 
-            // Si todos fueron exitosos, confirmamos
             DB::commit();
-
             $nombreDoctor = DB::table('users')
                 ->where('id', $doctor)
                 ->value('name');
-
             $descripcionAuditoria = 'Se generaron turnos dinamicamente a el Doctor : ' . $nombreDoctor.' con los siguientes parametros: ' . json_encode($response);
             $this->auditoriaController->auditar('TurnosController', 'generarTurnos(Request $request)', '', json_encode($response), 'INSERT', $descripcionAuditoria);
 
             return response()->json([
                 'message' => 'Turnos generados correctamente',
-                'resultado' => $response
+                'resultado' => $response,
+                'data' => $res,
             ], 200);
         } catch (\Exception $e) {
-            // Revertimos cualquier cambio
             DB::rollBack();
             $this->logController->saveLog('Nombre de Controlador: TurnosController, Nombre de Funcion: generarTurnos(Request $request)', 'Error al generar turnos: ' . $e->getMessage());
 

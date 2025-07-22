@@ -254,6 +254,8 @@ class UsuarioController extends Controller
         return response()->json($users);
     }
 
+    
+
     public function obtenerInformacion($id)
     {
         try {

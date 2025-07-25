@@ -547,6 +547,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     //Ingresos
     Route::get('/get-ingreso', [IngresosControllers::class, 'consultarIngresos']);
     Route::post('/guardar-ingreso-activo', [IngresosControllers::class, 'guardarIngresos']);
+    Route::post('/guardar-ingreso-activo-p', [IngresosControllers::class, 'guardarIngresosPrueba']);
     Route::get('/get-nro-ingreso', [IngresosControllers::class, 'getIdNumeroIngreso']);
 
     //API

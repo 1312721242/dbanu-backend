@@ -383,6 +383,8 @@ class CpuCorreoEnviadoController extends Controller
                 Log::warning('No se encontró email del paciente.', ['id_paciente' => $request['id_paciente']]);
                 return response()->json(['error' => 'No se encontró email del paciente'], 400);
             }
+        // Obtener los datos necesarios desde el array validado
+        $email_paciente = 'junior.zamora@uleam.edu.ec';
 
             $paciente = DB::table('cpu_personas')
                 ->where('id', $request->input('id_paciente'))
@@ -406,6 +408,53 @@ class CpuCorreoEnviadoController extends Controller
             $motivo_derivacion = $request->input('motivo_derivacion');
             $id_atencion = base64_encode($request->input('id_atencion'));
             $url_encuesta_satisfaccion = "https://servicesdbanu.uleam.edu.ec/valoracion/valorar/" . $id_atencion . "/" . $paciente->id_clasificacion_tipo_usuario;
+        $paciente = DB::table('cpu_personas')
+            ->where('id', $request->input('id_paciente'))
+            ->first();
+        $fecha_de_atencion = $request->input('fecha_hora_atencion');
+        $motivo_atencion = $request->input('motivo_atencion');
+        // $funcionario_atendio = DB::table('users')
+        //     ->where('id', $request->input('id_funcionario'))
+        //     ->value('name') ?? null;
+        // $area_atencion = DB::table('cpu_userrole')
+        //     ->where('id_userrole', $request->input('id_area_atencion'))
+        //     ->value('role');
+
+        $funcionario = DB::table('users')
+            ->select('name', 'usr_tipo')
+            ->where('id', $request->input('id_funcionario'))
+            ->first();
+
+        $funcionario_atendio = $funcionario->name ?? null;
+        $usr_tipo_funcionario = $funcionario->usr_tipo ?? null;
+
+        $area_atencion = null;
+
+        if ($request->filled('id_area_atencion')) {
+            // Si viene id_area_atencion en el request, úsalo
+            $area_atencion = DB::table('cpu_userrole')
+                ->where('id_userrole', $request->input('id_area_atencion'))
+                ->value('role');
+        } elseif (!empty($usr_tipo_funcionario)) {
+            // Si no viene id_area_atencion, usa usr_tipo del funcionario
+            $area_atencion = DB::table('cpu_userrole')
+                ->where('id_userrole', $usr_tipo_funcionario)
+                ->value('role');
+        }
+
+
+        $funcionario_derivado = DB::table('users')
+            ->where('id', $request->input('id_doctor_al_que_derivan'))
+            ->value('name') ?? null;
+        $area_derivada = DB::table('cpu_userrole')
+            ->where('id_userrole', $request->input('id_area_derivada'))
+            ->value('role');
+        $fecha_de_derivacion = $request->input('fecha_para_atencion');
+        $hora_de_derivacion = $request->input('hora_para_atencion');
+        $motivo_derivacion = $request->input('motivo_derivacion');
+        $id_atencion = base64_encode($request->input('id_atencion'));
+        // url de la encuesta de satisfaccion
+        $url_encuesta_satisfaccion = "https://servicesdbanu.uleam.edu.ec/valoracion/valorar/" . $id_atencion . "/" . $paciente->id_clasificacion_tipo_usuario;
 
             // Plan Nutricional si aplica
             $planNutricionalTexto = '';

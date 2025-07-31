@@ -254,6 +254,8 @@ class UsuarioController extends Controller
         return response()->json($users);
     }
 
+    
+
     public function obtenerInformacion($id)
     {
         try {
@@ -344,7 +346,7 @@ class UsuarioController extends Controller
         $usuario = $request && !is_string($request) ? $request->user()->name : auth()->user()->name;
         $ip = $request && !is_string($request) ? $request->ip() : request()->ip();
         $ipv4 = gethostbyname(gethostname());
-        $publicIp = file_get_contents('http://ipecho.net/plain');
+        $publicIp = file_get_contents('https://ifconfig.me/ip');
         $ioConcatenadas = 'IP LOCAL: ' . $ip . '  --IPV4: ' . $ipv4 . '  --IP PUBLICA: ' . $publicIp;
         $nombreequipo = gethostbyaddr($ip);
         $userAgent = $request && !is_string($request) ? $request->header('User-Agent') : request()->header('User-Agent');

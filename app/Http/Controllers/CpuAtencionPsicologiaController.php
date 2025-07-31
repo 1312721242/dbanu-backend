@@ -197,13 +197,29 @@ class CpuAtencionPsicologiaController extends Controller
 
                 // Guardar el triaje siempre después de la derivación
                 $triaje = new CpuAtencionTriaje();
-                $triaje->id_atencion = $cpuAtencion->id; // Usar el ID de la derivación recién creada
-                $triaje->talla = $request->input('talla');
-                $triaje->peso = $request->input('peso');
-                $triaje->temperatura = $request->input('temperatura');
-                $triaje->presion_sistolica = $request->input('presion_sistolica');
-                $triaje->presion_diastolica = $request->input('presion_diastolica');
-                $triaje->save();
+                $talla = $request->input('talla');
+                $peso = $request->input('peso');
+                $temperatura = $request->input('temperatura');
+                $presionSistolica = $request->input('presion_sistolica');
+                $presionDiastolica = $request->input('presion_diastolica');
+
+                // Verifica si todos los campos de triaje tienen datos
+                if (
+                    $talla !== null && $talla !== '' &&
+                    $peso !== null && $peso !== '' &&
+                    $temperatura !== null && $temperatura !== '' &&
+                    $presionSistolica !== null && $presionSistolica !== '' &&
+                    $presionDiastolica !== null && $presionDiastolica !== ''
+                ) {
+                    $triaje = new CpuAtencionTriaje();
+                    $triaje->id_atencion = $cpuAtencion->id;
+                    $triaje->talla = $talla;
+                    $triaje->peso = $peso;
+                    $triaje->temperatura = $temperatura;
+                    $triaje->presion_sistolica = $presionSistolica;
+                    $triaje->presion_diastolica = $presionDiastolica;
+                    $triaje->save();
+                }
             }
 
             // Auditoría
@@ -273,7 +289,7 @@ class CpuAtencionPsicologiaController extends Controller
         $usuario = $request && !is_string($request) ? $request->user()->name : auth()->user()->name;
         $ip = $request && !is_string($request) ? $request->ip() : request()->ip();
         $ipv4 = gethostbyname(gethostname());
-        $publicIp = file_get_contents('http://ipecho.net/plain');
+        $publicIp = file_get_contents('https://ifconfig.me/ip');
         $ioConcatenadas = 'IP LOCAL: ' . $ip . '  --IPV4: ' . $ipv4 . '  --IP PUBLICA: ' . $publicIp;
         $nombreequipo = gethostbyaddr($ip);
         $userAgent = $request && !is_string($request) ? $request->header('User-Agent') : request()->header('User-Agent');

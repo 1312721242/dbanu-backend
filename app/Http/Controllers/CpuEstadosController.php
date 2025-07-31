@@ -13,6 +13,8 @@ class CpuEstadosController extends Controller
     public function __construct()
     {
         $this->middleware('auth:api');
+        $this->auditoriaController = new AuditoriaControllers();
+        $this->logController = new LogController();
     }
 
     public function agregarEstado(Request $request)
@@ -129,10 +131,28 @@ class CpuEstadosController extends Controller
         return response()->json(['success' => true, 'message' => 'Estado eliminado correctamente']);
     }
 
-    public function consultarEstados()
+    public function consultarEstadosAnterior()
     {
         $estados = CpuEstado::orderBy('id', 'asc')->get();
-
         return response()->json($estados);
+    }
+
+    public function consultarEstados()
+    {
+        try {
+            $data = DB::table('cpu_estados')
+                ->select('id', 'estado', 'updated_at', 'created_at')
+                //->whereIn('id', [8, 9])
+                ->orderBy('id', 'asc')
+                ->get();
+
+            return response()->json($data, 200);
+        } catch (\Exception $e) {
+            $this->logController->saveLog('Nombre de Controlador: CpuEstadosController, Nombre de Funcion: consultarEstados()', $e->getMessage());
+            return response()->json([
+                'error' => 'Error al obtener los estados',
+                'mensaje' => $e->getMessage()
+            ], 500);
+        }
     }
 }

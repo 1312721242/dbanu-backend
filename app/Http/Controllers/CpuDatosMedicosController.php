@@ -8,6 +8,13 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 class CpuDatosMedicosController extends Controller
 {
+    public function __construct()
+    {
+        $this->middleware('auth:api');
+        $this->auditoriaController = new AuditoriaControllers();
+        $this->logController = new LogController();
+    }
+
     public function index()
     {
         $datosMedicos = CpuDatosMedicos::all();
@@ -40,6 +47,8 @@ class CpuDatosMedicosController extends Controller
 
         $datosMedicos = CpuDatosMedicos::create($request->all());
         $this->auditar('cpu_datos_medicos', 'store', '', $datosMedicos, 'INSERCION', 'Creación de datos médicos');
+        $descripcionAuditoria = 'Se modificó los Datos Médicos: ' . json_encode([$datosMedicos]);
+        $this->auditoriaController->auditar('cpu_facultad', 'agregarFacultad()', '',json_encode([$datosMedicos]), 'UPDATE', $descripcionAuditoria);
         return response()->json($datosMedicos, 201);
     }
 
@@ -51,16 +60,14 @@ class CpuDatosMedicosController extends Controller
         if (!$datosMedicos) {
             return response()->json(['message' => 'No se encontraron datos médicos'], 200);
         }
-
-
         return response()->json($datosMedicos);
     }
 
 
     public function update(Request $request, $id)
     {
-        $datosMedicos = CpuDatosMedicos::findOrFail($id);
-
+        try {
+           $datosMedicos = CpuDatosMedicos::findOrFail($id);
         $request->validate([
             'id_persona' => 'sometimes|required|exists:cpu_personas,id',
             'enfermedades_catastroficas' => 'sometimes|required|boolean',
@@ -82,10 +89,13 @@ class CpuDatosMedicosController extends Controller
             'fecha_estimada_parto' => 'nullable|date',
             'partos_data' => 'nullable|json',
         ]);
-
         $datosMedicos->update($request->all());
         $this->auditar('cpu_datos_medicos', 'update', '', $datosMedicos, 'MODIFICACION', 'Actualización de datos médicos');
         return response()->json($datosMedicos);
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+            return response()->json(['message' => 'Datos médicos no encontrados'], 404);
+             $this->logController->saveLog('Nombre de Controlador: ReporteIndicadorController, Nombre de Funcion: getIndicadorEvaluacion()', $e->getMessage());
+        }
     }
 
     public function destroy($id)
@@ -102,7 +112,7 @@ class CpuDatosMedicosController extends Controller
         $usuario = $request && !is_string($request) ? $request->user()->name : auth()->user()->name;
         $ip = $request && !is_string($request) ? $request->ip() : request()->ip();
         $ipv4 = gethostbyname(gethostname());
-        $publicIp = file_get_contents('http://ipecho.net/plain');
+        $publicIp = file_get_contents('https://ifconfig.me/ip');
         $ioConcatenadas = 'IP LOCAL: ' . $ip . '  --IPV4: ' . $ipv4 . '  --IP PUBLICA: ' . $publicIp;
         $nombreequipo = gethostbyaddr($ip);
         $userAgent = $request && !is_string($request) ? $request->header('User-Agent') : request()->header('User-Agent');

@@ -987,6 +987,67 @@ class CpuAtencionesController extends Controller
                 }
             }
 
+            // ✅ ENVÍO DE CORREOS
+            $correoController = new CpuCorreoEnviadoController();
+
+            // Correo atención paciente
+            $correoAtencion = $correoController->enviarCorreoAtencionAreaSaludPaciente(new Request([
+                'id_atencion' => $atencion->id,
+                'id_area_atencion' => $request->input('id_area'),
+                'fecha_hora_atencion' => Carbon::now()->format("Y-m-d H:i:s"),
+                'motivo_atencion' => $request->input('motivo_atencion'),
+                'id_paciente' => $request->input('id_persona'),
+                'id_funcionario' => $request->input('id_funcionario'),
+            ]));
+
+            if (!$correoAtencion->isSuccessful()) {
+                $atencion->delete();
+                $medicinaGeneral->delete();
+                DB::rollBack();
+                return response()->json(['error' => 'Error al enviar correo de atención'], 500);
+            }
+
+            // Correo derivación (si aplica)
+            if ($request->input('derivacion')) {
+                $correoDerivacionPaciente = $correoController->enviarCorreoDerivacionAreaSaludPaciente(new Request([
+                    'id_atencion' => $atencion->id,
+                    'id_area_atencion' => $request->input('id_area'),
+                    'motivo_derivacion' => $request->input('derivacion.motivo_derivacion'),
+                    'id_paciente' => $request->input('id_persona'),
+                    'id_funcionario' => $request->input('id_funcionario'),
+                    'id_doctor_al_que_derivan' => $request->input('derivacion.id_doctor_al_que_derivan'),
+                    'id_area_derivada' => $request->input('derivacion.id_area'),
+                    'fecha_para_atencion' => $request->input('derivacion.fecha_para_atencion'),
+                    'hora_para_atencion' => $request->input('derivacion.hora_para_atencion'),
+                ]));
+
+                if (!$correoDerivacionPaciente->isSuccessful()) {
+                    $atencion->delete();
+                    $medicinaGeneral->delete();
+                    DB::rollBack();
+                    return response()->json(['error' => 'Error al enviar correo al paciente'], 500);
+                }
+
+                $correoDerivacionFuncionario = $correoController->enviarCorreoDerivacionAreaSaludFuncionario(new Request([
+                    'id_atencion' => $atencion->id,
+                    'id_area_atencion' => $request->input('id_area'),
+                    'motivo_derivacion' => $request->input('derivacion.motivo_derivacion'),
+                    'id_paciente' => $request->input('id_persona'),
+                    'id_funcionario' => $request->input('id_funcionario'),
+                    'id_doctor_al_que_derivan' => $request->input('derivacion.id_doctor_al_que_derivan'),
+                    'id_area_derivada' => $request->input('derivacion.id_area'),
+                    'fecha_para_atencion' => $request->input('derivacion.fecha_para_atencion'),
+                    'hora_para_atencion' => $request->input('derivacion.hora_para_atencion'),
+                ]));
+
+                if (!$correoDerivacionFuncionario->isSuccessful()) {
+                    $atencion->delete();
+                    $medicinaGeneral->delete();
+                    DB::rollBack();
+                    return response()->json(['error' => 'Error al enviar correo al funcionario'], 500);
+                }
+            }
+
             DB::commit();
 
             // Auditoría
@@ -998,12 +1059,7 @@ class CpuAtencionesController extends Controller
                                                                                 FECHA Y HORA DE ATENCION: {$request->input('fecha_hora_atencion')},
                                                                                 ANIO DE ATENCION: {$request->input('anio_atencion')}");
 
-            // // Llamar a la función enviarCorreoAtencionPaciente del controlador CpuCorreoEnviadoController
-            // $correoController = new CpuCorreoEnviadoController();
-            // $correoController->enviarCorreoAtencionPaciente($request->all(), $derivado, $id_atencion);
-            // // if ($derivado) {
-            //     $correoController->enviarCorreoDerivacionPaciente($request->all());
-            // // }
+
 
             return response()->json(['success' => true, 'atencion_id' => $atencion->id]);
         } catch (\Exception $e) {
@@ -1186,7 +1242,7 @@ class CpuAtencionesController extends Controller
         $usuario = $request && !is_string($request) ? $request->user()->name : auth()->user()->name;
         $ip = $request && !is_string($request) ? $request->ip() : request()->ip();
         $ipv4 = gethostbyname(gethostname());
-        $publicIp = file_get_contents('http://ipecho.net/plain');
+        $publicIp = file_get_contents('https://ifconfig.me/ip');
         $ioConcatenadas = 'IP LOCAL: ' . $ip . '  --IPV4: ' . $ipv4 . '  --IP PUBLICA: ' . $publicIp;
         $nombreequipo = gethostbyaddr($ip);
         $userAgent = $request && !is_string($request) ? $request->header('User-Agent') : request()->header('User-Agent');

@@ -12,7 +12,7 @@ class CpuCarrera extends Model
 
     public function legalizacionMatriculas()
     {
-        return $this->hasMany(CpuLegalizacionMatricula::class, 'id_carrera');
+        return $this->hasMany(CpuLegalizacionMatricula::class, 'id_carrera','id_sede');
     }
 
 }

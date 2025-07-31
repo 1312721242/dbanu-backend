@@ -378,7 +378,10 @@ class ReporteController extends Controller
             return preg_replace('/(\/A|\/O)$/', '', $value);
         };
 
-        $booleanToSiNo = fn($value) => $value ? 'SI' : 'NO';
+        //$booleanToSiNo = fn($value) => $value ? 'SI' : 'NO';
+        $booleanToSiNo = fn($value) => $value === true ? 'SI' : 'NO';
+
+        $normalize_estado_civil = fn($value) => empty($value) || strtolower($value) === 'null' ? 'SIN INFORMACION' : $value;
 
         $query = DB::table('cpu_atenciones as at')
             ->join('cpu_personas as p', 'at.id_persona', '=', 'p.id')
@@ -427,7 +430,7 @@ class ReporteController extends Controller
 
         $atenciones = $query->get();
 
-        $agrupadoPorPersona = $atenciones->groupBy('id_persona')->map(function ($atenciones, $id_persona) use ($normalize, $booleanToSiNo) {
+        $agrupadoPorPersona = $atenciones->groupBy('id_persona')->map(function ($atenciones, $id_persona) use ($normalize,$normalize_estado_civil, $booleanToSiNo) {
             $persona = $atenciones->first();
             return [
                 'id_persona' => $id_persona,
@@ -437,12 +440,16 @@ class ReporteController extends Controller
                 'ciudad' => $normalize($persona->ciudad),
                 'sexo' => $normalize($persona->sexo),
                 'tipoetnia' => $normalize($persona->tipoetnia),
-                'discapacidad' => $booleanToSiNo($persona->discapacidad),
+                //'discapacidad' => $booleanToSiNo($persona->discapacidad),
+                'discapacidad' => mb_strtoupper($persona->discapacidad ?? 'NO', 'UTF-8'),
                 'clasificacionUsuario' => $normalize($persona->clasificacion_usuario),
                 'campus' => $normalize($persona->campus),
-                'estadoCivil' => $normalize($persona->estado_civil),
+                'estadoCivil' => $normalize_estado_civil($persona->estado_civil),
+                //'estadoCivil' => $normalize($persona->estado_civil),
                 'segmentacionPersona' => $normalize($persona->segmentacion_persona),
                 'enfermedadesCatastroficas' => $booleanToSiNo($persona->enfermedades_catastroficas),
+
+                
                 'tieneSeguroMedico' => $booleanToSiNo($persona->tiene_seguro_medico),
                 'embarazada' => $booleanToSiNo($persona->embarazada),
                 'puesto' => $normalize($persona->puesto),
@@ -723,7 +730,7 @@ class ReporteController extends Controller
         $usuario = $request && !is_string($request) ? $request->user()->name : auth()->user()->name;
         $ip = $request && !is_string($request) ? $request->ip() : request()->ip();
         $ipv4 = gethostbyname(gethostname());
-        $publicIp = file_get_contents('http://ipecho.net/plain');
+        $publicIp = file_get_contents('https://ifconfig.me/ip');
         $ioConcatenadas = 'IP LOCAL: ' . $ip . '  --IPV4: ' . $ipv4 . '  --IP PUBLICA: ' . $publicIp;
         $nombreequipo = gethostbyaddr($ip);
         $userAgent = $request && !is_string($request) ? $request->header('User-Agent') : request()->header('User-Agent');

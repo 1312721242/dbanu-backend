@@ -206,7 +206,7 @@ class CpuPersonaController extends Controller
                     'grant_type' => 'client_credentials',
                     'client_id' => '13e24fa4-9c64-4653-a96c-20964510b52a',
                     // 'client_secret' => 'ywq8Q~1mk.SSMpJV1KjeUZPZfY~~1diPvVCT0c.b',
-                    'client_secret' => 'D1c8Q~gB11NpYVW7TBkTvoW1QSEHorolMBXcNcrs',
+                    'client_secret' => 'ywq8Q~1mk.SSMpJV1KjeUZPZfY~~1diPvVCT0c.b',
                     'scope' => 'https://service.flow.microsoft.com//.default',
                 ]
             );

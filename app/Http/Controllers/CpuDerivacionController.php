@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\CpuAtencion;
 use Illuminate\Http\Request;
 use App\Models\CpuDerivacion;
 use App\Models\CpuTurno;
@@ -271,9 +272,9 @@ class CpuDerivacionController extends Controller
             'nombres_funcionario' => 'required|string',
             'area_atencion' => 'required|string',
 
-
-
         ]);
+
+        Log::info('Datos recibidos en reagendar:', $validatedData);
 
         DB::beginTransaction();
 
@@ -306,6 +307,9 @@ class CpuDerivacionController extends Controller
             // Actualizar el estado a 7 en cpu_turnos si id_turno_asignado coincide con id_turnos
             CpuTurno::where('id_turnos', $validatedData['id_turno_asignado'])
                 ->update(['estado' => 7]);
+
+            // ✅ Actualizar el estado de la atención como "reagendada" (id_estado = 4)
+            CpuAtencion::where('id', $validatedData['ate_id'])->update(['id_estado' => 4]);
 
             // Llamar a la función enviarCorreo con los datos necesarios después de que la transacción se haya realizado correctamente
             // $this->enviarCorreoPaciente($validatedData, 'reagendamiento');
@@ -374,21 +378,74 @@ class CpuDerivacionController extends Controller
     //     }
     // }
 
+    // public function noAsistioCita(Request $request, $id)
+    // {
+    //     // 🔍 Imprimir los datos recibidos antes de la validación
+    //     Log::info('📌 Datos recibidos en noAsistioCita:', $request->all());
+
+    //     // 🔥 Evita que Laravel transforme `""` en `null`
+    //     $validatedData = $request->all();
+
+    //     // Si `id_paciente` no existe o es `null`, lánzalo manualmente
+    //     if (!isset($validatedData['id_paciente'])) {
+    //         Log::error('❌ Error: id_paciente no está presente en los datos.');
+    //         return response()->json(['error' => 'Falta el campo id_paciente'], 400);
+    //     }
+
+    //     // 🔥 Validación manual para mayor control
+    //     $rules = [
+    //         'id_paciente' => 'required|integer',
+    //         'email_paciente' => 'required|string',
+    //         'area_atencion' => 'required|string',
+    //         'fecha_para_atencion' => 'required|date',
+    //         'hora_para_atencion' => 'required|string',
+    //         'nombres_funcionario' => 'required|string',
+    //         'nombres_paciente' => 'required|string',
+    //         'funcionario_email' => 'required|string',
+    //     ];
+    //     $validator = Validator::make($validatedData, $rules);
+
+    //     if ($validator->fails()) {
+    //         Log::error('❌ Error en validación:', ['errors' => $validator->errors()]);
+    //         return response()->json(['error' => $validator->errors()], 400);
+    //     }
+
+    //     DB::beginTransaction();
+
+    //     try {
+    //         // Buscar derivación
+    //         $derivacion = CpuDerivacion::find($id);
+    //         if (!$derivacion) {
+    //             return response()->json(['message' => 'Derivación no encontrada.'], 404);
+    //         }
+
+    //         // Actualizar estado de la derivación
+    //         $derivacion->update(['id_estado_derivacion' => 5]);
+
+    //         // Enviar correos al paciente y al funcionario utilizando los datos validados
+    //         $this->enviarCorreoPaciente($validatedData, 'no_show');
+    //         $this->enviarCorreoFuncionario($validatedData, 'no_show');
+
+    //         DB::commit();
+    //         return response()->json(['message' => 'Estado actualizado y correos enviados.'], 200);
+    //     } catch (\Exception $e) {
+    //         DB::rollBack();
+    //         Log::error('❌ Error en la transacción:', ['error' => $e->getMessage()]);
+    //         return response()->json(['error' => 'Error en la operación: ' . $e->getMessage()], 500);
+    //     }
+    // }
+
     public function noAsistioCita(Request $request, $id)
     {
-        // 🔍 Imprimir los datos recibidos antes de la validación
-        Log::info('📌 Datos recibidos en noAsistioCita:', $request->all());
+        Log::info('Datos recibidos en noAsistioCita:', $request->all());
 
-        // 🔥 Evita que Laravel transforme `""` en `null`
         $validatedData = $request->all();
 
-        // Si `id_paciente` no existe o es `null`, lánzalo manualmente
         if (!isset($validatedData['id_paciente'])) {
-            Log::error('❌ Error: id_paciente no está presente en los datos.');
+            Log::error('Error: id_paciente no está presente en los datos.');
             return response()->json(['error' => 'Falta el campo id_paciente'], 400);
         }
 
-        // 🔥 Validación manual para mayor control
         $rules = [
             'id_paciente' => 'required|integer',
             'email_paciente' => 'required|string',
@@ -402,7 +459,7 @@ class CpuDerivacionController extends Controller
         $validator = Validator::make($validatedData, $rules);
 
         if ($validator->fails()) {
-            Log::error('❌ Error en validación:', ['errors' => $validator->errors()]);
+            Log::error('Error en validación:', ['errors' => $validator->errors()]);
             return response()->json(['error' => $validator->errors()], 400);
         }
 
@@ -418,15 +475,35 @@ class CpuDerivacionController extends Controller
             // Actualizar estado de la derivación
             $derivacion->update(['id_estado_derivacion' => 5]);
 
-            // Enviar correos al paciente y al funcionario utilizando los datos validados
+            // 🔁 Actualizar estado del turno si existe
+            if ($derivacion->id_turno_asignado) {
+                $turno = \App\Models\CpuTurno::find($derivacion->id_turno_asignado);
+                if ($turno) {
+                    // Combinar fecha y hora del turno
+                    $fechaHoraTurno = \Carbon\Carbon::parse($turno->fehca_turno->format('Y-m-d') . ' ' . $turno->hora);
+
+                    if ($fechaHoraTurno->isFuture()) {
+                        $turno->estado = 1; // Disponible nuevamente
+                    } else {
+                        $turno->estado = 5; // No asistió / vencido
+                    }
+
+                    $turno->save();
+                    Log::info("📅 Turno {$turno->id_turnos} actualizado a estado {$turno->estado}");
+                } else {
+                    Log::warning("⚠️ Turno con ID {$derivacion->id_turno_asignado} no encontrado.");
+                }
+            }
+
+            // Enviar correos
             $this->enviarCorreoPaciente($validatedData, 'no_show');
             $this->enviarCorreoFuncionario($validatedData, 'no_show');
 
             DB::commit();
-            return response()->json(['message' => 'Estado actualizado y correos enviados.'], 200);
+            return response()->json(['message' => 'Estado actualizado, turno ajustado y correos enviados.'], 200);
         } catch (\Exception $e) {
             DB::rollBack();
-            Log::error('❌ Error en la transacción:', ['error' => $e->getMessage()]);
+            Log::error('Error en la transacción:', ['error' => $e->getMessage()]);
             return response()->json(['error' => 'Error en la operación: ' . $e->getMessage()], 500);
         }
     }
@@ -597,7 +674,7 @@ class CpuDerivacionController extends Controller
         $nombreUsuarioEquipo = get_current_user() . ' en ' . $tipoEquipo;
 
         $fecha = now();
-        $codigo_auditoria = strtoupper($tabla . '_' . $campo . '_' . $tipo );
+        $codigo_auditoria = strtoupper($tabla . '_' . $campo . '_' . $tipo);
         DB::table('cpu_auditoria')->insert([
             'aud_user' => $usuario,
             'aud_tabla' => $tabla,

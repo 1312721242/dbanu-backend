@@ -710,25 +710,57 @@ class CpuAtencionesController extends Controller
                 'domingo' => '🔹 *Domingo*'
             ];
 
+            $ordenComidas = ['desayuno', 'entreComida1', 'almuerzo', 'entreComida2', 'merienda'];
+            $emojis = [
+                'desayuno' => '🍽️',
+                'entreComida1' => '🍏',
+                'almuerzo' => '🍛',
+                'entreComida2' => '🥑',
+                'merienda' => '🍵'
+            ];
+
             foreach ($diasSemana as $dia => $nombreDia) {
                 if (isset($planNutricional[$dia])) {
                     $planTexto .= "\n{$nombreDia}\n";
-                    foreach ($planNutricional[$dia] as $comida => $descripcion) {
-                        $emoji = match ($comida) {
-                            'desayuno' => '🍽️',
-                            'almuerzo' => '🍛',
-                            'merienda' => '🍵',
-                            'entreComida1' => '🍏',
-                            'entreComida2' => '🥑',
-                            default => '🍴',
-                        };
-                        $planTexto .= "  - {$emoji} *" . ucfirst($comida) . ":* {$descripcion}\n";
+                    foreach ($ordenComidas as $comida) {
+                        if (isset($planNutricional[$dia][$comida])) {
+                            $descripcion = $planNutricional[$dia][$comida];
+                            $emoji = $emojis[$comida] ?? '🍴';
+                            $planTexto .= "  - {$emoji} *" . ucfirst($comida) . ":* {$descripcion}\n";
+                        }
                     }
                     $planTexto .= "-----------------------\n";
                 }
             }
 
-            // Verificar si se envía el `id_turno_asignado`
+            // ✅ Siempre enviar correo de atención
+            $correoController = new CpuCorreoEnviadoController();
+            $motivoAtencion = $request->input('motivo');
+            // Si el caso fue cerrado (id_estado == 22), se agrega leyenda al motivo
+            if (isset($caso) && $caso->id_estado == 22) {
+                $motivoAtencion .= ' - CIERRE CASO';
+            }
+
+            // 📩 Enviar correo de atención al paciente
+            $correoAtencionPaciente = $correoController->enviarCorreoAtencionAreaSaludPaciente(new Request([
+                'id_atencion' => $idAtencion,
+                'id_area_atencion' => $request->input('id_area'),
+                'fecha_hora_atencion' => Carbon::now()->format("Y-m-d H:i:s"),
+                'motivo_atencion' => $motivoAtencion,
+                'id_paciente' => $request->input('id_paciente'),
+                'id_funcionario' => $request->input('id_funcionario'),
+                'plan_nutricional_texto' => $planTexto,
+            ]));
+
+            if (!$correoAtencionPaciente->isSuccessful()) {
+                // ❌ Si falla el correo, eliminar la atención guardada
+                $atencion->delete();
+                $nutricion->delete();
+                DB::rollBack();
+                return response()->json(['error' => 'Error al enviar el correo de atención, la atención no fue guardada'], 500);
+            }
+
+            // Verificar si se envía el `id_turno_asignado` 📩 Solo si hay derivación
             if ($request->filled('id_turno_asignado')) {
                 Log::info('Valor de id_turno_asignado:', ['id_turno_asignado' => $request->input('id_turno_asignado')]);
                 try {
@@ -755,28 +787,6 @@ class CpuAtencionesController extends Controller
                     $turno = CpuTurno::findOrFail($derivacionData['id_turno_asignado']);
                     $turno->estado = 2; // Actualiza el estado del turno a 2
                     $turno->save();
-
-                    // ✅ Enviar correos según la lógica del controlador
-                    $correoController = new CpuCorreoEnviadoController();
-
-                    // 📩 Enviar correo de atención al paciente
-                    $correoAtencionPaciente = $correoController->enviarCorreoAtencionAreaSaludPaciente(new Request([
-                        'id_atencion' => $idAtencion,
-                        'id_area_atencion' => $request->input('id_area'),
-                        'fecha_hora_atencion' => Carbon::now()->format("Y-m-d H:i:s"),
-                        'motivo_atencion' => $request->input('motivo'),
-                        'id_paciente' => $request->input('id_paciente'),
-                        'id_funcionario' => $request->input('id_funcionario'),
-                        'plan_nutricional_texto' => $planTexto,
-                    ]));
-
-                    if (!$correoAtencionPaciente->isSuccessful()) {
-                        // ❌ Si falla el correo, eliminar la atención guardada
-                        $atencion->delete();
-                        $nutricion->delete();
-                        DB::rollBack();
-                        return response()->json(['error' => 'Error al enviar el correo de atención, la atención no fue guardada'], 500);
-                    }
 
                     // 📩 Enviar correos de derivación si aplica
                     if ($request->filled('id_doctor_al_que_derivan')) {
@@ -1170,70 +1180,70 @@ class CpuAtencionesController extends Controller
     }
 
     // Función para auditar
-        //funcion para auditar
-        private function auditar($tabla, $campo, $dataOld, $dataNew, $tipo, $descripcion, $request = null)
-        {
-            $usuario = $request && !is_string($request) ? $request->user()->name : auth()->user()->name;
-            $ip = $request && !is_string($request) ? $request->ip() : request()->ip();
-            $ipv4 = gethostbyname(gethostname());
-            $publicIp = file_get_contents('http://ipecho.net/plain');
-            $ioConcatenadas = 'IP LOCAL: ' . $ip . '  --IPV4: ' . $ipv4 . '  --IP PUBLICA: ' . $publicIp;
-            $nombreequipo = gethostbyaddr($ip);
-            $userAgent = $request && !is_string($request) ? $request->header('User-Agent') : request()->header('User-Agent');
-            $tipoEquipo = 'Desconocido';
+    //funcion para auditar
+    private function auditar($tabla, $campo, $dataOld, $dataNew, $tipo, $descripcion, $request = null)
+    {
+        $usuario = $request && !is_string($request) ? $request->user()->name : auth()->user()->name;
+        $ip = $request && !is_string($request) ? $request->ip() : request()->ip();
+        $ipv4 = gethostbyname(gethostname());
+        $publicIp = file_get_contents('http://ipecho.net/plain');
+        $ioConcatenadas = 'IP LOCAL: ' . $ip . '  --IPV4: ' . $ipv4 . '  --IP PUBLICA: ' . $publicIp;
+        $nombreequipo = gethostbyaddr($ip);
+        $userAgent = $request && !is_string($request) ? $request->header('User-Agent') : request()->header('User-Agent');
+        $tipoEquipo = 'Desconocido';
 
-            if (stripos($userAgent, 'Mobile') !== false) {
-                $tipoEquipo = 'Celular';
-            } elseif (stripos($userAgent, 'Tablet') !== false) {
-                $tipoEquipo = 'Tablet';
-            } elseif (stripos($userAgent, 'Laptop') !== false || stripos($userAgent, 'Macintosh') !== false) {
-                $tipoEquipo = 'Laptop';
-            } elseif (stripos($userAgent, 'Windows') !== false || stripos($userAgent, 'Linux') !== false) {
-                $tipoEquipo = 'Computador de Escritorio';
-            }
-            $nombreUsuarioEquipo = get_current_user() . ' en ' . $tipoEquipo;
-
-            $fecha = now();
-            $codigo_auditoria = strtoupper($tabla . '_' . $campo . '_' . $tipo );
-            DB::table('cpu_auditoria')->insert([
-                'aud_user' => $usuario,
-                'aud_tabla' => $tabla,
-                'aud_campo' => $campo,
-                'aud_dataold' => $dataOld,
-                'aud_datanew' => $dataNew,
-                'aud_tipo' => $tipo,
-                'aud_fecha' => $fecha,
-                'aud_ip' => $ioConcatenadas,
-                'aud_tipoauditoria' => $this->getTipoAuditoria($tipo),
-                'aud_descripcion' => $descripcion,
-                'aud_nombreequipo' => $nombreequipo,
-                'aud_descrequipo' => $nombreUsuarioEquipo,
-                'aud_codigo' => $codigo_auditoria,
-                'created_at' => now(),
-                'updated_at' => now(),
-
-            ]);
+        if (stripos($userAgent, 'Mobile') !== false) {
+            $tipoEquipo = 'Celular';
+        } elseif (stripos($userAgent, 'Tablet') !== false) {
+            $tipoEquipo = 'Tablet';
+        } elseif (stripos($userAgent, 'Laptop') !== false || stripos($userAgent, 'Macintosh') !== false) {
+            $tipoEquipo = 'Laptop';
+        } elseif (stripos($userAgent, 'Windows') !== false || stripos($userAgent, 'Linux') !== false) {
+            $tipoEquipo = 'Computador de Escritorio';
         }
+        $nombreUsuarioEquipo = get_current_user() . ' en ' . $tipoEquipo;
 
-        private function getTipoAuditoria($tipo)
-        {
-            switch ($tipo) {
-                case 'CONSULTA':
-                    return 1;
-                case 'INSERCION':
-                    return 3;
-                case 'MODIFICACION':
-                    return 2;
-                case 'ELIMINACION':
-                    return 4;
-                case 'LOGIN':
-                    return 5;
-                case 'LOGOUT':
-                    return 6;
-                case 'DESACTIVACION':
-                    return 7;
-                default:
-                    return 0;
-            }
+        $fecha = now();
+        $codigo_auditoria = strtoupper($tabla . '_' . $campo . '_' . $tipo);
+        DB::table('cpu_auditoria')->insert([
+            'aud_user' => $usuario,
+            'aud_tabla' => $tabla,
+            'aud_campo' => $campo,
+            'aud_dataold' => $dataOld,
+            'aud_datanew' => $dataNew,
+            'aud_tipo' => $tipo,
+            'aud_fecha' => $fecha,
+            'aud_ip' => $ioConcatenadas,
+            'aud_tipoauditoria' => $this->getTipoAuditoria($tipo),
+            'aud_descripcion' => $descripcion,
+            'aud_nombreequipo' => $nombreequipo,
+            'aud_descrequipo' => $nombreUsuarioEquipo,
+            'aud_codigo' => $codigo_auditoria,
+            'created_at' => now(),
+            'updated_at' => now(),
+
+        ]);
+    }
+
+    private function getTipoAuditoria($tipo)
+    {
+        switch ($tipo) {
+            case 'CONSULTA':
+                return 1;
+            case 'INSERCION':
+                return 3;
+            case 'MODIFICACION':
+                return 2;
+            case 'ELIMINACION':
+                return 4;
+            case 'LOGIN':
+                return 5;
+            case 'LOGOUT':
+                return 6;
+            case 'DESACTIVACION':
+                return 7;
+            default:
+                return 0;
         }
+    }
 }

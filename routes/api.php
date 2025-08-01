@@ -551,7 +551,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('/get-nro-ingreso', [IngresosControllers::class, 'getIdNumeroIngreso']);
     Route::get('/get-ingreso-id/{id}', [IngresosControllers::class, 'getConsultarIngresosId']);
     Route::post('ruta-comprobante-ingreso-id', [IngresosControllers::class, 'descargarComprobanteIngresosId']);
-
+    Route::get('/get-kardex-movimiento', [IngresosControllers::class, 'getKardexMovimiento']);
 
     //API
     Route::get('/api-tipo-analisis', [ApiControllers::class, 'ApiConsultarTiposAnalisis']);

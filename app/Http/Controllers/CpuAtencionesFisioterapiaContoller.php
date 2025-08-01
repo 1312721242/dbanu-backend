@@ -275,6 +275,18 @@ class CpuAtencionesFisioterapiaContoller extends Controller
                             'hora_para_atencion' => $request->input('hora_para_atencion'),
                         ]));
 
+                        Log ::info('Datos para Correo de derivación al funcionario enviado:', [
+                            'id_atencion' => $idAtencion,
+                            'id_area_atencion' => $request->input('id_area'),
+                            'motivo_derivacion' => $request->input('motivo_derivacion'),
+                            'id_paciente' => $request->input('id_paciente'),
+                            'id_funcionario' => $request->input('id_funcionario'),
+                            'id_doctor_al_que_derivan' => $request->input('id_doctor_al_que_derivan'),
+                            'id_area_derivada' => $request->input('id_area_derivada'),
+                            'fecha_para_atencion' => $request->input('fecha_para_atencion'),
+                            'hora_para_atencion' => $request->input('hora_para_atencion'),
+                        ]);
+
                         if (!$correoDerivacionFuncionario->isSuccessful()) {
                             $atencion->delete();
                             $fisioterapia->delete();

@@ -480,6 +480,250 @@ class ReporteController extends Controller
         ]);
     }
 
+    public function getTotalAtencionesPorArea(Request $request)
+    {
+        $fechaInicio = Carbon::parse($request->input('fechaInicio'))->startOfDay()->toDateTimeString();
+        $fechaFin = Carbon::parse($request->input('fechaFin'))->endOfDay()->toDateTimeString();
+        $usr_tipo = $request->input('usr_tipo');
+
+        $normalize = function ($value) {
+            if (is_null($value)) return null;
+            $value = mb_strtoupper(trim($value));
+            $value = str_replace(['Á', 'É', 'Í', 'Ó', 'Ú'], ['A', 'E', 'I', 'O', 'U'], $value);
+            return preg_replace('/(\/A|\/O)$/', '', $value);
+        };
+
+        $booleanToSiNo = fn($value) => $value ? 'SI' : 'NO';
+
+        $query = DB::table('cpu_atenciones as at')
+            ->join('cpu_personas as p', 'at.id_persona', '=', 'p.id')
+            ->leftJoin('cpu_datos_estudiantes as de', 'p.id', '=', 'de.id_persona')
+            ->leftJoin('cpu_datos_empleados as dem', 'p.id', '=', 'dem.id_persona')
+            ->leftJoin('cpu_datos_medicos as dm', 'p.id', '=', 'dm.id_persona')
+            ->leftJoin('users as u', 'at.id_funcionario', '=', 'u.id')
+            ->leftJoin('cpu_userrole as ur', 'u.usr_tipo', '=', 'ur.id_userrole')
+            ->leftJoin('cpu_tipo_usuario as tu', 'at.id_tipo_usuario', '=', 'tu.id')
+            ->select(
+                'at.id',
+                'at.id_persona',
+                'at.via_atencion',
+                'at.motivo_atencion',
+                'at.fecha_hora_atencion',
+                'at.detalle_atencion',
+                'at.tipo_atencion',
+                'at.recomendacion',
+                'p.cedula',
+                'p.nombres',
+                'p.provincia',
+                'p.ciudad',
+                'p.tipoetnia',
+                'p.discapacidad',
+                'p.sexo',
+                'p.direccion',
+                'de.campus',
+                'de.estado_civil',
+                'de.segmentacion_persona',
+                'dem.puesto',
+                'dem.modalidad',
+                'dem.unidad as facultad',
+                'dem.carrera',
+                'dm.enfermedades_catastroficas',
+                'dm.tiene_seguro_medico',
+                'dm.embarazada',
+                'ur.role as area',
+                'tu.tipo_usuario as clasificacion_usuario'
+            )
+            ->whereBetween('at.fecha_hora_atencion', [$fechaInicio, $fechaFin]);
+
+        // Si el usuario no es tipo 1, se filtra por su área
+        if ($usr_tipo != 1) {
+            $query->where('u.usr_tipo', $usr_tipo);
+        }
+
+        $atenciones = $query->get();
+
+        $agrupadoPorPersona = $atenciones->groupBy('id_persona')->map(function ($atenciones, $id_persona) use ($normalize, $booleanToSiNo) {
+            $persona = $atenciones->first();
+            return [
+                'id_persona' => $id_persona,
+                'cedula' => $persona->cedula,
+                'nombres' => $normalize($persona->nombres),
+                'provincia' => $normalize($persona->provincia),
+                'ciudad' => $normalize($persona->ciudad),
+                'sexo' => $normalize($persona->sexo),
+                'tipoetnia' => $normalize($persona->tipoetnia),
+                'discapacidad' => $booleanToSiNo($persona->discapacidad),
+                'clasificacionUsuario' => $normalize($persona->clasificacion_usuario),
+                'campus' => $normalize($persona->campus),
+                'estadoCivil' => $normalize($persona->estado_civil),
+                'segmentacionPersona' => $normalize($persona->segmentacion_persona),
+                'enfermedadesCatastroficas' => $booleanToSiNo($persona->enfermedades_catastroficas),
+                'tieneSeguroMedico' => $booleanToSiNo($persona->tiene_seguro_medico),
+                'embarazada' => $booleanToSiNo($persona->embarazada),
+                'puesto' => $normalize($persona->puesto),
+                'modalidad' => $normalize($persona->modalidad),
+                'facultad' => $normalize($persona->facultad),
+                'carrera' => $normalize($persona->carrera),
+                'totalAtenciones' => $atenciones->count(),
+                'atenciones' => $atenciones->map(function ($atencion) use ($normalize) {
+                    return [
+                        'id' => $atencion->id,
+                        'via_atencion' => $normalize($atencion->via_atencion),
+                        'motivo_atencion' => $normalize($atencion->motivo_atencion),
+                        'fecha_hora_atencion' => Carbon::parse($atencion->fecha_hora_atencion)->translatedFormat('l, d F Y'),
+                        'detalle_atencion' => $normalize($atencion->detalle_atencion),
+                        'tipo_atencion' => $normalize($atencion->tipo_atencion),
+                        'recomendacion' => $normalize($atencion->recomendacion),
+                        'area' => $normalize($atencion->area),
+                    ];
+                })
+            ];
+        })->values();
+
+        $this->auditar('reporte', 'getTotalAtencionesPorArea', '', '', 'CONSULTA', 'Consulta de total de atenciones por área');
+
+        return response()->json([
+            'total_atenciones' => $agrupadoPorPersona->sum(fn($persona) => $persona['totalAtenciones']),
+            'personas' => $agrupadoPorPersona
+        ]);
+    }
+
+    public function getTotalAtencionesPorSedes(Request $request)
+    {
+        $fechaInicio = Carbon::parse($request->input('fechaInicio'))->startOfDay()->toDateTimeString();
+        $fechaFin = Carbon::parse($request->input('fechaFin'))->endOfDay()->toDateTimeString();
+        $usr_sede = $request->input('usr_sede');
+        Log::info('Usuario sede: ' . $usr_sede);
+        $nombreSede = null;
+
+        // Funciones de utilidad
+        $normalize = function ($value) {
+            if (is_null($value)) return null;
+            $value = mb_strtoupper(trim($value));
+            $value = str_replace(['Á', 'É', 'Í', 'Ó', 'Ú'], ['A', 'E', 'I', 'O', 'U'], $value);
+            return preg_replace('/(\/A|\/O)$/', '', $value);
+        };
+        $booleanToSiNo = fn($value) => $value ? 'SI' : 'NO';
+
+        // Obtener nombre_sede y normalizar
+        if (!empty($usr_sede)) {
+            $nombreSedeOriginal = DB::table('cpu_sede')->where('id', $usr_sede)->value('nombre_sede');
+            $nombreSede = $normalize($nombreSedeOriginal);
+            Log::info('Nombre sede buscada (normalizada): ' . $nombreSede);
+        }
+
+        // Consulta general
+        $query = DB::table('cpu_atenciones as at')
+            ->join('cpu_personas as p', 'at.id_persona', '=', 'p.id')
+            ->leftJoin('cpu_datos_estudiantes as de', 'p.id', '=', 'de.id_persona')
+            ->leftJoin('cpu_datos_empleados as dem', 'p.id', '=', 'dem.id_persona')
+            ->leftJoin('cpu_datos_medicos as dm', 'p.id', '=', 'dm.id_persona')
+            ->leftJoin('users as u', 'at.id_funcionario', '=', 'u.id')
+            ->leftJoin('cpu_userrole as ur', 'u.usr_tipo', '=', 'ur.id_userrole')
+            ->leftJoin('cpu_tipo_usuario as tu', 'at.id_tipo_usuario', '=', 'tu.id')
+            ->select(
+                'at.id',
+                'at.id_persona',
+                'at.via_atencion',
+                'at.motivo_atencion',
+                'at.fecha_hora_atencion',
+                'at.detalle_atencion',
+                'at.tipo_atencion',
+                'at.recomendacion',
+                'p.cedula',
+                'p.nombres',
+                'p.provincia',
+                'p.ciudad',
+                'p.tipoetnia',
+                'p.discapacidad',
+                'p.sexo',
+                'p.direccion',
+                'de.campus',
+                'de.estado_civil',
+                'de.segmentacion_persona',
+                'dem.puesto',
+                'dem.modalidad',
+                'dem.unidad as facultad',
+                'dem.carrera',
+                'dm.enfermedades_catastroficas',
+                'dm.tiene_seguro_medico',
+                'dm.embarazada',
+                'ur.role as area',
+                'tu.tipo_usuario as clasificacion_usuario'
+            )
+            ->whereBetween('at.fecha_hora_atencion', [$fechaInicio, $fechaFin]);
+
+        $atenciones = $query->get();
+
+        Log::info('Campus únicos encontrados:', $atenciones->pluck('campus')->unique()->toArray());
+
+        // Aplicar filtro por sede
+        // if (!empty($nombreSede)) {
+        //     $atenciones = $atenciones->filter(function ($item) use ($normalize, $nombreSede) {
+        //         return $item->campus !== null && $normalize($item->campus) === $nombreSede;
+        //     })->values();
+        // }
+        if (!empty($nombreSede)) {
+            $atenciones = $atenciones->filter(function ($item) use ($normalize, $nombreSede) {
+                $campusNormalizado = $normalize($item->campus);
+
+                // Si la sede es Manta, acepta también Matriz - Manta
+                if ($nombreSede === 'MATRIZ - MANTA') {
+                    return in_array($campusNormalizado, ['MANTA', 'MATRIZ - MANTA']);
+                }
+
+                return $campusNormalizado === $nombreSede;
+            })->values();
+        }
+
+
+        // Agrupar por persona
+        $agrupadoPorPersona = $atenciones->groupBy('id_persona')->map(function ($atenciones, $id_persona) use ($normalize, $booleanToSiNo) {
+            $persona = $atenciones->first();
+            return [
+                'id_persona' => $id_persona,
+                'cedula' => $persona->cedula,
+                'nombres' => $normalize($persona->nombres),
+                'provincia' => $normalize($persona->provincia),
+                'ciudad' => $normalize($persona->ciudad),
+                'sexo' => $normalize($persona->sexo),
+                'tipoetnia' => $normalize($persona->tipoetnia),
+                'discapacidad' => $booleanToSiNo($persona->discapacidad),
+                'clasificacionUsuario' => $normalize($persona->clasificacion_usuario),
+                'campus' => $normalize($persona->campus),
+                'estadoCivil' => $normalize($persona->estado_civil),
+                'segmentacionPersona' => $normalize($persona->segmentacion_persona),
+                'enfermedadesCatastroficas' => $booleanToSiNo($persona->enfermedades_catastroficas),
+                'tieneSeguroMedico' => $booleanToSiNo($persona->tiene_seguro_medico),
+                'embarazada' => $booleanToSiNo($persona->embarazada),
+                'puesto' => $normalize($persona->puesto),
+                'modalidad' => $normalize($persona->modalidad),
+                'facultad' => $normalize($persona->facultad),
+                'carrera' => $normalize($persona->carrera),
+                'totalAtenciones' => $atenciones->count(),
+                'atenciones' => $atenciones->map(function ($atencion) use ($normalize) {
+                    return [
+                        'id' => $atencion->id,
+                        'via_atencion' => $normalize($atencion->via_atencion),
+                        'motivo_atencion' => $normalize($atencion->motivo_atencion),
+                        'fecha_hora_atencion' => Carbon::parse($atencion->fecha_hora_atencion)->translatedFormat('l, d F Y'),
+                        'detalle_atencion' => $normalize($atencion->detalle_atencion),
+                        'tipo_atencion' => $normalize($atencion->tipo_atencion),
+                        'recomendacion' => $normalize($atencion->recomendacion),
+                        'area' => $normalize($atencion->area),
+                    ];
+                })
+            ];
+        })->values();
+
+        $this->auditar('reporte', 'getTotalAtencionesPorSede', '', '', 'CONSULTA', 'Consulta de total de atenciones por sede');
+
+        return response()->json([
+            'total_atenciones' => $agrupadoPorPersona->sum(fn($persona) => $persona['totalAtenciones']),
+            'personas' => $agrupadoPorPersona
+        ]);
+    }
+
     //funcion para auditar
     private function auditar($tabla, $campo, $dataOld, $dataNew, $tipo, $descripcion, $request = null)
     {

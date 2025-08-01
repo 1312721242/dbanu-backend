@@ -64,6 +64,7 @@ use App\Http\Controllers\CpuTerapiaLenguajeController;
 use App\Http\Controllers\CpuTipoBecaController;
 use App\Http\Controllers\CpuTramiteController;
 use App\Http\Controllers\ReporteController;
+use App\Http\Controllers\CpuPedidoCosturaController;
 use App\Http\Controllers\ProductosControllers;
 use App\Http\Controllers\ProveedoresControllers;
 use App\Http\Controllers\CategoriaActivosControllers;
@@ -478,6 +479,8 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('/valores-unicos', [ReporteController::class, 'getAllUnifiedUniqueValuesForSelects']);
     // API para obtener el total de atenciones por fecha
     Route::post('/reporte/total-atenciones-por-fecha', [ReporteController::class, 'getTotalAtencionesPorFecha']);
+    Route::post('/reporte/total-atenciones-por-areas', [ReporteController::class, 'getTotalAtencionesPorArea']);
+    Route::post('/reporte/total-atenciones-por-sede', [ReporteController::class, 'getTotalAtencionesPorSedes']);
 
     // API para guardar o actualizar datos sociales
     Route::post('/datos-sociales', [CpuDatosSocialesController::class, 'store']);
@@ -519,6 +522,11 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
     //API  - secretaria de direccion
     Route::post('/usuarios/externos/secretaria', [CpuPersonaController::class, 'store']);
+
+    //Taller costura
+    Route::post('/pedidos-costura', [CpuPedidoCosturaController::class, 'store']);
+    Route::get('/pedidos-costura', [CpuPedidoCosturaController::class, 'index']);
+    Route::put('/pedidos-costura/{id}', [CpuPedidoCosturaController::class, 'update']);
 
     //profesiones
     Route::post('/agregar-profesion', [CpuProfesionController::class, 'agregarProfesion']);

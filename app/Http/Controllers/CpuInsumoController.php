@@ -27,13 +27,13 @@ class CpuInsumoController extends Controller
 
     public function getInsumos()
     {
-        $insumosMedicos = CpuInsumo::where('id_tipo_insumo', '!=', 1)
+        $insumosMedicos = CpuInsumo::where('id_tipo_insumo', '=',3 )
             ->where('cantidad_unidades', '>=', 1)
             ->orderBy('ins_descripcion', 'asc')
             ->select('id', 'id_tipo_insumo', 'ins_descripcion', 'cantidad_unidades', 'ins_cantidad')
             ->get();
 
-        $medicamentos = CpuInsumo::where('id_tipo_insumo', '=', 1)
+        $medicamentos = CpuInsumo::where('id_tipo_insumo', '=', 2)
             ->where('cantidad_unidades', '>=', 1)
             ->orderBy('ins_descripcion', 'asc')
             ->select('id', 'id_tipo_insumo', 'ins_descripcion', 'cantidad_unidades', 'ins_cantidad')

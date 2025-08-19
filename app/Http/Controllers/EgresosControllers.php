@@ -19,7 +19,7 @@ class EgresosControllers extends Controller
     public function consultarEgresos()
     {
         try {
-            $data = DB::table('cpu_encabezados_egresos as cee')
+            $data = DB::table('cpu_encabezados_egresos as cee') 
                 ->select(
                     'cee.ee_id',
                     'cee.ee_id_funcionario',
@@ -78,6 +78,37 @@ class EgresosControllers extends Controller
             $this->logController->saveLog('Nombre de Controlador: IngresosControllers, Nombre de Funcion:consultarIngresosId($id)', 'Error al consultar ingresos: ' . $e->getMessage());
             Log::error('Error al consultar ingresos: ' . $e->getMessage());
             return response()->json(['error' => 'Error al consultar ingresos: ' . $e->getMessage()], 500);
+        }
+    }
+
+    public function guardarObservacionEgreso(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'idEgreso' => 'required|integer',
+            'observacion' => 'required|string|max:255',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['error' => $validator->errors()], 422);
+        }
+
+        try {
+            $dataold = DB::table('cpu_encabezados_egresos')
+                ->where('ee_id', $request->idEgreso)
+                ->value('ee_observacion');
+
+            $response = DB::table('cpu_encabezados_egresos')
+                ->where('ee_id', $request->idEgreso)
+                ->update(['ee_observacion' => $request->observacion]);
+
+            $descripcionAuditoria = 'Se actualizó la observación del egreso con ID: ' . $dataold . ' de : ' . $request->observacion .'a'. $request->observacion;
+            $this->auditoriaController->auditar('cpu_encabezados_egresos', 'guardarObservacionEgreso(Request $request)',  $dataold,  json_encode($response), 'UPDATE', $descripcionAuditoria);
+
+            return response()->json(['message' => 'Observación actualizada correctamente', "response" => $response], 200);
+        } catch (\Exception $e) {
+            $this->logController->saveLog('Nombre de Controlador: EgresosControllers, Nombre de Funcion: guardarObservacionEgreso()', 'Error al guardar observación: ' . $e->getMessage());
+            Log::error('Error al guardar observación: ' . $e->getMessage());
+            return response()->json(['error' => 'Error al guardar observación: ' . $e->getMessage()], 500);
         }
     }
 

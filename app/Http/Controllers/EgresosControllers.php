@@ -19,7 +19,7 @@ class EgresosControllers extends Controller
     public function consultarEgresos()
     {
         try {
-            $data = DB::table('cpu_encabezados_egresos as cee') 
+            $data = DB::table('cpu_encabezados_egresos as cee')
                 ->select(
                     'cee.ee_id',
                     'cee.ee_id_funcionario',
@@ -81,16 +81,19 @@ class EgresosControllers extends Controller
         }
     }
 
-    public function guardarObservacionEgreso(Request $request)
+    public function guardarAtencionEgreso(Request $request)
     {
         $validator = Validator::make($request->all(), [
             'idEgreso' => 'required|integer',
-            'observacion' => 'required|string|max:255',
+            //'observacion' => 'required|string|max:255',
         ]);
 
         if ($validator->fails()) {
             return response()->json(['error' => $validator->errors()], 422);
         }
+        $nroEgreso = DB::table('cpu_encabezados_egresos')
+                ->where('ee_id', $request->idEgreso)
+                ->value('ee_numero_egreso');
 
         try {
             $dataold = DB::table('cpu_encabezados_egresos')
@@ -101,8 +104,58 @@ class EgresosControllers extends Controller
                 ->where('ee_id', $request->idEgreso)
                 ->update(['ee_observacion' => $request->observacion]);
 
-            $descripcionAuditoria = 'Se actualizó la observación del egreso con ID: ' . $dataold . ' de : ' . $request->observacion .'a'. $request->observacion;
-            $this->auditoriaController->auditar('cpu_encabezados_egresos', 'guardarObservacionEgreso(Request $request)',  $dataold,  json_encode($response), 'UPDATE', $descripcionAuditoria);
+            $descripcionAuditoria = 'Se actualizó la obaservación de atención del egreso #: ' . $nroEgreso . ' con la abservación: ' . $request->observacion;
+            $this->auditoriaController->auditar('cpu_encabezados_egresos', 'guardarAtencionEgreso(Request $request)', $dataold, $request->observacion, 'UPDATE', $descripcionAuditoria);
+
+
+            $detalleEgreso = DB::table('cpu_encabezados_egresos')
+                ->where('ee_id', $request->idEgreso)
+                ->value('ee_detalle');
+
+            if ($detalleEgreso) {
+                // Convertir de JSON a array PHP
+                $detalleEgreso = json_decode($detalleEgreso, true);
+
+                // 3. REINSERTAR MOVIMIENTOS y RECALCULAR STOCK
+                foreach ($detalleEgreso as $value) {
+                    $idInsumo = $value['idInsumo'];
+                    $cantidad = (int) $value['cantidad'];
+
+                    // RECONSTRUIR STOCK ACTUAL antes de este egreso
+                    $stockAnterior = DB::table('cpu_movimientos_inventarios')
+                        ->where('mi_id_insumo', $idInsumo)
+                        ->orderBy('mi_created_at', 'desc')
+                        ->value('mi_stock_actual') ?? 0;
+
+                    $stockNuevo = $stockAnterior - $cantidad;
+
+                    DB::table('cpu_movimientos_inventarios')->insert([
+                        'mi_id_insumo'       => $idInsumo,
+                        'mi_cantidad'        => $cantidad,
+                        'mi_stock_anterior'  => $stockAnterior,
+                        'mi_stock_actual'    => $stockNuevo,
+                        'mi_tipo_transaccion' => 2,
+                        'mi_fecha'           => now(),
+                        'mi_created_at'      => now(),
+                        'mi_updated_at'      => now(),
+                        'mi_user_id'         => $request->user()->id,
+                        'mi_id_encabezado'   => $request->idEgreso,
+                    ]);
+                }
+            }
+
+            $descripcionAuditoria = 'Se actuaalizo los movimientos de inventario del egreso #: ' . $nroEgreso;
+            $this->auditoriaController->auditar('cpu_movimientos_inventarios', 'guardarAtencionEgreso(Request $request)', '', $detalleEgreso, 'INSERT', $descripcionAuditoria);
+
+            DB::table('cpu_encabezados_egresos')
+                ->where('ee_id', $request->idEgreso)
+                ->update(['ee_id_estado' => 2, 'ee_id_user' => $request->user()->id]); 
+
+            $descripcionAuditoria = 'Se actualizó el estado del egreso #: ' . $nroEgreso . ' a "Atendido"';
+            $this->auditoriaController->auditar('cpu_encabezados_egresos', 'guardarAtencionEgreso(Request $request)', '', '', 'UPDATE', $descripcionAuditoria);
+
+            // $descripcionAuditoria = 'Se actualizó la observación del egreso con ID: ' . $dataold . ' de : ' . $request->observacion . 'a' . $request->observacion;
+            // $this->auditoriaController->auditar('cpu_encabezados_egresos', 'guardarObservacionEgreso(Request $request)',  $dataold,  $request->observacion, 'UPDATE', $descripcionAuditoria);
 
             return response()->json(['message' => 'Observación actualizada correctamente', "response" => $response], 200);
         } catch (\Exception $e) {

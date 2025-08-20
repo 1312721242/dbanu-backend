@@ -561,7 +561,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     //Egresos
     Route::get('/get-egreso', [EgresosControllers::class, 'consultarEgresos']);
     Route::get('/get-egreso-id/{id}', [EgresosControllers::class, 'getConsultarEgresosId']);
-    Route::post('/guardar-observacion', [EgresosControllers::class, 'guardarObservacionEgreso']);
+    Route::post('/guardar-atencion-egreso', [EgresosControllers::class, 'guardarAtencionEgreso']);
 
 
     //API

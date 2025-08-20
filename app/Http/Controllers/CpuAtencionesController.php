@@ -1248,20 +1248,13 @@ class CpuAtencionesController extends Controller
 
             $ee_id = DB::table('cpu_encabezados_egresos')->insertGetId([
                 'ee_id_funcionario' => $request->input('id_funcionario'),
-                //'ee_cedula_funcionario' => $ee_cedula_funcionario,
+                'ee_numero_egreso' => 'ULEAM-DBU-E-'. str_pad(DB::table('cpu_encabezados_egresos')->max('ee_id') + 1, 6, '0', STR_PAD_LEFT),
                 'ee_id_paciente' => $request->input('id_persona'),
-                //'ee_cedula_paciente' => $ee_cedula_paciente,
                 'ee_id_atencion_medicina_general' => $medicinaGeneral->id,
-                // 'ee_id_facultad' => $ee_id_facultad,
-                // 'ee_id_carrera' => $ee_id_carrera,
-                // 'ee_tipo_usuario' => $ee_tipo_usuario,
                 'ee_detalle' => $listaInsumos ? json_encode($listaInsumos) : null,
                 'ee_id_estado' => 21,
-                //'ee_id_user' => $request && !is_string($request) ? $request->user()->id : auth()->user()->id,
                 'ee_created_at' => Carbon::now(),
                 'ee_updated_at' => Carbon::now(),
-                // 'ee_observacion' => $ee_observacion,
-                // 'ee_id_derivacion' => $ee_id_derivacion,
             ], 'ee_id');
 
             $descripcion = "Se registró un egreso con ID {$ee_id} para la atención {$medicinaGeneral->id} con los siguientes insumos: " . json_encode($listaInsumos);

@@ -22,9 +22,10 @@ class EgresosControllers extends Controller
             $data = DB::table('cpu_encabezados_egresos as cee')
                 ->select(
                     'cee.ee_id',
+
                     'cee.ee_id_funcionario',
-                    'u.name as nombre_funcionario',
-                    'u.email as email_funcionario',
+                    'uf.name as nombre_funcionario',
+                    'uf.email as email_funcionario',
                     'cee.ee_cedula_funcionario',
 
                     'cee.ee_id_paciente',
@@ -35,16 +36,22 @@ class EgresosControllers extends Controller
                     'cee.ee_detalle',
                     'cee.ee_id_estado',
                     'e.estado as nombre_estado',
+
                     'cee.ee_id_user',
+                    'uu.name as nombre_usuario',
+                    'uu.email as email_usuario',
+
                     'cee.ee_created_at',
                     'cee.ee_updated_at',
                     'cee.ee_observacion',
                     'cee.ee_id_atencion_medicina_general'
                 )
-                ->leftJoin('users as u', 'cee.ee_id_funcionario', '=', 'u.id')
+                ->leftJoin('users as uf', 'cee.ee_id_funcionario', '=', 'uf.id') // funcionario
+                ->leftJoin('users as uu', 'cee.ee_id_user', '=', 'uu.id')       // usuario que creó/modificó
                 ->leftJoin('cpu_estados as e', 'cee.ee_id_estado', '=', 'e.id')
                 ->leftJoin('cpu_personas as p', 'cee.ee_id_paciente', '=', 'p.id')
                 ->get();
+
             return response()->json($data, 200);
         } catch (\Exception $e) {
             $this->logController->saveLog('Nombre de Controlador: EgresosControllers, Nombre de Funcion: consultarEgresos()', 'Error al consultar egresos: ' . $e->getMessage());
@@ -92,8 +99,8 @@ class EgresosControllers extends Controller
             return response()->json(['error' => $validator->errors()], 422);
         }
         $nroEgreso = DB::table('cpu_encabezados_egresos')
-                ->where('ee_id', $request->idEgreso)
-                ->value('ee_numero_egreso');
+            ->where('ee_id', $request->idEgreso)
+            ->value('ee_numero_egreso');
 
         try {
             $dataold = DB::table('cpu_encabezados_egresos')
@@ -149,7 +156,7 @@ class EgresosControllers extends Controller
 
             DB::table('cpu_encabezados_egresos')
                 ->where('ee_id', $request->idEgreso)
-                ->update(['ee_id_estado' => 2, 'ee_id_user' => $request->user()->id]); 
+                ->update(['ee_id_estado' => 2, 'ee_id_user' => $request->user()->id]);
 
             $descripcionAuditoria = 'Se actualizó el estado del egreso #: ' . $nroEgreso . ' a "Atendido"';
             $this->auditoriaController->auditar('cpu_encabezados_egresos', 'guardarAtencionEgreso(Request $request)', '', '', 'UPDATE', $descripcionAuditoria);

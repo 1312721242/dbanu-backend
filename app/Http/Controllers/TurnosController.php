@@ -19,6 +19,7 @@ class TurnosController extends Controller
         $this->auditoriaController = new AuditoriaControllers();
         $this->logController = new LogController();
     }
+
     // public function agregarTurnos(Request $request)
     // {
     //     $user = Auth::user();
@@ -246,68 +247,53 @@ class TurnosController extends Controller
         }
     }
 
-
-    // public function listarTurnosPorFuncionario(Request $request)
-    // {
-    //     $idFuncionario = $request->query('funcionario');
-    //     $fecha = $request->query('fecha');
-    //     $area = $request->query('area');
-    //     $horaActual = Carbon::now()->format('H:i:s');
-
-    //     // Log para depuración
-    //     Log::info("Funcionario: $idFuncionario, Fecha: $fecha, Área: $area, Hora Actual: $horaActual");
-
-    //     $turnosQuery = CpuTurno::where('id_medico', $idFuncionario)
-    //         ->where('estado', 1)
-    //         ->where('area', $area)
-    //         ->whereDate('fehca_turno', $fecha);
-
-    //     if ($fecha == Carbon::now()->format('Y-m-d')) {
-    //         $turnosQuery->where('hora', '>', $horaActual);
-    //     }
-
-    //     $turnos = $turnosQuery->get();
-
-    //     // Depuración de SQL
-    //     Log::info("Consulta SQL: " . $turnosQuery->toSql());
-    //     Log::info("Parámetros de consulta: " . json_encode($turnosQuery->getBindings()));
-
-    //     // Formatear las fechas y horas
-    //     $turnos = $turnos->map(function ($turno) {
-    //         $turno->fehca_turno = Carbon::parse($turno->fehca_turno)->format('Y-m-d');
-    //         $turno->hora = Carbon::parse($turno->hora)->format('H:i:s');
-    //         return $turno;
-    //     });
-
-    //     Log::info("Turnos encontrados: " . $turnos->count());
-    //     Log::info("Turnos: " . json_encode($turnos));
-    //     //auditar
-    //     $this->auditar('turnos', 'listarTurnosPorFuncionario', '', $turnos, 'CONSULTA', 'Consulta de turnos por funcionario');
-
-    //     return response()->json($turnos);
-    // }
-
     public function listarTurnosPorFuncionario(Request $request)
     {
         $idFuncionario = $request->query('funcionario');
         $fecha = $request->query('fecha');
         $area = $request->query('area');
         $horaActual = Carbon::now()->format('H:i:s');
+        $area_deriva = $request->query('area_deriva');
+        // // Validar que el área deriva sea un valor válido
+        // if (!in_array($area_deriva, ['FISIOTERAPIA', 'OTROS'])) {
+        //     return response()->json(['error' => 'Área deriva no válida'], 400);
+        // }
 
         // Log para depuración
-        Log::info("Funcionario: $idFuncionario, Fecha: $fecha, Área: $area, Hora Actual: $horaActual");
+        Log::info("Funcionario: $idFuncionario, Fecha: $fecha, Área: $area, Hora Actual: $horaActual, Área Deriva: $area_deriva");
 
-        if ($area == 8) {
+
+        // if ($area == 8) {
+        //     $turnosQuery = CpuTurno::where('id_medico', $idFuncionario)
+        //         ->where('estado', 1)
+        //         ->where('area', $area)
+        //         ->where('tipo_atencion', 2)
+        //         ->whereDate('fehca_turno', $fecha);
+        // } else {
+        //     $turnosQuery = CpuTurno::where('id_medico', $idFuncionario)
+        //         ->where('estado', 1)
+        //         ->where('area', $area)
+        //         ->whereDate('fehca_turno', $fecha);
+        // }
+        if ($area_deriva === 'FISIOTERAPIA') {
             $turnosQuery = CpuTurno::where('id_medico', $idFuncionario)
                 ->where('estado', 1)
                 ->where('area', $area)
-                ->where('tipo_atencion', 2)
+                ->where('tipo_atencion', 1)
                 ->whereDate('fehca_turno', $fecha);
         } else {
-            $turnosQuery = CpuTurno::where('id_medico', $idFuncionario)
-                ->where('estado', 1)
-                ->where('area', $area)
-                ->whereDate('fehca_turno', $fecha);
+            if ($area == 8) {
+                $turnosQuery = CpuTurno::where('id_medico', $idFuncionario)
+                    ->where('estado', 1)
+                    ->where('area', $area)
+                    ->where('tipo_atencion', 2)
+                    ->whereDate('fehca_turno', $fecha);
+            } else {
+                $turnosQuery = CpuTurno::where('id_medico', $idFuncionario)
+                    ->where('estado', 1)
+                    ->where('area', $area)
+                    ->whereDate('fehca_turno', $fecha);
+            }
         }
 
         if ($fecha == Carbon::now()->format('Y-m-d')) {

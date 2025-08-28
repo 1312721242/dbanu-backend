@@ -337,6 +337,9 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::post('/registrar-consumo', [CpuConsumoBecadoController::class, 'registrarConsumo']);
     Route::get('registros-por-fechas/{fechaInicio}/{fechaFin}', [CpuConsumoBecadoController::class, 'registrosPorFechas']);
     Route::get('detalle-registros/{fechaInicio}/{fechaFin}', [CpuConsumoBecadoController::class, 'detalleRegistros']);
+    Route::get('detalle-registros/{fechaInicio}/{fechaFin}', [CpuConsumoBecadoController::class, 'detalleRegistros']);
+    Route::get('/becados/resumen', [CpuConsumoBecadoController::class, 'obtenerResumenBecados']);
+    Route::get('/becados/periodos', [CpuConsumoBecadoController::class, 'obtenerPeriodos']);
 
     Route::get('/obtener-cie10', [CpuAtencionPsicologiaController::class, 'obtenerCie10']);
     // routes/api.php
@@ -532,7 +535,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::post('/agregar-profesion', [CpuProfesionController::class, 'agregarProfesion']);
     Route::put('/modificar-profesion/{id}', [CpuProfesionController::class, 'modificarProfesion']);
     Route::delete('/eliminar-profesion/{id}', [CpuProfesionController::class, 'eliminarProfesion']);
-    Route::get('/consultar-profesion', [CpuProfesionController::class, 'consultarProfesiones']);
+    Route::get('/consultar-profesiones', [CpuProfesionController::class, 'consultarProfesiones']);
 
     //Secretaria  Matriculas
     Route::get('/consultar-secretaria-matricula', [SecretariasMatriculasControllers::class, 'consultarSecretariasMatriculas']);

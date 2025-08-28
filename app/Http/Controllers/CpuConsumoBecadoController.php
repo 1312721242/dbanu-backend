@@ -74,88 +74,87 @@ class CpuConsumoBecadoController extends Controller
     //     return response()->json(['message' => 'Consumo registrado correctamente', 'code' => 200], 200);
     // }
 
-public function registrarConsumo(Request $request)
-{
-    $request->validate([
-        'id' => 'required|integer',
-        'periodo' => 'nullable|string',
-        'identificacion' => 'required|string',
-        'tipo_alimento' => 'required|string',
-        'monto_facturado' => 'required|numeric',
-        'tipo_usuario' => 'required|string',
-        'id_sede' => 'required|integer',
-        'id_facultad' => 'required|integer',
-        'id_user' => 'required|integer',
-    ]);
-
-    DB::beginTransaction();
-
-    try {
-        if ($request->tipo_usuario === 'Ayuda Económica' || $request->tipo_usuario === 'becado') {
-            $consumo = new CpuConsumoBecado();
-            $consumo->id_becado = $request->id;
-            $consumo->periodo = $request->periodo;
-            $consumo->identificacion = $request->identificacion;
-            $consumo->tipo_alimento = $request->tipo_alimento;
-            $consumo->monto_facturado = $request->monto_facturado;
-            $consumo->id_sede = $request->id_sede;
-            $consumo->id_facultad = $request->id_facultad;
-            $consumo->id_user = $request->id_user;
-            $consumo->save();
-
-            $becado = CpuBecado::where('id', $request->id)->first();
-            $becado->monto_consumido += $request->monto_facturado;
-            $becado->save();
-
-            $restante = $becado->monto_otorgado - $becado->monto_consumido;
-        } else {
-            $consumo = new CpuConsumoFuncionarioComunidad();
-            $consumo->id_funcionario_comunidad = $request->id;
-            $consumo->identificacion = $request->identificacion;
-            $consumo->tipo_alimento = $request->tipo_alimento;
-            $consumo->monto_facturado = $request->monto_facturado;
-            $consumo->id_sede = $request->id_sede;
-            $consumo->id_facultad = $request->id_facultad;
-            $consumo->forma_pago = $request->forma_pago;
-            $consumo->id_user = $request->id_user;
-            $consumo->save();
-
-            $restante = 0;
-        }
-
-        //Enviar correo
-        $this->enviarCorreo($request, $restante);
-
-        //Auditar
-        $this->auditar(
-            'cpu_consumo_becado',
-            'registrarConsumo',
-            '',
-            $consumo,
-            'INSERCION',
-            'Consumo de alimentos por ayuda económica - Tasty Uleam, Identificacion: ' . $request->identificacion .
-            ' - Monto: ' . $request->monto_facturado .
-            ' - Tipo de alimento: ' . $request->tipo_alimento .
-            ' - Tipo de usuario: ' . $request->tipo_usuario .
-            ' | Sede: ' . $request->id_sede .
-            ' | Facultad: ' . $request->id_facultad
-        );
-
-        DB::commit(); //Todo correcto
-
-        return response()->json(['message' => 'Consumo registrado correctamente', 'code' => 200], 200);
-
-    } catch (\Exception $e) {
-        DB::rollBack(); //Algo falló, revierte todo
-
-        Log::error('Error en registrarConsumo: ' . $e->getMessage(), [
-            'request' => $request->all(),
-            'exception' => $e
+    public function registrarConsumo(Request $request)
+    {
+        $request->validate([
+            'id' => 'required|integer',
+            'periodo' => 'nullable|string',
+            'identificacion' => 'required|string',
+            'tipo_alimento' => 'required|string',
+            'monto_facturado' => 'required|numeric',
+            'tipo_usuario' => 'required|string',
+            'id_sede' => 'required|integer',
+            'id_facultad' => 'required|integer',
+            'id_user' => 'required|integer',
         ]);
 
-        return response()->json(['message' => 'Error al registrar consumo. No se guardaron los cambios.', 'error' => $e->getMessage()], 500);
+        DB::beginTransaction();
+
+        try {
+            if ($request->tipo_usuario === 'Ayuda Económica' || $request->tipo_usuario === 'becado') {
+                $consumo = new CpuConsumoBecado();
+                $consumo->id_becado = $request->id;
+                $consumo->periodo = $request->periodo;
+                $consumo->identificacion = $request->identificacion;
+                $consumo->tipo_alimento = $request->tipo_alimento;
+                $consumo->monto_facturado = $request->monto_facturado;
+                $consumo->id_sede = $request->id_sede;
+                $consumo->id_facultad = $request->id_facultad;
+                $consumo->id_user = $request->id_user;
+                $consumo->save();
+
+                $becado = CpuBecado::where('id', $request->id)->first();
+                $becado->monto_consumido += $request->monto_facturado;
+                $becado->save();
+
+                $restante = $becado->monto_otorgado - $becado->monto_consumido;
+            } else {
+                $consumo = new CpuConsumoFuncionarioComunidad();
+                $consumo->id_funcionario_comunidad = $request->id;
+                $consumo->identificacion = $request->identificacion;
+                $consumo->tipo_alimento = $request->tipo_alimento;
+                $consumo->monto_facturado = $request->monto_facturado;
+                $consumo->id_sede = $request->id_sede;
+                $consumo->id_facultad = $request->id_facultad;
+                $consumo->forma_pago = $request->forma_pago;
+                $consumo->id_user = $request->id_user;
+                $consumo->save();
+
+                $restante = 0;
+            }
+
+            //Enviar correo
+            $this->enviarCorreo($request, $restante);
+
+            //Auditar
+            $this->auditar(
+                'cpu_consumo_becado',
+                'registrarConsumo',
+                '',
+                $consumo,
+                'INSERCION',
+                'Consumo de alimentos por ayuda económica - Tasty Uleam, Identificacion: ' . $request->identificacion .
+                    ' - Monto: ' . $request->monto_facturado .
+                    ' - Tipo de alimento: ' . $request->tipo_alimento .
+                    ' - Tipo de usuario: ' . $request->tipo_usuario .
+                    ' | Sede: ' . $request->id_sede .
+                    ' | Facultad: ' . $request->id_facultad
+            );
+
+            DB::commit(); //Todo correcto
+
+            return response()->json(['message' => 'Consumo registrado correctamente', 'code' => 200], 200);
+        } catch (\Exception $e) {
+            DB::rollBack(); //Algo falló, revierte todo
+
+            Log::error('Error en registrarConsumo: ' . $e->getMessage(), [
+                'request' => $request->all(),
+                'exception' => $e
+            ]);
+
+            return response()->json(['message' => 'Error al registrar consumo. No se guardaron los cambios.', 'error' => $e->getMessage()], 500);
+        }
     }
-}
 
 
     public function registrosPorFechas($fechaInicio, $fechaFin, Request $request)
@@ -505,7 +504,65 @@ public function registrarConsumo(Request $request)
         }
     }
 
+    public function obtenerPeriodos()
+    {
+        $periodos = CpuBecado::query()
+            ->select('periodo')
+            ->distinct()
+            ->orderBy('periodo', 'desc')
+            ->pluck('periodo');
 
+        return response()->json([
+            'message' => 'Periodos disponibles',
+            'data' => $periodos
+        ], 200);
+    }
+
+
+    public function obtenerResumenBecados(Request $request)
+    {
+        $request->validate([
+            'periodo'   => 'required|string',
+            'page'      => 'nullable|integer|min:1',
+            'per_page'  => 'nullable|integer|min:1|max:1000',
+        ]);
+
+        $perPage = (int) $request->input('per_page', 15);
+
+        $query = CpuBecado::query()
+            ->select([
+                'periodo',
+                'identificacion',
+                'nombres',
+                'apellidos',
+                'sexo',
+                'beca',
+                'monto_otorgado',
+                'monto_consumido',
+                'matriz_extension',
+                'facultad',
+                'carrera',
+            ])
+            ->selectRaw('COALESCE(monto_otorgado,0) - COALESCE(monto_consumido,0) AS por_consumir')
+            ->where('periodo', $request->periodo)
+            ->orderBy('id', 'asc');
+
+        $result = $query->paginate($perPage);
+
+        return response()->json([
+            'message'    => 'Resumen de becados',
+            'filters'    => [
+                'periodo' => $request->periodo,
+            ],
+            'data'       => $result->items(),
+            'pagination' => [
+                'current_page' => $result->currentPage(),
+                'per_page'     => $result->perPage(),
+                'total'        => $result->total(),
+                'last_page'    => $result->lastPage(),
+            ],
+        ], 200);
+    }
 
 
     //funcion para auditar

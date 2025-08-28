@@ -384,7 +384,7 @@ class CpuCorreoEnviadoController extends Controller
                 return response()->json(['error' => 'No se encontró email del paciente'], 400);
             }
         // Obtener los datos necesarios desde el array validado
-        $email_paciente = 'junior.zamora@uleam.edu.ec';
+        // $email_paciente = 'junior.zamora@uleam.edu.ec';
 
             $paciente = DB::table('cpu_personas')
                 ->where('id', $request->input('id_paciente'))

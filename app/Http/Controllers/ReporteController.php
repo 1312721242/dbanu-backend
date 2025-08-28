@@ -259,111 +259,6 @@ class ReporteController extends Controller
         ]);
     }
 
-    // Función para obtener el total de registros de atenciones en un rango de fechas
-    // public function getTotalAtencionesPorFecha(Request $request)
-    // {
-    //     $fechaInicio = $request->input('fechaInicio');
-    //     $fechaFin = $request->input('fechaFin');
-
-    //     // Función para normalizar cadenas
-    //     $normalize = function ($value) {
-    //         if (is_null($value)) {
-    //             return null;
-    //         }
-    //         $value = mb_strtoupper(trim($value)); // Convertir a mayúsculas y quitar espacios
-    //         $value = str_replace(['Á', 'É', 'Í', 'Ó', 'Ú'], ['A', 'E', 'I', 'O', 'U'], $value); // Normaliza caracteres con tilde
-    //         return preg_replace('/(\/A|\/O)$/', '', $value); // Elimina sufijos como "/A" o "/O"
-    //     };
-
-    //     // Función para convertir valores booleanos a "SI" o "NO"
-    //     $booleanToSiNo = function ($value) {
-    //         return $value ? 'SI' : 'NO';
-    //     };
-
-    //     // Obtener las atenciones dentro del rango de fechas
-    //     $atenciones = DB::table('cpu_atenciones as at')
-    //         ->join('cpu_personas as p', 'at.id_persona', '=', 'p.id')
-    //         ->leftJoin('cpu_datos_estudiantes as de', 'p.id', '=', 'de.id_persona')
-    //         ->leftJoin('cpu_datos_empleados as dem', 'p.id', '=', 'dem.id_persona')
-    //         ->leftJoin('cpu_datos_medicos as dm', 'p.id', '=', 'dm.id_persona')
-    //         ->select(
-    //             'at.id',
-    //             'at.id_persona',
-    //             'at.via_atencion',
-    //             'at.motivo_atencion',
-    //             'at.fecha_hora_atencion',
-    //             'at.detalle_atencion',
-    //             'at.tipo_atencion',
-    //             'at.recomendacion',
-    //             'p.cedula',
-    //             'p.nombres',
-    //             'p.provincia',
-    //             'p.ciudad',
-    //             'p.tipoetnia',
-    //             'p.discapacidad',
-    //             'p.sexo',
-    //             'p.direccion',
-    //             'de.campus',
-    //             'de.estado_civil',
-    //             'de.segmentacion_persona',
-    //             'dem.puesto',
-    //             'dem.modalidad',
-    //             'dem.unidad as facultad',
-    //             'dem.carrera',
-    //             'dm.enfermedades_catastroficas',
-    //             'dm.tiene_seguro_medico',
-    //             'dm.embarazada'
-    //         )
-    //         ->whereBetween('at.fecha_hora_atencion', [$fechaInicio, $fechaFin])
-    //         ->get();
-
-    //     // Agrupar por persona
-    //     $agrupadoPorPersona = $atenciones->groupBy('id_persona')->map(function ($atenciones, $id_persona) use ($normalize, $booleanToSiNo) {
-    //         $persona = $atenciones->first(); // Información principal de la persona
-    //         return [
-    //             'id_persona' => $id_persona,
-    //             'cedula' => $persona->cedula,
-    //             'nombres' => $normalize($persona->nombres),
-    //             'provincia' => $normalize($persona->provincia),
-    //             'ciudad' => $normalize($persona->ciudad),
-    //             'sexo' => $normalize($persona->sexo),
-    //             'tipoetnia' => $normalize($persona->tipoetnia),
-    //             'discapacidad' => $booleanToSiNo($persona->discapacidad),
-    //             'clasificacionUsuario' => $normalize($persona->tipoetnia), // Este campo puede adaptarse según la tabla
-    //             'campus' => $normalize($persona->campus),
-    //             'estadoCivil' => $normalize($persona->estado_civil),
-    //             'segmentacionPersona' => $normalize($persona->segmentacion_persona),
-    //             'enfermedadesCatastroficas' => $booleanToSiNo($persona->enfermedades_catastroficas),
-    //             'tieneSeguroMedico' => $booleanToSiNo($persona->tiene_seguro_medico),
-    //             'embarazada' => $booleanToSiNo($persona->embarazada),
-    //             'puesto' => $normalize($persona->puesto),
-    //             'modalidad' => $normalize($persona->modalidad),
-    //             'facultad' => $normalize($persona->facultad),
-    //             'carrera' => $normalize($persona->carrera),
-    //             'totalAtenciones' => $atenciones->count(),
-    //             'atenciones' => $atenciones->map(function ($atencion) use ($normalize) {
-    //                 return [
-    //                     'id' => $atencion->id,
-    //                     'via_atencion' => $normalize($atencion->via_atencion),
-    //                     'motivo_atencion' => $normalize($atencion->motivo_atencion),
-    //                     'fecha_hora_atencion' => Carbon::parse($atencion->fecha_hora_atencion)->translatedFormat('l, d F Y'),
-    //                     'detalle_atencion' => $normalize($atencion->detalle_atencion),
-    //                     'tipo_atencion' => $normalize($atencion->tipo_atencion),
-    //                     'recomendacion' => $normalize($atencion->recomendacion),
-    //                 ];
-    //             })
-    //         ];
-    //     })->values();
-
-    //     //auditar
-    //     $this->auditar('reporte', 'getTotalAtencionesPorFecha', '', '', 'CONSULTA', 'Consulta de total de atenciones por fecha');
-
-    //     return response()->json([
-    //         'total_atenciones' => $agrupadoPorPersona->sum(fn($persona) => $persona['totalAtenciones']), // Total de atenciones
-    //         'personas' => $agrupadoPorPersona // Datos agrupados por persona
-    //     ]);
-    // }
-
     public function getTotalAtencionesPorFecha(Request $request)
     {
         $fechaInicio = Carbon::parse($request->input('fechaInicio'))->startOfDay()->toDateTimeString();
@@ -378,16 +273,25 @@ class ReporteController extends Controller
             return preg_replace('/(\/A|\/O)$/', '', $value);
         };
 
-        //$booleanToSiNo = fn($value) => $value ? 'SI' : 'NO';
+        $normalize_estado_civil = fn($value) => empty($value) || strtolower($value) === 'null' ? 'SIN INFORMACION' : $value;
+
         $booleanToSiNo = fn($value) => $value === true ? 'SI' : 'NO';
 
-        $normalize_estado_civil = fn($value) => empty($value) || strtolower($value) === 'null' ? 'SIN INFORMACION' : $value;
+        $subqueryMedicos = DB::table('cpu_datos_medicos')
+            ->select('id', 'id_persona', 'enfermedades_catastroficas', 'tiene_seguro_medico', 'embarazada')
+            ->whereRaw('id IN (
+                                SELECT DISTINCT ON (id_persona) id
+                                FROM cpu_datos_medicos
+                                ORDER BY id_persona, id DESC
+         )');
 
         $query = DB::table('cpu_atenciones as at')
             ->join('cpu_personas as p', 'at.id_persona', '=', 'p.id')
             ->leftJoin('cpu_datos_estudiantes as de', 'p.id', '=', 'de.id_persona')
             ->leftJoin('cpu_datos_empleados as dem', 'p.id', '=', 'dem.id_persona')
-            ->leftJoin('cpu_datos_medicos as dm', 'p.id', '=', 'dm.id_persona')
+            ->leftJoinSub($subqueryMedicos, 'dm', function ($join) {
+                $join->on('p.id', '=', 'dm.id_persona');
+            })
             ->leftJoin('users as u', 'at.id_funcionario', '=', 'u.id')
             ->leftJoin('cpu_userrole as ur', 'u.usr_tipo', '=', 'ur.id_userrole')
             ->leftJoin('cpu_tipo_usuario as tu', 'at.id_tipo_usuario', '=', 'tu.id')
@@ -423,14 +327,13 @@ class ReporteController extends Controller
             )
             ->whereBetween('at.fecha_hora_atencion', [$fechaInicio, $fechaFin]);
 
-        // 👇 Aquí está tu única validación:
         if ($usr_tipo != 1) {
             $query->where('at.id_funcionario', $usr_id);
         }
 
         $atenciones = $query->get();
 
-        $agrupadoPorPersona = $atenciones->groupBy('id_persona')->map(function ($atenciones, $id_persona) use ($normalize,$normalize_estado_civil, $booleanToSiNo) {
+        $agrupadoPorPersona = $atenciones->groupBy('id_persona')->map(function ($atenciones, $id_persona) use ($normalize, $normalize_estado_civil, $booleanToSiNo) {
             $persona = $atenciones->first();
             return [
                 'id_persona' => $id_persona,
@@ -440,16 +343,12 @@ class ReporteController extends Controller
                 'ciudad' => $normalize($persona->ciudad),
                 'sexo' => $normalize($persona->sexo),
                 'tipoetnia' => $normalize($persona->tipoetnia),
-                //'discapacidad' => $booleanToSiNo($persona->discapacidad),
                 'discapacidad' => mb_strtoupper($persona->discapacidad ?? 'NO', 'UTF-8'),
                 'clasificacionUsuario' => $normalize($persona->clasificacion_usuario),
                 'campus' => $normalize($persona->campus),
                 'estadoCivil' => $normalize_estado_civil($persona->estado_civil),
-                //'estadoCivil' => $normalize($persona->estado_civil),
                 'segmentacionPersona' => $normalize($persona->segmentacion_persona),
                 'enfermedadesCatastroficas' => $booleanToSiNo($persona->enfermedades_catastroficas),
-
-                
                 'tieneSeguroMedico' => $booleanToSiNo($persona->tiene_seguro_medico),
                 'embarazada' => $booleanToSiNo($persona->embarazada),
                 'puesto' => $normalize($persona->puesto),
@@ -474,9 +373,14 @@ class ReporteController extends Controller
 
         $this->auditar('reporte', 'getTotalAtencionesPorFecha', '', '', 'CONSULTA', 'Consulta de total de atenciones por fecha');
 
+        $areas = $agrupadoPorPersona->flatMap(function ($persona) {
+            return collect($persona['atenciones'])->pluck('area');
+        })->filter()->unique()->values()->all();
+
         return response()->json([
             'total_atenciones' => $agrupadoPorPersona->sum(fn($persona) => $persona['totalAtenciones']),
-            'personas' => $agrupadoPorPersona
+            'personas' => $agrupadoPorPersona,
+            'areas' => $areas
         ]);
     }
 
@@ -495,11 +399,21 @@ class ReporteController extends Controller
 
         $booleanToSiNo = fn($value) => $value ? 'SI' : 'NO';
 
+        $subqueryMedicos = DB::table('cpu_datos_medicos')
+            ->select('id', 'id_persona', 'enfermedades_catastroficas', 'tiene_seguro_medico', 'embarazada')
+            ->whereRaw('id IN (
+            SELECT DISTINCT ON (id_persona) id
+            FROM cpu_datos_medicos
+            ORDER BY id_persona, id DESC
+        )');
+
         $query = DB::table('cpu_atenciones as at')
             ->join('cpu_personas as p', 'at.id_persona', '=', 'p.id')
             ->leftJoin('cpu_datos_estudiantes as de', 'p.id', '=', 'de.id_persona')
             ->leftJoin('cpu_datos_empleados as dem', 'p.id', '=', 'dem.id_persona')
-            ->leftJoin('cpu_datos_medicos as dm', 'p.id', '=', 'dm.id_persona')
+            ->leftJoinSub($subqueryMedicos, 'dm', function ($join) {
+                $join->on('p.id', '=', 'dm.id_persona');
+            })
             ->leftJoin('users as u', 'at.id_funcionario', '=', 'u.id')
             ->leftJoin('cpu_userrole as ur', 'u.usr_tipo', '=', 'ur.id_userrole')
             ->leftJoin('cpu_tipo_usuario as tu', 'at.id_tipo_usuario', '=', 'tu.id')
@@ -535,7 +449,6 @@ class ReporteController extends Controller
             )
             ->whereBetween('at.fecha_hora_atencion', [$fechaInicio, $fechaFin]);
 
-        // Si el usuario no es tipo 1, se filtra por su área
         if ($usr_tipo != 1) {
             $query->where('u.usr_tipo', $usr_tipo);
         }
@@ -582,9 +495,14 @@ class ReporteController extends Controller
 
         $this->auditar('reporte', 'getTotalAtencionesPorArea', '', '', 'CONSULTA', 'Consulta de total de atenciones por área');
 
+        $areas = $agrupadoPorPersona->flatMap(function ($persona) {
+            return collect($persona['atenciones'])->pluck('area');
+        })->filter()->unique()->values()->all();
+
         return response()->json([
             'total_atenciones' => $agrupadoPorPersona->sum(fn($persona) => $persona['totalAtenciones']),
-            'personas' => $agrupadoPorPersona
+            'personas' => $agrupadoPorPersona,
+            'areas' => $areas
         ]);
     }
 
@@ -603,6 +521,7 @@ class ReporteController extends Controller
             $value = str_replace(['Á', 'É', 'Í', 'Ó', 'Ú'], ['A', 'E', 'I', 'O', 'U'], $value);
             return preg_replace('/(\/A|\/O)$/', '', $value);
         };
+
         $booleanToSiNo = fn($value) => $value ? 'SI' : 'NO';
 
         // Obtener nombre_sede y normalizar
@@ -612,12 +531,23 @@ class ReporteController extends Controller
             Log::info('Nombre sede buscada (normalizada): ' . $nombreSede);
         }
 
+        $subqueryMedicos = DB::table('cpu_datos_medicos')
+            ->select('id', 'id_persona', 'enfermedades_catastroficas', 'tiene_seguro_medico', 'embarazada')
+            ->whereRaw('id IN (
+                SELECT DISTINCT ON (id_persona) id
+                FROM cpu_datos_medicos
+                ORDER BY id_persona, id DESC
+            )');
+
+
         // Consulta general
         $query = DB::table('cpu_atenciones as at')
             ->join('cpu_personas as p', 'at.id_persona', '=', 'p.id')
             ->leftJoin('cpu_datos_estudiantes as de', 'p.id', '=', 'de.id_persona')
             ->leftJoin('cpu_datos_empleados as dem', 'p.id', '=', 'dem.id_persona')
-            ->leftJoin('cpu_datos_medicos as dm', 'p.id', '=', 'dm.id_persona')
+            ->leftJoinSub($subqueryMedicos, 'dm', function ($join) {
+                $join->on('p.id', '=', 'dm.id_persona');
+            })
             ->leftJoin('users as u', 'at.id_funcionario', '=', 'u.id')
             ->leftJoin('cpu_userrole as ur', 'u.usr_tipo', '=', 'ur.id_userrole')
             ->leftJoin('cpu_tipo_usuario as tu', 'at.id_tipo_usuario', '=', 'tu.id')
@@ -657,12 +587,6 @@ class ReporteController extends Controller
 
         Log::info('Campus únicos encontrados:', $atenciones->pluck('campus')->unique()->toArray());
 
-        // Aplicar filtro por sede
-        // if (!empty($nombreSede)) {
-        //     $atenciones = $atenciones->filter(function ($item) use ($normalize, $nombreSede) {
-        //         return $item->campus !== null && $normalize($item->campus) === $nombreSede;
-        //     })->values();
-        // }
         if (!empty($nombreSede)) {
             $atenciones = $atenciones->filter(function ($item) use ($normalize, $nombreSede) {
                 $campusNormalizado = $normalize($item->campus);
@@ -718,9 +642,14 @@ class ReporteController extends Controller
 
         $this->auditar('reporte', 'getTotalAtencionesPorSede', '', '', 'CONSULTA', 'Consulta de total de atenciones por sede');
 
+        $areas = $agrupadoPorPersona->flatMap(function ($persona) {
+            return collect($persona['atenciones'])->pluck('area');
+        })->filter()->unique()->values()->all();
+
         return response()->json([
             'total_atenciones' => $agrupadoPorPersona->sum(fn($persona) => $persona['totalAtenciones']),
-            'personas' => $agrupadoPorPersona
+            'personas' => $agrupadoPorPersona,
+            'areas' => $areas
         ]);
     }
 

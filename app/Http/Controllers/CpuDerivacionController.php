@@ -120,6 +120,9 @@ class CpuDerivacionController extends Controller
         $fechaInicio = Carbon::parse($request->input('fecha_inicio'))->startOfDay();
         $fechaFin = Carbon::parse($request->input('fecha_fin'))->endOfDay();
 
+        $usrSede = Auth::user()->usr_sede;
+        Log::info("Sede del usuario autenticado: $usrSede");
+
         // Crear la consulta base
         $query = CpuDerivacion::with(['paciente', 'funcionarioQueDerivo'])
             ->whereBetween('fecha_para_atencion', [$fechaInicio, $fechaFin])
@@ -159,7 +162,8 @@ class CpuDerivacionController extends Controller
 
         // Agregar las condiciones según el doctor_id
         if ($doctorId == 9) {
-            $query->where('id_estado_derivacion', 7);
+            $query->where('id_estado_derivacion', 7)
+                    ->where('users.usr_sede', $usrSede);
         } elseif ($doctorId != 1) {
             $query->where('id_doctor_al_que_derivan', $doctorId);
             $query->whereNot('id_estado_derivacion', 2);

@@ -69,6 +69,7 @@ use App\Http\Controllers\ProductosControllers;
 use App\Http\Controllers\ProveedoresControllers;
 use App\Http\Controllers\CategoriaActivosControllers;
 use App\Http\Controllers\IngresosControllers;
+use App\Http\Controllers\EgresosControllers;
 use App\Http\Controllers\ApiControllers;
 use App\Http\Controllers\OrdenesAnalisisControllers;
 use App\Http\Controllers\TiposAnalisisControllers;
@@ -432,10 +433,6 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::post('/guardar-insumo', [CpuInsumoController::class, 'saveInsumos']);
     Route::put('/modificar-insumo/{id}', [CpuInsumoController::class, 'modificarInsumo']);
 
-
-
-
-
     //apis para busqueda de cie11
     Route::post('/get-token', [ICDController::class, 'getToken']);
     Route::get('/search', [ICDController::class, 'searchICD']);
@@ -562,6 +559,12 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('/get-nro-ingreso', [IngresosControllers::class, 'getIdNumeroIngreso']);
     Route::get('/get-ingreso-id/{id}', [IngresosControllers::class, 'getConsultarIngresosId']);
     Route::post('ruta-comprobante-ingreso-id', [IngresosControllers::class, 'descargarComprobanteIngresosId']);
+    Route::get('/get-kardex-movimiento', [IngresosControllers::class, 'getKardexMovimiento']);
+
+    //Egresos
+    Route::get('/get-egreso', [EgresosControllers::class, 'consultarEgresos']);
+    Route::get('/get-egreso-id/{id}', [EgresosControllers::class, 'getConsultarEgresosId']);
+    Route::post('/guardar-atencion-egreso', [EgresosControllers::class, 'guardarAtencionEgreso']);
 
 
     //API

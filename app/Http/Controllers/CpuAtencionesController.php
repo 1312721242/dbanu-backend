@@ -24,8 +24,16 @@ use Illuminate\Support\Facades\Cache;
 
 class CpuAtencionesController extends Controller
 {
+    public function __construct()
+    {
+        $this->middleware('auth:api');
+        $this->auditoriaController = new AuditoriaControllers();
+        $this->logController = new LogController();
+    }
+
     public function guardarAtencion(Request $request)
     {
+
         $validator = Validator::make($request->all(), [
             'id_funcionario' => 'required|integer',
             'id_persona' => 'required|integer',
@@ -35,6 +43,7 @@ class CpuAtencionesController extends Controller
             'fecha_hora_atencion' => 'required|date_format:Y-m-d H:i:s',
             'anio_atencion' => 'required|integer',
         ]);
+
 
         if ($validator->fails()) {
             return response()->json(['error' => $validator->errors()], 400);
@@ -710,25 +719,57 @@ class CpuAtencionesController extends Controller
                 'domingo' => '🔹 *Domingo*'
             ];
 
+            $ordenComidas = ['desayuno', 'entreComida1', 'almuerzo', 'entreComida2', 'merienda'];
+            $emojis = [
+                'desayuno' => '🍽️',
+                'entreComida1' => '🍏',
+                'almuerzo' => '🍛',
+                'entreComida2' => '🥑',
+                'merienda' => '🍵'
+            ];
+
             foreach ($diasSemana as $dia => $nombreDia) {
                 if (isset($planNutricional[$dia])) {
                     $planTexto .= "\n{$nombreDia}\n";
-                    foreach ($planNutricional[$dia] as $comida => $descripcion) {
-                        $emoji = match ($comida) {
-                            'desayuno' => '🍽️',
-                            'almuerzo' => '🍛',
-                            'merienda' => '🍵',
-                            'entreComida1' => '🍏',
-                            'entreComida2' => '🥑',
-                            default => '🍴',
-                        };
-                        $planTexto .= "  - {$emoji} *" . ucfirst($comida) . ":* {$descripcion}\n";
+                    foreach ($ordenComidas as $comida) {
+                        if (isset($planNutricional[$dia][$comida])) {
+                            $descripcion = $planNutricional[$dia][$comida];
+                            $emoji = $emojis[$comida] ?? '🍴';
+                            $planTexto .= "  - {$emoji} *" . ucfirst($comida) . ":* {$descripcion}\n";
+                        }
                     }
                     $planTexto .= "-----------------------\n";
                 }
             }
 
-            // Verificar si se envía el `id_turno_asignado`
+            // ✅ Siempre enviar correo de atención
+            $correoController = new CpuCorreoEnviadoController();
+            $motivoAtencion = $request->input('motivo');
+            // Si el caso fue cerrado (id_estado == 22), se agrega leyenda al motivo
+            if (isset($caso) && $caso->id_estado == 22) {
+                $motivoAtencion .= ' - CIERRE CASO';
+            }
+
+            // 📩 Enviar correo de atención al paciente
+            $correoAtencionPaciente = $correoController->enviarCorreoAtencionAreaSaludPaciente(new Request([
+                'id_atencion' => $idAtencion,
+                'id_area_atencion' => $request->input('id_area'),
+                'fecha_hora_atencion' => Carbon::now()->format("Y-m-d H:i:s"),
+                'motivo_atencion' => $motivoAtencion,
+                'id_paciente' => $request->input('id_paciente'),
+                'id_funcionario' => $request->input('id_funcionario'),
+                'plan_nutricional_texto' => $planTexto,
+            ]));
+
+            if (!$correoAtencionPaciente->isSuccessful()) {
+                // ❌ Si falla el correo, eliminar la atención guardada
+                $atencion->delete();
+                $nutricion->delete();
+                DB::rollBack();
+                return response()->json(['error' => 'Error al enviar el correo de atención, la atención no fue guardada'], 500);
+            }
+
+            // Verificar si se envía el `id_turno_asignado` 📩 Solo si hay derivación
             if ($request->filled('id_turno_asignado')) {
                 Log::info('Valor de id_turno_asignado:', ['id_turno_asignado' => $request->input('id_turno_asignado')]);
                 try {
@@ -755,28 +796,6 @@ class CpuAtencionesController extends Controller
                     $turno = CpuTurno::findOrFail($derivacionData['id_turno_asignado']);
                     $turno->estado = 2; // Actualiza el estado del turno a 2
                     $turno->save();
-
-                    // ✅ Enviar correos según la lógica del controlador
-                    $correoController = new CpuCorreoEnviadoController();
-
-                    // 📩 Enviar correo de atención al paciente
-                    $correoAtencionPaciente = $correoController->enviarCorreoAtencionAreaSaludPaciente(new Request([
-                        'id_atencion' => $idAtencion,
-                        'id_area_atencion' => $request->input('id_area'),
-                        'fecha_hora_atencion' => Carbon::now()->format("Y-m-d H:i:s"),
-                        'motivo_atencion' => $request->input('motivo'),
-                        'id_paciente' => $request->input('id_paciente'),
-                        'id_funcionario' => $request->input('id_funcionario'),
-                        'plan_nutricional_texto' => $planTexto,
-                    ]));
-
-                    if (!$correoAtencionPaciente->isSuccessful()) {
-                        // ❌ Si falla el correo, eliminar la atención guardada
-                        $atencion->delete();
-                        $nutricion->delete();
-                        DB::rollBack();
-                        return response()->json(['error' => 'Error al enviar el correo de atención, la atención no fue guardada'], 500);
-                    }
 
                     // 📩 Enviar correos de derivación si aplica
                     if ($request->filled('id_doctor_al_que_derivan')) {
@@ -845,6 +864,220 @@ class CpuAtencionesController extends Controller
         }
     }
 
+    // public function guardarAtencionMedicinaGeneral(Request $request)
+    // {
+    //     // Validar que los campos requeridos estén presentes
+    //     $request->validate([
+    //         'id_funcionario' => 'required|integer|exists:users,id',
+    //         'id_persona' => 'required|integer|exists:cpu_personas,id',
+    //         'via_atencion' => 'required|string',
+    //         'motivo_atencion' => 'required|string',
+    //         'fecha_hora_atencion' => 'required|date_format:Y-m-d H:i:s',
+    //         'anio_atencion' => 'required|integer',
+    //         'detalle_atencion' => 'required|string',
+    //         'id_tipo_usuario' => 'required|integer|exists:cpu_tipo_usuario,id',
+    //         'evolucion_enfermedad' => 'nullable|string',
+    //         'diagnostico' => 'nullable|array|min:0',
+    //         'prescripcion' => 'nullable|string',
+    //         'recomendacion' => 'nullable|string',
+    //         'tipo_atencion' => 'required|string',
+    //         'id_cie10' => 'nullable|integer|exists:cpu_cie10,id',
+    //         'derivado' => 'nullable|boolean',
+    //     ]);
+
+    //     $derivado = $request->input('derivado');
+
+    //     DB::beginTransaction();
+
+    //     try {
+    //         // Guardar en cpu_atenciones
+    //         $atencion = new CpuAtencion();
+    //         $atencion->id_funcionario = $request->input('id_funcionario');
+    //         $atencion->id_persona = $request->input('id_persona');
+    //         $atencion->via_atencion = $request->input('via_atencion');
+    //         $atencion->motivo_atencion = $request->input('motivo_atencion');
+    //         $atencion->fecha_hora_atencion = $request->input('fecha_hora_atencion');
+    //         $atencion->anio_atencion = $request->input('anio_atencion');
+    //         $atencion->detalle_atencion = $request->input('detalle_atencion');
+    //         $atencion->id_caso = $request->input('id_caso');
+    //         $atencion->id_tipo_usuario = $request->input('id_tipo_usuario');
+    //         $atencion->evolucion_enfermedad = $request->input('enfermedad_actual');
+    //         $atencion->diagnostico = !empty($request->diagnostico) ? json_encode($request->diagnostico) : null;
+    //         $atencion->prescripcion = $request->input('planes_tratamiento');
+    //         $atencion->recomendacion = $request->input('recomendacion');
+    //         $atencion->tipo_atencion = $request->input('tipo_atencion');
+    //         $atencion->id_cie10 = $request->input('id_cie10');
+    //         $atencion->tipo_atencion = $request->input('tipo_atencion');
+    //         $atencion->id_estado = 1;
+    //         $atencion->save();
+
+    //         $id_atencion = $atencion->id;
+
+    //         // Guardar en cpu_atenciones_medicina_general
+    //         $medicinaGeneral = new CpuAtencionMedicinaGeneral();
+    //         $medicinaGeneral->id_atencion = $atencion->id;
+    //         $medicinaGeneral->organos_sistemas = !empty($request->input('revision_organos'));
+    //         $medicinaGeneral->examen_fisico = !empty($request->input('examen_fisico'));
+    //         $medicinaGeneral->detalle_organos_sistemas = $request->input('detalle_revision_organos');
+    //         $medicinaGeneral->detalle_examen_fisico = $request->input('detalle_examen_fisico');
+    //         $medicinaGeneral->insumos_medicos = $request->input('insumos');
+    //         $medicinaGeneral->medicamentos = $request->input('medicamentos');
+    //         $medicinaGeneral->save();
+
+    //         // Guardar insumos
+    //         if ($request->has('insumos')) {
+    //             foreach ($request->input('insumos') as $insumo) {
+    //                 $insumoOcupado = new CpuInsumoOcupado();
+    //                 $insumoOcupado->id_insumo = $insumo['id'];
+    //                 $insumoOcupado->id_atencion_medicina_general = $medicinaGeneral->id;
+    //                 $insumoOcupado->id_funcionario = $request->input('id_funcionario');
+    //                 $insumoOcupado->id_paciente = $request->input('id_persona');
+    //                 $insumoOcupado->cantidad_ocupado = $insumo['cantidad'];
+    //                 $insumoOcupado->detalle_ocupado = $request->input('detalle_atencion');
+    //                 $insumoOcupado->fecha_uso = now();
+    //                 $insumoOcupado->save();
+    //                 // Actualizar la cantidad disponible del insumo o medicamento
+    //                 $insumoresul = CpuInsumo::find($insumo['id']);
+    //                 if ($insumoresul) {
+    //                     $insumoresul->decrement('cantidad_unidades', (int)$insumo['cantidad']);
+    //                 }
+    //             }
+    //         }
+
+    //         // Guardar medicamentos
+    //         if ($request->has('medicamentos')) {
+    //             foreach ($request->input('medicamentos') as $medicamento) {
+    //                 $insumoOcupado = new CpuInsumoOcupado();
+    //                 $insumoOcupado->id_insumo = $medicamento['id'];
+    //                 $insumoOcupado->id_atencion_medicina_general = $medicinaGeneral->id;
+    //                 $insumoOcupado->id_funcionario = $request->input('id_funcionario');
+    //                 $insumoOcupado->id_paciente = $request->input('id_persona');
+    //                 $insumoOcupado->cantidad_ocupado = $medicamento['cantidad'];
+    //                 $insumoOcupado->detalle_ocupado = $request->input('detalle_atencion');
+    //                 $insumoOcupado->fecha_uso = now();
+    //                 $insumoOcupado->save();
+    //                 // Actualizar la cantidad disponible del insumo o medicamento
+    //                 $insumo = CpuInsumo::find($medicamento['id']);
+    //                 if ($insumo) {
+    //                     $insumo->decrement('cantidad_unidades', (int)$medicamento['cantidad']);
+    //                 }
+    //             }
+    //         }
+
+    //         // Manejar derivación si está marcada
+    //         if ($request->input('derivacion')) {
+    //             $derivacion = new CpuDerivacion();
+    //             $derivacion->ate_id = $atencion->id;
+    //             $derivacion->id_doctor_al_que_derivan = $request->input('derivacion.id_doctor_al_que_derivan');
+    //             $derivacion->id_paciente = $request->input('id_persona');
+    //             $derivacion->motivo_derivacion = $request->input('derivacion.motivo_derivacion');
+    //             $derivacion->id_area = $request->input('derivacion.id_area');
+    //             $derivacion->fecha_para_atencion = $request->input('derivacion.fecha_para_atencion');
+    //             $derivacion->hora_para_atencion = $request->input('derivacion.hora_para_atencion');
+    //             $derivacion->id_estado_derivacion = $request->input('derivacion.id_estado_derivacion');
+    //             $derivacion->id_turno_asignado = $request->input('derivacion.id_turno_asignado');
+    //             $derivacion->id_funcionario_que_derivo = $request->input('id_funcionario'); // Corregido para utilizar Auth::id() en lugar de Auth::user()->id
+    //             $derivacion->fecha_derivacion = now();
+    //             $derivacion->save();
+
+    //             // Actualizar turno
+    //             $turno = CpuTurno::find($request->input('derivacion.id_turno_asignado'));
+    //             $turno->id_paciente = $request->input('id_persona');
+    //             $turno->estado = 7;
+    //             $turno->save();
+    //         }
+
+    //         // Actualizar la derivación original
+    //         if ($request->has('id_derivacion')) {
+    //             $derivacionOriginal = CpuDerivacion::find($request->input('id_derivacion'));
+    //             if ($derivacionOriginal) {
+    //                 $derivacionOriginal->id_estado_derivacion = 2;
+    //                 $derivacionOriginal->save();
+    //             }
+    //         }
+
+    //         // ✅ ENVÍO DE CORREOS
+    //         $correoController = new CpuCorreoEnviadoController();
+
+    //         // Correo atención paciente
+    //         $correoAtencion = $correoController->enviarCorreoAtencionAreaSaludPaciente(new Request([
+    //             'id_atencion' => $atencion->id,
+    //             'id_area_atencion' => $request->input('id_area'),
+    //             'fecha_hora_atencion' => Carbon::now()->format("Y-m-d H:i:s"),
+    //             'motivo_atencion' => $request->input('motivo_atencion'),
+    //             'id_paciente' => $request->input('id_persona'),
+    //             'id_funcionario' => $request->input('id_funcionario'),
+    //         ]));
+
+    //         if (!$correoAtencion->isSuccessful()) {
+    //             $atencion->delete();
+    //             $medicinaGeneral->delete();
+    //             DB::rollBack();
+    //             return response()->json(['error' => 'Error al enviar correo de atención'], 500);
+    //         }
+
+    //         // Correo derivación (si aplica)
+    //         if ($request->input('derivacion')) {
+    //             $correoDerivacionPaciente = $correoController->enviarCorreoDerivacionAreaSaludPaciente(new Request([
+    //                 'id_atencion' => $atencion->id,
+    //                 'id_area_atencion' => $request->input('id_area'),
+    //                 'motivo_derivacion' => $request->input('derivacion.motivo_derivacion'),
+    //                 'id_paciente' => $request->input('id_persona'),
+    //                 'id_funcionario' => $request->input('id_funcionario'),
+    //                 'id_doctor_al_que_derivan' => $request->input('derivacion.id_doctor_al_que_derivan'),
+    //                 'id_area_derivada' => $request->input('derivacion.id_area'),
+    //                 'fecha_para_atencion' => $request->input('derivacion.fecha_para_atencion'),
+    //                 'hora_para_atencion' => $request->input('derivacion.hora_para_atencion'),
+    //             ]));
+
+    //             if (!$correoDerivacionPaciente->isSuccessful()) {
+    //                 $atencion->delete();
+    //                 $medicinaGeneral->delete();
+    //                 DB::rollBack();
+    //                 return response()->json(['error' => 'Error al enviar correo al paciente'], 500);
+    //             }
+
+    //             $correoDerivacionFuncionario = $correoController->enviarCorreoDerivacionAreaSaludFuncionario(new Request([
+    //                 'id_atencion' => $atencion->id,
+    //                 'id_area_atencion' => $request->input('id_area'),
+    //                 'motivo_derivacion' => $request->input('derivacion.motivo_derivacion'),
+    //                 'id_paciente' => $request->input('id_persona'),
+    //                 'id_funcionario' => $request->input('id_funcionario'),
+    //                 'id_doctor_al_que_derivan' => $request->input('derivacion.id_doctor_al_que_derivan'),
+    //                 'id_area_derivada' => $request->input('derivacion.id_area'),
+    //                 'fecha_para_atencion' => $request->input('derivacion.fecha_para_atencion'),
+    //                 'hora_para_atencion' => $request->input('derivacion.hora_para_atencion'),
+    //             ]));
+
+    //             if (!$correoDerivacionFuncionario->isSuccessful()) {
+    //                 $atencion->delete();
+    //                 $medicinaGeneral->delete();
+    //                 DB::rollBack();
+    //                 return response()->json(['error' => 'Error al enviar correo al funcionario'], 500);
+    //             }
+    //         }
+
+    //         DB::commit();
+
+    //         // Auditoría
+    //         $this->auditar('cpu_atencion', 'id', '', $atencion->id, 'INSERCION', "INSERCION DE NUEVA ATENCION MEDICINA GENERAL: {$atencion->id},
+    //                                                                             PACIENTE: {$request->input('id_persona')},
+    //                                                                             FUNCIONARIO: {$request->input('id_funcionario')},
+    //                                                                             VIA DE ATENCION: {$request->input('via_atencion')},
+    //                                                                             MOTIVO DE ATENCION: {$request->input('motivo_atencion')},
+    //                                                                             FECHA Y HORA DE ATENCION: {$request->input('fecha_hora_atencion')},
+    //                                                                             ANIO DE ATENCION: {$request->input('anio_atencion')}");
+
+
+
+    //         return response()->json(['success' => true, 'atencion_id' => $atencion->id]);
+    //     } catch (\Exception $e) {
+    //         DB::rollBack();
+    //         Log::error('Error al guardar la atención de medicina general:', ['exception' => $e->getMessage()]);
+    //         return response()->json(['error' => 'Error al guardar la atención de medicina general', 'details' => $e->getMessage()], 500);
+    //     }
+    // }
+
     public function guardarAtencionMedicinaGeneral(Request $request)
     {
         // Validar que los campos requeridos estén presentes
@@ -905,9 +1138,24 @@ class CpuAtencionesController extends Controller
             $medicinaGeneral->medicamentos = $request->input('medicamentos');
             $medicinaGeneral->save();
 
+            // Auditoría
+            $nombre_paciente = DB::table('cpu_personas')->where('id', $request->input('id_persona'))->value('nombres');
+            $descripcionAuditoria = 'Se registro una atención medica al funcionaario: ' . $nombre_paciente . ' el : ' . now() . ' con ID: ' . $request->input('id_persona');
+            $this->auditoriaController->auditar('cpu_atenciones_medicina_general', 'guardarAtencionMedicinaGeneral(Request $request)', '',  json_encode($medicinaGeneral), 'INSERT', $descripcionAuditoria);
+
+            $listaInsumos = [];
+
             // Guardar insumos
             if ($request->has('insumos')) {
+
                 foreach ($request->input('insumos') as $insumo) {
+                    $nombre_insumo = DB::table('cpu_insumo')->where('id', $insumo['id'])->value('ins_descripcion');
+                    $listaInsumos[] = [
+                        'idInsumo' => $insumo['id'],
+                        'nombre' => $nombre_insumo,
+                        'cantidad' => (string)$insumo['cantidad'],
+                    ];
+
                     $insumoOcupado = new CpuInsumoOcupado();
                     $insumoOcupado->id_insumo = $insumo['id'];
                     $insumoOcupado->id_atencion_medicina_general = $medicinaGeneral->id;
@@ -917,6 +1165,10 @@ class CpuAtencionesController extends Controller
                     $insumoOcupado->detalle_ocupado = $request->input('detalle_atencion');
                     $insumoOcupado->fecha_uso = now();
                     $insumoOcupado->save();
+
+                    $descripcion = "Se registro el insumo {$nombre_insumo} con cantidad {$insumo['cantidad']} para la atención {$medicinaGeneral->id}";
+                    $this->auditoriaController->auditar('cpu_insumo_ocupado', 'guardarAtencionMedicinaGeneral(Request $request)', '',  json_encode($insumoOcupado), 'INSERT', $descripcion);
+
                     // Actualizar la cantidad disponible del insumo o medicamento
                     $insumoresul = CpuInsumo::find($insumo['id']);
                     if ($insumoresul) {
@@ -928,6 +1180,13 @@ class CpuAtencionesController extends Controller
             // Guardar medicamentos
             if ($request->has('medicamentos')) {
                 foreach ($request->input('medicamentos') as $medicamento) {
+                    $nombre_insumo = DB::table('cpu_insumo')->where('id', $insumo['id'])->value('ins_descripcion');
+                    $listaInsumos[] = [
+                        'idInsumo' => $medicamento['id'],
+                        'nombre' => $nombre_insumo,
+                        'cantidad' => (string)$medicamento['cantidad'],
+                    ];
+
                     $insumoOcupado = new CpuInsumoOcupado();
                     $insumoOcupado->id_insumo = $medicamento['id'];
                     $insumoOcupado->id_atencion_medicina_general = $medicinaGeneral->id;
@@ -937,6 +1196,9 @@ class CpuAtencionesController extends Controller
                     $insumoOcupado->detalle_ocupado = $request->input('detalle_atencion');
                     $insumoOcupado->fecha_uso = now();
                     $insumoOcupado->save();
+
+                    $descripcion = "Se registro el medicamento {$nombre_insumo} con cantidad {$medicamento['cantidad']} para la atención {$medicinaGeneral->id}";
+                    $this->auditoriaController->auditar('cpu_insumo_ocupado', 'guardarAtencionMedicinaGeneral(Request $request)', '',  json_encode($insumoOcupado), 'INSERT', $descripcion);
                     // Actualizar la cantidad disponible del insumo o medicamento
                     $insumo = CpuInsumo::find($medicamento['id']);
                     if ($insumo) {
@@ -961,11 +1223,16 @@ class CpuAtencionesController extends Controller
                 $derivacion->fecha_derivacion = now();
                 $derivacion->save();
 
+                $descripcion = "Se registro una derivación para la atención {$medicinaGeneral->id} con motivo: {$derivacion->motivo_derivacion}, doctor al que deriva: {$derivacion->id_doctor_al_que_derivan}, área: {$derivacion->id_area}, fecha para atención: {$derivacion->fecha_para_atencion}, hora para atención: {$derivacion->hora_para_atencion}";
+                $this->auditoriaController->auditar('cpu_derivacion', 'guardarAtencionMedicinaGeneral(Request $request)', '',  json_encode($derivacion), 'INSERT', $descripcion);
+
                 // Actualizar turno
                 $turno = CpuTurno::find($request->input('derivacion.id_turno_asignado'));
                 $turno->id_paciente = $request->input('id_persona');
                 $turno->estado = 7;
                 $turno->save();
+                $descripcion = "Se actualizó el turno {$turno->id} con el paciente {$nombre_paciente} y se cambió su estado a 7 (derivado).";
+                $this->auditoriaController->auditar('cpu_turnos', 'guardarAtencionMedicinaGeneral(Request $request)', '',  $turno, 'UPDATE', $descripcion);
             }
 
             // Actualizar la derivación original
@@ -974,87 +1241,105 @@ class CpuAtencionesController extends Controller
                 if ($derivacionOriginal) {
                     $derivacionOriginal->id_estado_derivacion = 2;
                     $derivacionOriginal->save();
+                    $descripcion = "Se actualizó la derivación original {$derivacionOriginal->id} a estado 2 (atendido) para la atención {$medicinaGeneral->id}.";
+                    $this->auditoriaController->auditar('cpu_derivacion', 'guardarAtencionMedicinaGeneral(Request $request)', '',  json_encode($derivacionOriginal), 'UPDATE', $descripcion);
                 }
             }
+
+            $ee_id = DB::table('cpu_encabezados_egresos')->insertGetId([
+                'ee_id_funcionario' => $request->input('id_funcionario'),
+                'ee_numero_egreso' => 'ULEAM-DBU-E-'. str_pad(DB::table('cpu_encabezados_egresos')->max('ee_id') + 1, 6, '0', STR_PAD_LEFT),
+                'ee_id_paciente' => $request->input('id_persona'),
+                'ee_id_atencion_medicina_general' => $medicinaGeneral->id,
+                'ee_detalle' => $listaInsumos ? json_encode($listaInsumos) : null,
+                'ee_id_estado' => 21,
+                'ee_created_at' => Carbon::now(),
+                'ee_updated_at' => Carbon::now(),
+            ], 'ee_id');
+
+            $descripcion = "Se registró un egreso con ID {$ee_id} para la atención {$medicinaGeneral->id} con los siguientes insumos: " . json_encode($listaInsumos);
+            $this->auditoriaController->auditar('cpu_encabezados_egresos', 'guardarAtencionMedicinaGeneral(Request $request)', '', $ee_id, 'INSERT', $descripcion);
 
             // ✅ ENVÍO DE CORREOS
-            $correoController = new CpuCorreoEnviadoController();
+            //$correoController = new CpuCorreoEnviadoController();
 
             // Correo atención paciente
-            $correoAtencion = $correoController->enviarCorreoAtencionAreaSaludPaciente(new Request([
-                'id_atencion' => $atencion->id,
-                'id_area_atencion' => $request->input('id_area'),
-                'fecha_hora_atencion' => Carbon::now()->format("Y-m-d H:i:s"),
-                'motivo_atencion' => $request->input('motivo_atencion'),
-                'id_paciente' => $request->input('id_persona'),
-                'id_funcionario' => $request->input('id_funcionario'),
-            ]));
+            // $correoAtencion = $correoController->enviarCorreoAtencionAreaSaludPaciente(new Request([
+            //     'id_atencion' => $atencion->id,
+            //     'id_area_atencion' => $request->input('id_area'),
+            //     'fecha_hora_atencion' => Carbon::now()->format("Y-m-d H:i:s"),
+            //     'motivo_atencion' => $request->input('motivo_atencion'),
+            //     'id_paciente' => $request->input('id_persona'),
+            //     'id_funcionario' => $request->input('id_funcionario'),
+            // ]));
 
-            if (!$correoAtencion->isSuccessful()) {
-                $atencion->delete();
-                $medicinaGeneral->delete();
-                DB::rollBack();
-                return response()->json(['error' => 'Error al enviar correo de atención'], 500);
-            }
+            // if (!$correoAtencion->isSuccessful()) {
+            //     $atencion->delete();
+            //     $medicinaGeneral->delete();
+            //     DB::rollBack();
+            //     return response()->json(['error' => 'Error al enviar correo de atención'], 500);
+            // }
 
             // Correo derivación (si aplica)
-            if ($request->input('derivacion')) {
-                $correoDerivacionPaciente = $correoController->enviarCorreoDerivacionAreaSaludPaciente(new Request([
-                    'id_atencion' => $atencion->id,
-                    'id_area_atencion' => $request->input('id_area'),
-                    'motivo_derivacion' => $request->input('derivacion.motivo_derivacion'),
-                    'id_paciente' => $request->input('id_persona'),
-                    'id_funcionario' => $request->input('id_funcionario'),
-                    'id_doctor_al_que_derivan' => $request->input('derivacion.id_doctor_al_que_derivan'),
-                    'id_area_derivada' => $request->input('derivacion.id_area'),
-                    'fecha_para_atencion' => $request->input('derivacion.fecha_para_atencion'),
-                    'hora_para_atencion' => $request->input('derivacion.hora_para_atencion'),
-                ]));
+            // if ($request->input('derivacion')) {
+            //     $correoDerivacionPaciente = $correoController->enviarCorreoDerivacionAreaSaludPaciente(new Request([
+            //         'id_atencion' => $atencion->id,
+            //         'id_area_atencion' => $request->input('id_area'),
+            //         'motivo_derivacion' => $request->input('derivacion.motivo_derivacion'),
+            //         'id_paciente' => $request->input('id_persona'),
+            //         'id_funcionario' => $request->input('id_funcionario'),
+            //         'id_doctor_al_que_derivan' => $request->input('derivacion.id_doctor_al_que_derivan'),
+            //         'id_area_derivada' => $request->input('derivacion.id_area'),
+            //         'fecha_para_atencion' => $request->input('derivacion.fecha_para_atencion'),
+            //         'hora_para_atencion' => $request->input('derivacion.hora_para_atencion'),
+            //     ]));
 
-                if (!$correoDerivacionPaciente->isSuccessful()) {
-                    $atencion->delete();
-                    $medicinaGeneral->delete();
-                    DB::rollBack();
-                    return response()->json(['error' => 'Error al enviar correo al paciente'], 500);
-                }
+            //     if (!$correoDerivacionPaciente->isSuccessful()) {
+            //         $atencion->delete();
+            //         $medicinaGeneral->delete();
+            //         DB::rollBack();
+            //         return response()->json(['error' => 'Error al enviar correo al paciente'], 500);
+            //     }
 
-                $correoDerivacionFuncionario = $correoController->enviarCorreoDerivacionAreaSaludFuncionario(new Request([
-                    'id_atencion' => $atencion->id,
-                    'id_area_atencion' => $request->input('id_area'),
-                    'motivo_derivacion' => $request->input('derivacion.motivo_derivacion'),
-                    'id_paciente' => $request->input('id_persona'),
-                    'id_funcionario' => $request->input('id_funcionario'),
-                    'id_doctor_al_que_derivan' => $request->input('derivacion.id_doctor_al_que_derivan'),
-                    'id_area_derivada' => $request->input('derivacion.id_area'),
-                    'fecha_para_atencion' => $request->input('derivacion.fecha_para_atencion'),
-                    'hora_para_atencion' => $request->input('derivacion.hora_para_atencion'),
-                ]));
+            //     $correoDerivacionFuncionario = $correoController->enviarCorreoDerivacionAreaSaludFuncionario(new Request([
+            //         'id_atencion' => $atencion->id,
+            //         'id_area_atencion' => $request->input('id_area'),
+            //         'motivo_derivacion' => $request->input('derivacion.motivo_derivacion'),
+            //         'id_paciente' => $request->input('id_persona'),
+            //         'id_funcionario' => $request->input('id_funcionario'),
+            //         'id_doctor_al_que_derivan' => $request->input('derivacion.id_doctor_al_que_derivan'),
+            //         'id_area_derivada' => $request->input('derivacion.id_area'),
+            //         'fecha_para_atencion' => $request->input('derivacion.fecha_para_atencion'),
+            //         'hora_para_atencion' => $request->input('derivacion.hora_para_atencion'),
+            //     ]));
 
-                if (!$correoDerivacionFuncionario->isSuccessful()) {
-                    $atencion->delete();
-                    $medicinaGeneral->delete();
-                    DB::rollBack();
-                    return response()->json(['error' => 'Error al enviar correo al funcionario'], 500);
-                }
-            }
+            //     if (!$correoDerivacionFuncionario->isSuccessful()) {
+            //         $atencion->delete();
+            //         $medicinaGeneral->delete();
+            //         DB::rollBack();
+            //         return response()->json(['error' => 'Error al enviar correo al funcionario'], 500);
+            //     }
+            // }
 
             DB::commit();
 
+            $descripcion = "Se guardó la atención de medicina general con ID {$atencion->id} para el paciente {$request->input('id_persona')} y funcionario {$request->input('id_funcionario')}. Motivo: {$request->input('motivo_atencion')}, Fecha y hora: {$request->input('fecha_hora_atencion')}, Año de atención: {$request->input('anio_atencion')}";
+            $this->auditoriaController->auditar('cpu_atencion', 'guardarAtencionMedicinaGeneral(Request $request)', '',  json_encode($atencion), 'INSERT', $descripcion);
+
             // Auditoría
-            $this->auditar('cpu_atencion', 'id', '', $atencion->id, 'INSERCION', "INSERCION DE NUEVA ATENCION MEDICINA GENERAL: {$atencion->id},
-                                                                                PACIENTE: {$request->input('id_persona')},
-                                                                                FUNCIONARIO: {$request->input('id_funcionario')},
-                                                                                VIA DE ATENCION: {$request->input('via_atencion')},
-                                                                                MOTIVO DE ATENCION: {$request->input('motivo_atencion')},
-                                                                                FECHA Y HORA DE ATENCION: {$request->input('fecha_hora_atencion')},
-                                                                                ANIO DE ATENCION: {$request->input('anio_atencion')}");
-
-
+            // $this->auditar('cpu_atencion', 'id', '', $atencion->id, 'INSERCION', "INSERCION DE NUEVA ATENCION MEDICINA GENERAL: {$atencion->id},
+            //                                                                     PACIENTE: {$request->input('id_persona')},
+            //                                                                     FUNCIONARIO: {$request->input('id_funcionario')},
+            //                                                                     VIA DE ATENCION: {$request->input('via_atencion')},
+            //                                                                     MOTIVO DE ATENCION: {$request->input('motivo_atencion')},
+            //                                                                     FECHA Y HORA DE ATENCION: {$request->input('fecha_hora_atencion')},
+            //                                                                     ANIO DE ATENCION: {$request->input('anio_atencion')}");
 
             return response()->json(['success' => true, 'atencion_id' => $atencion->id]);
         } catch (\Exception $e) {
             DB::rollBack();
             Log::error('Error al guardar la atención de medicina general:', ['exception' => $e->getMessage()]);
+            $this->logController->saveLog('Nombre de Controlador: CpuAtencionesController, Nombre de Funcion: guardarAtencionMedicinaGeneral(Request $request)', 'Error al guaardar atencion medicina general: ' . $e->getMessage());
             return response()->json(['error' => 'Error al guardar la atención de medicina general', 'details' => $e->getMessage()], 500);
         }
     }

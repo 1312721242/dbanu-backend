@@ -9,8 +9,17 @@ use Carbon\Carbon;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\DB;
+
+
 class TurnosController extends Controller
 {
+    public function __construct()
+    {
+        $this->middleware('auth:api');
+        $this->auditoriaController = new AuditoriaControllers();
+        $this->logController = new LogController();
+    }
+
     // public function agregarTurnos(Request $request)
     // {
     //     $user = Auth::user();
@@ -122,55 +131,121 @@ class TurnosController extends Controller
         return response()->json($response);
     }
 
+    // public function listarTurnos(Request $request)
+    // {
+    //     $user = Auth::user();
+    //     $id_funcionario = $user->id;
+    //     $ini = $request->input('inicio');
+    //     $hasta = $request->input('hasta');
+    //     $fechaActual = date('Y-m-d');
+    //     $horaActual = date('H:i:s');
+
+    //     // Depuración
+    //     Log::info("Usuario: $id_funcionario, Fecha Inicio: $ini, Fecha Fin: $hasta, Fecha Actual: $fechaActual, Hora Actual: $horaActual");
+
+    //     $turnosQuery = CpuTurno::where('id_medico', $id_funcionario)
+    //         ->where('estado', 1);
+
+    //     if ($ini == $fechaActual && $hasta == $fechaActual) {
+    //         // Caso 1: Solo hoy, después de la hora actual
+    //         Log::info("Consulta para el mismo día a partir de la hora actual");
+    //         $turnosQuery->where('fehca_turno', $ini)->where('hora', '>', $horaActual);
+    //     } elseif ($ini == $fechaActual && $hasta > $fechaActual) {
+    //         // Caso 2: Hoy desde la hora actual y días futuros desde cualquier hora
+    //         Log::info("Consulta para hoy a partir de la hora actual y días futuros desde cualquier hora");
+    //         $turnosQuery->where(function ($query) use ($ini, $hasta, $horaActual) {
+    //             $query->where(function ($q) use ($ini, $horaActual) {
+    //                 $q->where('fehca_turno', $ini)->where('hora', '>', $horaActual);
+    //             })->orWhere('fehca_turno', '>', $ini);
+    //         });
+    //     } else {
+    //         // Caso 3: Fechas futuras, devolver todos los turnos
+    //         Log::info("Consulta para fechas futuras sin restricciones de hora");
+    //         $turnosQuery->whereBetween('fehca_turno', [$ini, $hasta]);
+    //     }
+
+    //     $turnos = $turnosQuery->get();
+
+    //     // Formatear fechas y horas
+    //     $turnos = $turnos->map(function ($turno) {
+    //         $turno->fehca_turno = Carbon::parse($turno->fehca_turno)->format('Y-m-d');
+    //         $turno->hora = Carbon::parse($turno->hora)->format('H:i:s');
+    //         return $turno;
+    //     });
+
+    //     Log::info("Turnos encontrados: " . $turnos->count());
+    //     //auditar
+    //     $this->auditar('turnos', 'listarTurnos', '', $turnos, 'CONSULTA', 'Consulta de turnos');
+    //     return response()->json($turnos);
+    // }
+
     public function listarTurnos(Request $request)
     {
-        $user = Auth::user();
-        $id_funcionario = $user->id;
-        $ini = $request->input('inicio');
-        $hasta = $request->input('hasta');
-        $fechaActual = date('Y-m-d');
-        $horaActual = date('H:i:s');
+        try {
+            $user = Auth::user();
+            $id_funcionario = $user->id;
+            $ini = $request->input('inicio');
+            $hasta = $request->input('hasta');
+            $fechaActual = date('Y-m-d');
+            $horaActual = date('H:i:s');
 
-        // Depuración
-        Log::info("Usuario: $id_funcionario, Fecha Inicio: $ini, Fecha Fin: $hasta, Fecha Actual: $fechaActual, Hora Actual: $horaActual");
+            // Depuración
+            Log::info("Usuario: $id_funcionario, Fecha Inicio: $ini, Fecha Fin: $hasta, Fecha Actual: $fechaActual, Hora Actual: $horaActual");
 
-        $turnosQuery = CpuTurno::where('id_medico', $id_funcionario)
-            ->where('estado', 1);
+            $turnosQuery = CpuTurno::where('id_medico', $id_funcionario)
+                ->where('estado', 1);
 
-        if ($ini == $fechaActual && $hasta == $fechaActual) {
-            // Caso 1: Solo hoy, después de la hora actual
-            Log::info("Consulta para el mismo día a partir de la hora actual");
-            $turnosQuery->where('fehca_turno', $ini)->where('hora', '>', $horaActual);
-        } elseif ($ini == $fechaActual && $hasta > $fechaActual) {
-            // Caso 2: Hoy desde la hora actual y días futuros desde cualquier hora
-            Log::info("Consulta para hoy a partir de la hora actual y días futuros desde cualquier hora");
-            $turnosQuery->where(function($query) use ($ini, $hasta, $horaActual) {
-                $query->where(function($q) use ($ini, $horaActual) {
-                    $q->where('fehca_turno', $ini)->where('hora', '>', $horaActual);
-                })->orWhere('fehca_turno', '>', $ini);
+            if ($ini == $fechaActual && $hasta == $fechaActual) {
+                // Caso 1: Solo hoy, después de la hora actual
+                Log::info("Consulta para el mismo día a partir de la hora actual");
+                // $turnosQuery->where('fehca_turno', $ini)->where('hora', '>', $horaActual);
+                $turnosQuery->whereDate('fecha_turno', $ini)->where('hora', '>', $horaActual);
+            } elseif ($ini == $fechaActual && $hasta > $fechaActual) {
+                // Caso 2: Hoy desde la hora actual y días futuros desde cualquier hora
+                Log::info("Consulta para hoy a partir de la hora actual y días futuros desde cualquier hora");
+                $turnosQuery->where(function ($query) use ($ini, $hasta, $horaActual) {
+                    $query->where(function ($q) use ($ini, $horaActual) {
+                        $q->whereDate('fehca_turno', $ini)->where('hora', '>', $horaActual);
+                    })->orWhere('fehca_turno', '>', $ini);
+                });
+            } else {
+                // Caso 3: Fechas futuras, devolver todos los turnos
+                Log::info("Consulta para fechas futuras sin restricciones de hora");
+                // $turnosQuery->whereBetween('fehca_turno', [$ini, $hasta]);
+                $turnosQuery->whereBetween('fehca_turno', [
+                    $ini . ' 00:00:00',
+                    $hasta . ' 23:59:59'
+                ]);
+            }
+
+            $turnos = $turnosQuery->get();
+
+            // Formatear fechas y horas
+            $turnos = $turnos->map(function ($turno) {
+                $turno->fehca_turno = Carbon::parse($turno->fehca_turno)->format('Y-m-d');
+                $turno->hora = Carbon::parse($turno->hora)->format('H:i:s');
+                return $turno;
             });
-        } else {
-            // Caso 3: Fechas futuras, devolver todos los turnos
-            Log::info("Consulta para fechas futuras sin restricciones de hora");
-            $turnosQuery->whereBetween('fehca_turno', [$ini, $hasta]);
+
+            Log::info("Turnos encontrados: " . $turnos->count());
+            //auditar
+            $this->auditar('turnos', 'listarTurnos', '', $turnos, 'CONSULTA', 'Consulta de turnos');
+            return response()->json($turnos);
+        } catch (\Exception $e) {
+            // Log de error
+            $this->logController->saveLog(
+                'Nombre de Controlador: TurnosController, Nombre de Función: (Request $request)',
+                'Error al listar turnos: ' . $e->getMessage()
+            );
+
+            Log::error('Error al listar turnos: ' . $e->getMessage());
+
+            return response()->json([
+                'error' => 'No se pudieron listar los turnos',
+                'detalle' => $e->getMessage()
+            ], 500);
         }
-
-        $turnos = $turnosQuery->get();
-
-        // Formatear fechas y horas
-        $turnos = $turnos->map(function($turno) {
-            $turno->fehca_turno = Carbon::parse($turno->fehca_turno)->format('Y-m-d');
-            $turno->hora = Carbon::parse($turno->hora)->format('H:i:s');
-            return $turno;
-        });
-
-        Log::info("Turnos encontrados: " . $turnos->count());
-        //auditar
-        $this->auditar('turnos', 'listarTurnos', '', $turnos, 'CONSULTA', 'Consulta de turnos');
-
-        return response()->json($turnos);
     }
-
 
     public function listarTurnosPorFuncionario(Request $request)
     {
@@ -178,14 +253,48 @@ class TurnosController extends Controller
         $fecha = $request->query('fecha');
         $area = $request->query('area');
         $horaActual = Carbon::now()->format('H:i:s');
+        $area_deriva = $request->query('area_deriva');
+        // // Validar que el área deriva sea un valor válido
+        // if (!in_array($area_deriva, ['FISIOTERAPIA', 'OTROS'])) {
+        //     return response()->json(['error' => 'Área deriva no válida'], 400);
+        // }
 
         // Log para depuración
-        Log::info("Funcionario: $idFuncionario, Fecha: $fecha, Área: $area, Hora Actual: $horaActual");
+        Log::info("Funcionario: $idFuncionario, Fecha: $fecha, Área: $area, Hora Actual: $horaActual, Área Deriva: $area_deriva");
 
-        $turnosQuery = CpuTurno::where('id_medico', $idFuncionario)
-            ->where('estado', 1)
-            ->where('area', $area)
-            ->whereDate('fehca_turno', $fecha);
+
+        // if ($area == 8) {
+        //     $turnosQuery = CpuTurno::where('id_medico', $idFuncionario)
+        //         ->where('estado', 1)
+        //         ->where('area', $area)
+        //         ->where('tipo_atencion', 2)
+        //         ->whereDate('fehca_turno', $fecha);
+        // } else {
+        //     $turnosQuery = CpuTurno::where('id_medico', $idFuncionario)
+        //         ->where('estado', 1)
+        //         ->where('area', $area)
+        //         ->whereDate('fehca_turno', $fecha);
+        // }
+        if ($area_deriva === 'FISIOTERAPIA') {
+            $turnosQuery = CpuTurno::where('id_medico', $idFuncionario)
+                ->where('estado', 1)
+                ->where('area', $area)
+                ->where('tipo_atencion', 1)
+                ->whereDate('fehca_turno', $fecha);
+        } else {
+            if ($area == 8) {
+                $turnosQuery = CpuTurno::where('id_medico', $idFuncionario)
+                    ->where('estado', 1)
+                    ->where('area', $area)
+                    ->where('tipo_atencion', 2)
+                    ->whereDate('fehca_turno', $fecha);
+            } else {
+                $turnosQuery = CpuTurno::where('id_medico', $idFuncionario)
+                    ->where('estado', 1)
+                    ->where('area', $area)
+                    ->whereDate('fehca_turno', $fecha);
+            }
+        }
 
         if ($fecha == Carbon::now()->format('Y-m-d')) {
             $turnosQuery->where('hora', '>', $horaActual);
@@ -198,7 +307,7 @@ class TurnosController extends Controller
         Log::info("Parámetros de consulta: " . json_encode($turnosQuery->getBindings()));
 
         // Formatear las fechas y horas
-        $turnos = $turnos->map(function($turno) {
+        $turnos = $turnos->map(function ($turno) {
             $turno->fehca_turno = Carbon::parse($turno->fehca_turno)->format('Y-m-d');
             $turno->hora = Carbon::parse($turno->hora)->format('H:i:s');
             return $turno;
@@ -227,7 +336,6 @@ class TurnosController extends Controller
         } else {
             return response()->json(['success' => false], 404);
         }
-
     }
 
     public function reservarTurno(Request $request)
@@ -275,7 +383,7 @@ class TurnosController extends Controller
         $nombreUsuarioEquipo = get_current_user() . ' en ' . $tipoEquipo;
 
         $fecha = now();
-        $codigo_auditoria = strtoupper($tabla . '_' . $campo . '_' . $tipo );
+        $codigo_auditoria = strtoupper($tabla . '_' . $campo . '_' . $tipo);
         DB::table('cpu_auditoria')->insert([
             'aud_user' => $usuario,
             'aud_tabla' => $tabla,
@@ -315,6 +423,101 @@ class TurnosController extends Controller
                 return 7;
             default:
                 return 0;
+        }
+    }
+
+
+
+    public function generarTurnos(Request $request)
+    {
+        try {
+            $user = Auth::user();
+            $area = $user->usr_tipo;
+            $doctor = $user->id;
+
+            $datos = $request->all();
+
+            if (empty($datos)) {
+                return response()->json(['error' => 'No se enviaron datos de turnos'], 400);
+            }
+
+            $response = [
+                'agregados' => 0,
+                'total' => count($datos),
+                'turnos_generados' => [],
+            ];
+
+            DB::beginTransaction();
+
+            foreach ($datos as $index => $turno) {
+                $fecha_inicio = $turno['fecha_inicio'];
+                $fecha_fin = $turno['fecha_fin'];
+                $hora_inicio_atencion = $turno['hora_inicio_atencion'];
+                $hora_fin_atencion = $turno['hora_fin_atencion'];
+                $duracion_atencion = $turno['duracion_atencion'];
+                $hora_inicio_comida = $turno['hora_inicio_comida'];
+                $hora_fin_comida = $turno['hora_fin_comida'];
+                $hora_inicio_valoracion = $turno['hora_inicio_valoracion'];
+                $hora_fin_valoracion = $turno['hora_fin_valoracion'];
+                $duracion_valoracion = $turno['duracion_valoracion'];
+                $usr_tipo = $turno['usr_tipo'];
+
+                $res = DB::select("SELECT * FROM generar_agenda(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", [
+                    $doctor,
+                    $usr_tipo,
+                    $fecha_inicio,
+                    $fecha_fin,
+                    $hora_inicio_atencion,
+                    $hora_inicio_comida,
+                    $hora_fin_comida,
+                    $hora_fin_atencion,
+                    $duracion_atencion,
+                    $hora_inicio_valoracion,
+                    $hora_fin_valoracion,
+                    $duracion_valoracion
+                ]);
+
+                if (isset($res[0]->generar_agenda)) {
+                    $json_result = json_decode($res[0]->generar_agenda, true);
+                    $response['turnos_generados'][] = $json_result;
+                }
+
+                $response['agregados'] += 1;
+            }
+
+            DB::commit();
+
+            $nombreDoctor = DB::table('users')->where('id', $doctor)->value('name');
+            $descripcionAuditoria = 'Se generaron turnos dinámicamente para el Doctor: ' . $nombreDoctor .
+                ' con los siguientes parámetros: ' . json_encode($response);
+
+            $this->auditoriaController->auditar(
+                'TurnosController',
+                'generarTurnos(Request $request)',
+                '',
+                json_encode($response),
+                'INSERT',
+                $descripcionAuditoria
+            );
+
+            return response()->json([
+                'message' => 'Turnos generados correctamente',
+                'resultado' => $response
+            ], 200);
+        } catch (\Exception $e) {
+            //DB::rollBack();
+
+            $this->logController->saveLog(
+                'Nombre de Controlador: TurnosController, Nombre de Función: generarTurnos(Request $request)',
+                'Error al generar turnos: ' . $e->getMessage()
+            );
+
+            Log::error('Error al generar turnos: ' . $e->getMessage());
+
+            return response()->json([
+                'error' => 'No se pudieron generar los turnos',
+                'detalle' => $e->getMessage()
+            ], 500);
         }
     }
 }

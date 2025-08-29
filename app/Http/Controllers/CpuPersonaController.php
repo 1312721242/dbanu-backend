@@ -146,7 +146,7 @@ class CpuPersonaController extends Controller
             $persona->load('datosMedicos');
             $persona->tipoDiscapacidad = $persona->tipo_discapacidad;
             $persona->porcentajeDiscapacidad = $persona->porcentaje_discapacidad;
-            $persona->imagen = $persona->imagen;
+            $persona->imagen = url('Perfiles/' . $persona->imagen);
 
             return response()->json($persona);
         }

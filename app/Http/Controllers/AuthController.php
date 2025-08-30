@@ -255,7 +255,7 @@ class AuthController extends Controller
 
     private function auditar($tabla, $campo, $dataOld, $dataNew, $tipo, $descripcion, $request = null)
     {
-$usuario = $request && !is_string($request) ? $request->user()->name : auth()->user()->name;
+        $usuario = $request && !is_string($request) ? $request->user()->name : auth()->user()->name;
         $ip = $request && !is_string($request) ? $request->ip() : request()->ip();
         $ipv4 = gethostbyname(gethostname());
         $publicIp = file_get_contents('https://ifconfig.me/ip');
@@ -276,7 +276,7 @@ $usuario = $request && !is_string($request) ? $request->user()->name : auth()->u
         $nombreUsuarioEquipo = get_current_user() . ' en ' . $tipoEquipo;
 
         $fecha = now();
-        $codigo_auditoria = strtoupper($tabla . '_' . $campo . '_' . $tipo );
+        $codigo_auditoria = strtoupper($tabla . '_' . $campo . '_' . $tipo);
         DB::table('cpu_auditoria')->insert([
             'aud_user' => $usuario,
             'aud_tabla' => $tabla,

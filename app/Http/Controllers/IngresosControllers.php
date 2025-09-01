@@ -415,70 +415,70 @@ class IngresosControllers extends Controller
         try {
             $data = DB::select("
                  SELECT 
-    m.mi_id,
-    m.mi_id_insumo,
-    ins.ins_descripcion AS nombre_insumo,
-    m.mi_cantidad,
-    m.mi_stock_anterior,
-    m.mi_stock_actual,
-    m.mi_tipo_transaccion,
-    -- Número de comprobante según tipo de transacción
-    CASE 
-        WHEN m.mi_tipo_transaccion = 1 THEN i.ei_numero_comprobante
-        ELSE 'N/A'
-    END AS numero_comprobante,
-    -- Tipo de movimiento
-    CASE 
-        WHEN m.mi_tipo_transaccion = 1 THEN 'Ingreso'
-        WHEN m.mi_tipo_transaccion = 2 THEN 'Egreso'
-        ELSE 'Otro'
-    END AS tipo_movimiento,
-    CASE 
-        WHEN m.mi_tipo_transaccion = 1 THEN i.ei_numero_ingreso
-        WHEN m.mi_tipo_transaccion = 2 THEN e.ee_numero_egreso
-        ELSE 'N/A'
-    END AS numero_ingreso,
-    m.mi_fecha,
-    m.mi_created_at,
-    m.mi_updated_at,
-    m.mi_user_id,
-    u.name AS nombre_usuario,
-    u.email AS email_usuario,
-    -- Otros datos de ingresos y egresos opcionales
-    i.ei_numero_ingreso,
-    i.ei_id_proveedor,
-    i.ei_fecha_emision,
-    e.ee_id,
-    e.ee_id_funcionario,
-    e.ee_cedula_funcionario,
-    e.ee_id_paciente,
-    e.ee_cedula_paciente,
-    e.ee_observacion,
-    -- Stock acumulado
-    SUM(
-        CASE 
-            WHEN m.mi_tipo_transaccion = 1 THEN m.mi_cantidad
-            WHEN m.mi_tipo_transaccion = 2 THEN -m.mi_cantidad
-            ELSE 0
-        END
-    ) OVER (
-        PARTITION BY m.mi_id_insumo
-        ORDER BY m.mi_fecha, m.mi_created_at
-        ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
-    ) AS stock_actual_acumulado
-FROM cpu_movimientos_inventarios m
-LEFT JOIN cpu_encabezados_ingresos i 
-       ON m.mi_id_encabezado = i.ei_id 
-      AND m.mi_tipo_transaccion = 1
-LEFT JOIN cpu_encabezados_egresos e 
-       ON m.mi_id_encabezado = e.ee_id 
-      AND m.mi_tipo_transaccion = 2
-LEFT JOIN cpu_insumo ins
-       ON ins.id = m.mi_id_insumo
-LEFT JOIN users u
-       ON u.id = m.mi_user_id
-ORDER BY m.mi_id_insumo, m.mi_fecha, m.mi_created_at;
-");
+            m.mi_id,
+            m.mi_id_insumo,
+            ins.ins_descripcion AS nombre_insumo,
+            m.mi_cantidad,
+            m.mi_stock_anterior,
+            m.mi_stock_actual,
+            m.mi_tipo_transaccion,
+            -- Número de comprobante según tipo de transacción
+            CASE 
+                WHEN m.mi_tipo_transaccion = 1 THEN i.ei_numero_comprobante
+                ELSE 'N/A'
+            END AS numero_comprobante,
+            -- Tipo de movimiento
+            CASE 
+                WHEN m.mi_tipo_transaccion = 1 THEN 'Ingreso'
+                WHEN m.mi_tipo_transaccion = 2 THEN 'Egreso'
+                ELSE 'Otro'
+            END AS tipo_movimiento,
+            CASE 
+                WHEN m.mi_tipo_transaccion = 1 THEN i.ei_numero_ingreso
+                WHEN m.mi_tipo_transaccion = 2 THEN e.ee_numero_egreso
+                ELSE 'N/A'
+            END AS numero_ingreso,
+            m.mi_fecha,
+            m.mi_created_at,
+            m.mi_updated_at,
+            m.mi_user_id,
+            u.name AS nombre_usuario,
+            u.email AS email_usuario,
+            -- Otros datos de ingresos y egresos opcionales
+            i.ei_numero_ingreso,
+            i.ei_id_proveedor,
+            i.ei_fecha_emision,
+            e.ee_id,
+            e.ee_id_funcionario,
+            e.ee_cedula_funcionario,
+            e.ee_id_paciente,
+            e.ee_cedula_paciente,
+            e.ee_observacion,
+            -- Stock acumulado
+            SUM(
+                CASE 
+                    WHEN m.mi_tipo_transaccion = 1 THEN m.mi_cantidad
+                    WHEN m.mi_tipo_transaccion = 2 THEN -m.mi_cantidad
+                    ELSE 0
+                END
+            ) OVER (
+                PARTITION BY m.mi_id_insumo
+                ORDER BY m.mi_fecha, m.mi_created_at
+                ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
+            ) AS stock_actual_acumulado
+        FROM cpu_movimientos_inventarios m
+        LEFT JOIN cpu_encabezados_ingresos i 
+            ON m.mi_id_encabezado = i.ei_id 
+            AND m.mi_tipo_transaccion = 1
+        LEFT JOIN cpu_encabezados_egresos e 
+            ON m.mi_id_encabezado = e.ee_id 
+            AND m.mi_tipo_transaccion = 2
+        LEFT JOIN cpu_insumo ins
+            ON ins.id = m.mi_id_insumo
+        LEFT JOIN users u
+            ON u.id = m.mi_user_id
+        ORDER BY m.mi_id_insumo, m.mi_fecha, m.mi_created_at;
+        ");
             return response()->json($data);
         } catch (\Exception $e) {
             $this->logController->saveLog('Nombre de Controlador: IngresosControllers, Nombre de Funcion: getKardexMovimiento()', 'Error al guardar: ' . $e->getMessage());

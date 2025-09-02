@@ -182,7 +182,7 @@ class EgresosControllers extends Controller
     // }
 
 
-    public function guardarAtencionEgreso(Request $request)
+    public function guardarAtencionEgreso2(Request $request)
     {
         $validator = Validator::make($request->all(), [
             'idEgreso' => 'required|integer',
@@ -207,7 +207,7 @@ class EgresosControllers extends Controller
             ->value('ee_numero_egreso');
 
         try {
-            DB::beginTransaction(); 
+            DB::beginTransaction();
             $estado = DB::select(
                 "SELECT ee_id_estado FROM cpu_encabezados_egresos WHERE ee_id = :idEgreso",
                 ['idEgreso' => $request->idEgreso]
@@ -248,7 +248,7 @@ class EgresosControllers extends Controller
                             $mensajeStock
                         );
 
-                        DB::rollBack(); 
+                        DB::rollBack();
                         return response()->json([
                             'success' => false,
                             'message' => $mensajeStock,
@@ -324,15 +324,14 @@ class EgresosControllers extends Controller
                 $descripcionAuditoriaGeneral
             );
 
-            DB::commit(); 
+            DB::commit();
 
             return response()->json([
                 'success' => true,
                 'message' => "Atención guardada correctamente."
             ], 200);
-
         } catch (\Exception $e) {
-            DB::rollBack(); 
+            DB::rollBack();
             Log::error('Error al guardar atención: ' . $e->getMessage());
             $this->logController->saveLog(
                 'Nombre de controlador: EgresosControllers, Nombre de la función: guardarAtencionEgreso(request $request)',
@@ -345,6 +344,126 @@ class EgresosControllers extends Controller
             ], 500);
         }
     }
+
+    public function guardarAtencionEgreso(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'idEgreso' => 'required|integer',
+            'estado'   => 'required|integer'
+        ]);
+
+        if ($validator->fails()) {
+            $mensaje = json_encode($validator->errors());
+            $this->logController->saveLog(
+                'EgresosController -> guardarAtencionEgreso',
+                'Validación fallida: ' . $mensaje
+            );
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Error de validación',
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
+        $nroEgreso = DB::table('cpu_encabezados_egresos')
+            ->where('ee_id', $request->idEgreso)
+            ->value('ee_numero_egreso');
+
+        $estadoEgreso = $request->estado;
+        $auditoriaConsolidada = [];
+
+        try {
+            DB::beginTransaction();
+
+            $detalleEgreso = DB::table('cpu_encabezados_egresos')
+                ->where('ee_id', $request->idEgreso)
+                ->value('ee_detalle');
+
+            // Si es estado 5, se suman stocks y registran movimientos
+            if ($estadoEgreso == 5 && $detalleEgreso) {
+                $detalleEgreso = json_decode($detalleEgreso, true);
+
+                foreach ($detalleEgreso as $value) {
+                    $idInsumo = $value['idInsumo'];
+                    $cantidad = (int) $value['cantidad'];
+
+                    $stockAnterior = DB::table('cpu_movimientos_inventarios')
+                        ->where('mi_id_insumo', $idInsumo)
+                        ->orderBy('mi_created_at', 'desc')
+                        ->value('mi_stock_actual') ?? 0;
+
+                    $stockNuevo = $stockAnterior + $cantidad;
+
+                    $insertId = DB::table('cpu_movimientos_inventarios')->insertGetId([
+                        'mi_id_insumo'        => $idInsumo,
+                        'mi_cantidad'         => $cantidad,
+                        'mi_stock_anterior'   => $stockAnterior,
+                        'mi_stock_actual'     => $stockNuevo,
+                        'mi_tipo_transaccion' => 2,
+                        'mi_fecha'            => Carbon::now()->toDateTimeString(),
+                        'mi_created_at'       => Carbon::now()->toDateTimeString(),
+                        'mi_updated_at'       => Carbon::now()->toDateTimeString(),
+                        'mi_user_id'          => $request->user()->id,
+                        'mi_id_encabezado'    => $request->idEgreso,
+                    ], 'mi_id');
+
+                    $auditoriaConsolidada[] = [
+                        'accion'        => 'MOVIMIENTO_INSUMO',
+                        'descripcion'   => "Movimiento registrado: ID {$insertId}, insumo {$idInsumo}, stock anterior {$stockAnterior}, stock nuevo {$stockNuevo}",
+                        'idMovimiento'  => $insertId,
+                        'insumo'        => $idInsumo,
+                        'stockAnterior' => $stockAnterior,
+                        'stockNuevo'    => $stockNuevo
+                    ];
+                }
+            }
+
+            // Actualizar estado del egreso (2 o 5)
+            $update = DB::table('cpu_encabezados_egresos')
+                ->where('ee_id', $request->idEgreso)
+                ->update([
+                    'ee_id_estado' => $estadoEgreso == 5 ? 5 : 2,
+                    'ee_id_user'   => $request->user()->id
+                ]);
+
+            $auditoriaConsolidada[] = [
+                'accion'      => 'UPDATE_ESTADO',
+                'descripcion' => "Se actualizó el estado del egreso #{$nroEgreso} a {$estadoEgreso}",
+                'nuevoEstado' => $estadoEgreso
+            ];
+
+            // Auditoría consolidada final
+            $this->auditoriaController->auditar(
+                'cpu_encabezados_egresos',
+                'guardarAtencionEgreso(Request $request) - AUDITORIA CONSOLIDADA',
+                '',
+                json_encode($auditoriaConsolidada),
+                'INSERT',
+                'Auditoría completa de la función guardarAtencionEgreso'
+            );
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => "Atención guardada correctamente."
+            ], 200);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            $this->logController->saveLog(
+                'EgresosController -> guardarAtencionEgreso',
+                'Error al guardar la atención: ' . $e->getMessage()
+            );
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al guardar la atención: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+
 
 
     public function index()

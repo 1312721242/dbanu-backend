@@ -106,24 +106,114 @@ class CpuDerivacionController extends Controller
     }
 
     // Método para obtener derivaciones por doctor y rango de fechas
+    // public function getDerivacionesByDoctorAndDate(Request $request)
+    // {
+    //     // Validar los parámetros de entrada
+    //     $request->validate([
+    //         'doctor_id' => 'required|integer|exists:users,id',
+    //         'fecha_inicio' => 'required|date',
+    //         'fecha_fin' => 'required|date',
+    //     ]);
+
+    //     // Obtener los parámetros de la solicitud
+    //     $doctorId = $request->input('doctor_id');
+    //     $fechaInicio = Carbon::parse($request->input('fecha_inicio'))->startOfDay();
+    //     $fechaFin = Carbon::parse($request->input('fecha_fin'))->endOfDay();
+
+    //     $usrSede = Auth::user()->usr_sede;
+    //     Log::info("Sede del usuario autenticado: $usrSede");
+
+    //     // Crear la consulta base
+    //     $query = CpuDerivacion::with(['paciente', 'funcionarioQueDerivo'])
+    //         ->whereBetween('fecha_para_atencion', [$fechaInicio, $fechaFin])
+    //         ->whereNotIn('id_estado_derivacion', [4, 5])
+    //         ->select(
+    //             'cpu_personas.id as id_paciente',
+    //             'cpu_personas.cedula',
+    //             'cpu_personas.nombres',
+    //             'cpu_personas.sexo',
+    //             'cpu_personas.id_clasificacion_tipo_usuario',
+    //             'cpu_derivaciones.id_turno_asignado',
+    //             'cpu_derivaciones.ate_id',
+    //             'cpu_derivaciones.id as id_derivacion',
+    //             'cpu_derivaciones.fecha_para_atencion',
+    //             'cpu_derivaciones.motivo_derivacion',
+    //             'cpu_atenciones.diagnostico',
+    //             'cpu_derivaciones.id_tramite',
+    //             'users.name as funcionario_que_deriva',
+    //             'users.name as funcionario_al_que_deriva',
+    //             'cpu_userrole.role as area_atencion',
+    //             'cpu_derivaciones.hora_para_atencion',
+    //             'cpu_derivaciones.id_estado_derivacion',
+    //             'users.email as funcionario_email',
+    //             'users.usr_sede as id_sede',
+    //             DB::raw('COALESCE(cpu_datos_estudiantes.email_institucional, cpu_datos_empleados.emailinstitucional, cpu_datos_usuarios_externos.email) as email_paciente')
+    //         )
+    //         ->join('cpu_personas', 'cpu_personas.id', '=', 'cpu_derivaciones.id_paciente')
+    //         ->join('users', 'users.id', '=', 'cpu_derivaciones.id_funcionario_que_derivo')
+    //         ->leftJoin('users as deriva_usuario', 'deriva_usuario.id', '=', 'cpu_derivaciones.id_doctor_al_que_derivan')
+    //         ->leftJoin('cpu_userrole', 'cpu_derivaciones.id_area', '=', 'cpu_userrole.id_userrole')
+    //         ->leftJoin('cpu_datos_estudiantes', 'cpu_personas.id', '=', 'cpu_datos_estudiantes.id_persona')
+    //         ->leftJoin('cpu_datos_empleados', 'cpu_personas.id', '=', 'cpu_datos_empleados.id_persona')
+    //         ->leftJoin('users as deriva_sede', 'users.usr_sede', '=', 'cpu_derivaciones.id_funcionario_que_derivo')
+    //         ->leftJoin('cpu_atenciones', 'cpu_atenciones.id', '=', 'cpu_derivaciones.ate_id')
+    //         ->leftJoin('cpu_datos_usuarios_externos', 'cpu_personas.id', '=', 'cpu_datos_usuarios_externos.id_persona')
+    //         ->distinct(); // Asegurar que los registros sean únicos
+
+    //     // Agregar las condiciones según el doctor_id
+    //     if ($doctorId == 9) {
+    //         $query->where('id_estado_derivacion', 7)
+    //                 ->where('users.usr_sede', $usrSede);
+    //     } elseif ($doctorId != 1) {
+    //         $query->where('id_doctor_al_que_derivan', $doctorId);
+    //         $query->whereNot('id_estado_derivacion', 2);
+    //     } elseif ('users.usr_sede' > 2) {
+    //         $query->where('id_estado_derivacion', 7);
+    //     }
+
+    //     // Ordenar los resultados por fecha y hora ascendentemente
+    //     $query->orderBy('fecha_para_atencion', 'asc')
+    //         ->orderBy('hora_para_atencion', 'asc');
+
+    //     // Ejecutar la consulta
+    //     $derivaciones = $query->get();
+
+    //     // Verificar si hay datos en 'id_tramite' y obtener información adicional si es necesario
+    //     foreach ($derivaciones as $derivacion) {
+    //         if (!empty($derivacion->id_tramite)) {
+    //             $tramite = DB::table('cpu_tramites')
+    //                 ->select('tra_link_receptado', 'tra_link_enviado')
+    //                 ->where('id_tramite', $derivacion->id_tramite)
+    //                 ->first();
+
+    //             if ($tramite) {
+    //                 $derivacion->tra_link_receptado = $tramite->tra_link_receptado;
+    //                 $derivacion->tra_link_enviado = $tramite->tra_link_enviado;
+    //             }
+    //         }
+    //     }
+
+    //     // Devolver las derivaciones como respuesta JSON
+    //     return response()->json($derivaciones);
+    // }
+
     public function getDerivacionesByDoctorAndDate(Request $request)
     {
-        // Validar los parámetros de entrada
+        // Validación
         $request->validate([
-            'doctor_id' => 'required|integer|exists:users,id',
+            'doctor_id'    => 'required|integer|exists:users,id',
             'fecha_inicio' => 'required|date',
-            'fecha_fin' => 'required|date',
+            'fecha_fin'    => 'required|date',
         ]);
 
-        // Obtener los parámetros de la solicitud
-        $doctorId = $request->input('doctor_id');
+        $doctorId    = $request->input('doctor_id');
         $fechaInicio = Carbon::parse($request->input('fecha_inicio'))->startOfDay();
-        $fechaFin = Carbon::parse($request->input('fecha_fin'))->endOfDay();
+        $fechaFin    = Carbon::parse($request->input('fecha_fin'))->endOfDay();
 
         $usrSede = Auth::user()->usr_sede;
         Log::info("Sede del usuario autenticado: $usrSede");
 
-        // Crear la consulta base
+        // Consulta base
         $query = CpuDerivacion::with(['paciente', 'funcionarioQueDerivo'])
             ->whereBetween('fecha_para_atencion', [$fechaInicio, $fechaFin])
             ->whereNotIn('id_estado_derivacion', [4, 5])
@@ -147,7 +237,11 @@ class CpuDerivacionController extends Controller
                 'cpu_derivaciones.id_estado_derivacion',
                 'users.email as funcionario_email',
                 'users.usr_sede as id_sede',
-                DB::raw('COALESCE(cpu_datos_estudiantes.email_institucional, cpu_datos_empleados.emailinstitucional, cpu_datos_usuarios_externos.email) as email_paciente')
+                DB::raw('COALESCE(cpu_datos_estudiantes.email_institucional, cpu_datos_empleados.emailinstitucional, cpu_datos_usuarios_externos.email) as email_paciente'),
+                // ── Campos de la tabla de turnos ──
+                'cpu_turnos.tipo_atencion as turno_tipo_atencion',
+                'cpu_turnos.fehca_turno as turno_fecha',
+                'cpu_turnos.hora as turno_hora'
             )
             ->join('cpu_personas', 'cpu_personas.id', '=', 'cpu_derivaciones.id_paciente')
             ->join('users', 'users.id', '=', 'cpu_derivaciones.id_funcionario_que_derivo')
@@ -155,30 +249,30 @@ class CpuDerivacionController extends Controller
             ->leftJoin('cpu_userrole', 'cpu_derivaciones.id_area', '=', 'cpu_userrole.id_userrole')
             ->leftJoin('cpu_datos_estudiantes', 'cpu_personas.id', '=', 'cpu_datos_estudiantes.id_persona')
             ->leftJoin('cpu_datos_empleados', 'cpu_personas.id', '=', 'cpu_datos_empleados.id_persona')
-            ->leftJoin('users as deriva_sede', 'users.usr_sede', '=', 'cpu_derivaciones.id_funcionario_que_derivo')
             ->leftJoin('cpu_atenciones', 'cpu_atenciones.id', '=', 'cpu_derivaciones.ate_id')
             ->leftJoin('cpu_datos_usuarios_externos', 'cpu_personas.id', '=', 'cpu_datos_usuarios_externos.id_persona')
-            ->distinct(); // Asegurar que los registros sean únicos
+            // 🔗 Join con la tabla de turnos por el turno asignado
+            ->leftJoin('cpu_turnos', 'cpu_turnos.id_turnos', '=', 'cpu_derivaciones.id_turno_asignado')
+            ->distinct();
 
-        // Agregar las condiciones según el doctor_id
+        // Filtros por doctor/rol
         if ($doctorId == 9) {
             $query->where('id_estado_derivacion', 7)
-                    ->where('users.usr_sede', $usrSede);
+                ->where('users.usr_sede', $usrSede);
         } elseif ($doctorId != 1) {
-            $query->where('id_doctor_al_que_derivan', $doctorId);
-            $query->whereNot('id_estado_derivacion', 2);
-        } elseif ('users.usr_sede' > 2) {
+            $query->where('id_doctor_al_que_derivan', $doctorId)
+                ->whereNot('id_estado_derivacion', 2);
+        } elseif ($usrSede > 2) { // ← fix del string literal
             $query->where('id_estado_derivacion', 7);
         }
 
-        // Ordenar los resultados por fecha y hora ascendentemente
+        // Orden
         $query->orderBy('fecha_para_atencion', 'asc')
             ->orderBy('hora_para_atencion', 'asc');
 
-        // Ejecutar la consulta
         $derivaciones = $query->get();
 
-        // Verificar si hay datos en 'id_tramite' y obtener información adicional si es necesario
+        // Enriquecer con links de trámite si aplica
         foreach ($derivaciones as $derivacion) {
             if (!empty($derivacion->id_tramite)) {
                 $tramite = DB::table('cpu_tramites')
@@ -188,15 +282,13 @@ class CpuDerivacionController extends Controller
 
                 if ($tramite) {
                     $derivacion->tra_link_receptado = $tramite->tra_link_receptado;
-                    $derivacion->tra_link_enviado = $tramite->tra_link_enviado;
+                    $derivacion->tra_link_enviado   = $tramite->tra_link_enviado;
                 }
             }
         }
 
-        // Devolver las derivaciones como respuesta JSON
         return response()->json($derivaciones);
     }
-
 
     // Método para obtener derivaciones por doctor y rango de fechas
     public function getDerivacionesAll(Request $request)

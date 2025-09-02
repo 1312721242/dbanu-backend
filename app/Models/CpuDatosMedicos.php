@@ -46,9 +46,9 @@ class CpuDatosMedicos extends Model
         'partos_data' => 'json'
     ];
 
-    public function persona()
+   public function persona()
     {
-        return $this->belongsTo(CpuPersona::class, 'id_persona');
+        return $this->belongsTo(CpuPersona::class, 'id_persona', 'id');
     }
 
     public function tipoSangre()

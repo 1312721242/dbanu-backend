@@ -74,7 +74,11 @@ use App\Http\Controllers\ApiControllers;
 use App\Http\Controllers\OrdenesAnalisisControllers;
 use App\Http\Controllers\TiposAnalisisControllers;
 use App\Models\CpuAtencionFisioterapia;
-
+use App\Http\Controllers\NvPeriodosController;
+use App\Http\Controllers\NvDocentesController;
+use App\Http\Controllers\NvAsignaturasController;
+use App\Http\Controllers\NvParalelosController;
+use App\Http\Controllers\NvDocenteAsignaturaController;
 // Autenticación
 Route::get('credencial-pdf/{identificacion}/{periodo}', [CpuBecadoController::class, 'generarCredencialPDF']);
 Route::post('/login', [AuthController::class, 'login']);
@@ -568,7 +572,9 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('/get-egreso', [EgresosControllers::class, 'consultarEgresos']);
     Route::get('/get-egreso-id/{id}', [EgresosControllers::class, 'getConsultarEgresosId']);
     Route::post('/guardar-atencion-egreso', [EgresosControllers::class, 'guardarAtencionEgreso']);
+    //PROFESIONES
 
+    Route::post('/consultar-profesiones ', [CpuProfesionController::class, 'consultarProfesiones']);
 
     //API
     Route::get('/api-tipo-analisis', [ApiControllers::class, 'ApiConsultarTiposAnalisis']);
@@ -582,6 +588,48 @@ Route::middleware(['auth:sanctum'])->group(function () {
     //TIPOS DE ANALISIS
     Route::get('/get-tipo-analisis', [TiposAnalisisControllers::class, 'ConsultarTiposAnalisisOrion']);
     Route::get('/get-tipo-analisis/{id}', [TiposAnalisisControllers::class, 'ConsultarTiposAnalisisOrionId']);
+
+    // Periodos NV
+    Route::get('/nv/periodos',            [NvPeriodosController::class, 'index']);
+    Route::get('/nv/periodos/cpu',        [NvPeriodosController::class, 'cpuPeriodos']); // para el select
+    Route::post('/nv/periodos',            [NvPeriodosController::class, 'store']);
+    Route::put('/nv/periodos/{id}',       [NvPeriodosController::class, 'update']);
+    Route::put('/nv/periodos/{id}/toggle', [NvPeriodosController::class, 'toggleActivo']);
+    Route::post('/nv/periodos/bulk',       [NvPeriodosController::class, 'bulkUpsert']);
+
+    // Docentes
+    Route::get('/nv/docentes',                 [NvDocentesController::class, 'index']);
+    Route::post('/nv/docentes',                [NvDocentesController::class, 'store']);
+    Route::put('/nv/docentes/{id}',            [NvDocentesController::class, 'update']);        // ⬅️ NUEVA
+    Route::patch('/nv/docentes/{id}/toggle',   [NvDocentesController::class, 'toggle']);        // ⬅️ NUEVA
+    Route::post('/nv/docentes/bulk',           [NvDocentesController::class, 'bulkUpsert']);
+    Route::get('/nv/usuarios/buscar',          [NvDocentesController::class, 'buscarUsuarios']);
+    Route::get('/nv/docentes/buscar',          [NvDocentesController::class, 'buscarDocentes']);
+    Route::post('/nv/docentes/desde-usuario',  [NvDocentesController::class, 'crearDesdeUsuario']);
+
+    // Asignaturas
+    // Asignaturas
+    Route::get('/nv/asignaturas',             [NvAsignaturasController::class, 'index']);
+    Route::post('/nv/asignaturas',            [NvAsignaturasController::class, 'store']);
+    Route::put('/nv/asignaturas/{id}',        [NvAsignaturasController::class, 'update']);
+    Route::patch('/nv/asignaturas/{id}/toggle', [NvAsignaturasController::class, 'toggle']);
+    Route::post('/nv/asignaturas/bulk',       [NvAsignaturasController::class, 'bulkUpsert']);
+    Route::delete('/nv/asignaturas/{id}',     [NvAsignaturasController::class, 'destroy']); // opcional
+
+    // Paralelos
+    Route::get('/nv/paralelos',              [NvParalelosController::class, 'index']);
+    Route::post('/nv/paralelos',              [NvParalelosController::class, 'store']);
+    Route::post('/nv/paralelos/bulk',         [NvParalelosController::class, 'bulkUpsert']);
+    Route::put('/nv/paralelos/{id}',         [NvParalelosController::class, 'update']);   // <-- NUEVA
+    Route::put('/nv/paralelos/{id}/toggle',  [NvParalelosController::class, 'toggle']);
+
+
+    // Docente–Asignatura (por periodo y paralelo)
+    Route::get('/nv/docente-asignatura',           [NvDocenteAsignaturaController::class, 'index']);
+    Route::post('/nv/docente-asignatura',           [NvDocenteAsignaturaController::class, 'store']);
+    Route::post('/nv/docente-asignatura/bulk',      [NvDocenteAsignaturaController::class, 'bulkUpsert']);
+    Route::put('/nv/docente-asignatura/{id}',      [NvDocenteAsignaturaController::class, 'update']);
+    Route::delete('/nv/docente-asignatura/{id}',      [NvDocenteAsignaturaController::class, 'destroy']);
 });
 
 // Route::put('/cpu-persona-update/{cedula}', [CpuPersonaController::class, 'update']);

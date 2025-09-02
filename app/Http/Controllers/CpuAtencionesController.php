@@ -1260,66 +1260,66 @@ class CpuAtencionesController extends Controller
             $descripcion = "Se registró un egreso con ID {$ee_id} para la atención {$medicinaGeneral->id} con los siguientes insumos: " . json_encode($listaInsumos);
             $this->auditoriaController->auditar('cpu_encabezados_egresos', 'guardarAtencionMedicinaGeneral(Request $request)', '', $ee_id, 'INSERT', $descripcion);
 
-            // ✅ ENVÍO DE CORREOS
-            //$correoController = new CpuCorreoEnviadoController();
 
-            // Correo atención paciente
-            // $correoAtencion = $correoController->enviarCorreoAtencionAreaSaludPaciente(new Request([
-            //     'id_atencion' => $atencion->id,
-            //     'id_area_atencion' => $request->input('id_area'),
-            //     'fecha_hora_atencion' => Carbon::now()->format("Y-m-d H:i:s"),
-            //     'motivo_atencion' => $request->input('motivo_atencion'),
-            //     'id_paciente' => $request->input('id_persona'),
-            //     'id_funcionario' => $request->input('id_funcionario'),
-            // ]));
+            $correoController = new CpuCorreoEnviadoController();
 
-            // if (!$correoAtencion->isSuccessful()) {
-            //     $atencion->delete();
-            //     $medicinaGeneral->delete();
-            //     DB::rollBack();
-            //     return response()->json(['error' => 'Error al enviar correo de atención'], 500);
-            // }
 
-            // Correo derivación (si aplica)
-            // if ($request->input('derivacion')) {
-            //     $correoDerivacionPaciente = $correoController->enviarCorreoDerivacionAreaSaludPaciente(new Request([
-            //         'id_atencion' => $atencion->id,
-            //         'id_area_atencion' => $request->input('id_area'),
-            //         'motivo_derivacion' => $request->input('derivacion.motivo_derivacion'),
-            //         'id_paciente' => $request->input('id_persona'),
-            //         'id_funcionario' => $request->input('id_funcionario'),
-            //         'id_doctor_al_que_derivan' => $request->input('derivacion.id_doctor_al_que_derivan'),
-            //         'id_area_derivada' => $request->input('derivacion.id_area'),
-            //         'fecha_para_atencion' => $request->input('derivacion.fecha_para_atencion'),
-            //         'hora_para_atencion' => $request->input('derivacion.hora_para_atencion'),
-            //     ]));
+            $correoAtencion = $correoController->enviarCorreoAtencionAreaSaludPaciente(new Request([
+                'id_atencion' => $atencion->id,
+                'id_area_atencion' => $request->input('id_area'),
+                'fecha_hora_atencion' => Carbon::now()->format("Y-m-d H:i:s"),
+                'motivo_atencion' => $request->input('motivo_atencion'),
+                'id_paciente' => $request->input('id_persona'),
+                'id_funcionario' => $request->input('id_funcionario'),
+            ]));
 
-            //     if (!$correoDerivacionPaciente->isSuccessful()) {
-            //         $atencion->delete();
-            //         $medicinaGeneral->delete();
-            //         DB::rollBack();
-            //         return response()->json(['error' => 'Error al enviar correo al paciente'], 500);
-            //     }
+            if (!$correoAtencion->isSuccessful()) {
+                $atencion->delete();
+                $medicinaGeneral->delete();
+                DB::rollBack();
+                return response()->json(['error' => 'Error al enviar correo de atención'], 500);
+            }
 
-            //     $correoDerivacionFuncionario = $correoController->enviarCorreoDerivacionAreaSaludFuncionario(new Request([
-            //         'id_atencion' => $atencion->id,
-            //         'id_area_atencion' => $request->input('id_area'),
-            //         'motivo_derivacion' => $request->input('derivacion.motivo_derivacion'),
-            //         'id_paciente' => $request->input('id_persona'),
-            //         'id_funcionario' => $request->input('id_funcionario'),
-            //         'id_doctor_al_que_derivan' => $request->input('derivacion.id_doctor_al_que_derivan'),
-            //         'id_area_derivada' => $request->input('derivacion.id_area'),
-            //         'fecha_para_atencion' => $request->input('derivacion.fecha_para_atencion'),
-            //         'hora_para_atencion' => $request->input('derivacion.hora_para_atencion'),
-            //     ]));
 
-            //     if (!$correoDerivacionFuncionario->isSuccessful()) {
-            //         $atencion->delete();
-            //         $medicinaGeneral->delete();
-            //         DB::rollBack();
-            //         return response()->json(['error' => 'Error al enviar correo al funcionario'], 500);
-            //     }
-            // }
+            if ($request->input('derivacion')) {
+                $correoDerivacionPaciente = $correoController->enviarCorreoDerivacionAreaSaludPaciente(new Request([
+                    'id_atencion' => $atencion->id,
+                    'id_area_atencion' => $request->input('id_area'),
+                    'motivo_derivacion' => $request->input('derivacion.motivo_derivacion'),
+                    'id_paciente' => $request->input('id_persona'),
+                    'id_funcionario' => $request->input('id_funcionario'),
+                    'id_doctor_al_que_derivan' => $request->input('derivacion.id_doctor_al_que_derivan'),
+                    'id_area_derivada' => $request->input('derivacion.id_area'),
+                    'fecha_para_atencion' => $request->input('derivacion.fecha_para_atencion'),
+                    'hora_para_atencion' => $request->input('derivacion.hora_para_atencion'),
+                ]));
+
+                if (!$correoDerivacionPaciente->isSuccessful()) {
+                    $atencion->delete();
+                    $medicinaGeneral->delete();
+                    DB::rollBack();
+                    return response()->json(['error' => 'Error al enviar correo al paciente'], 500);
+                }
+
+                $correoDerivacionFuncionario = $correoController->enviarCorreoDerivacionAreaSaludFuncionario(new Request([
+                    'id_atencion' => $atencion->id,
+                    'id_area_atencion' => $request->input('id_area'),
+                    'motivo_derivacion' => $request->input('derivacion.motivo_derivacion'),
+                    'id_paciente' => $request->input('id_persona'),
+                    'id_funcionario' => $request->input('id_funcionario'),
+                    'id_doctor_al_que_derivan' => $request->input('derivacion.id_doctor_al_que_derivan'),
+                    'id_area_derivada' => $request->input('derivacion.id_area'),
+                    'fecha_para_atencion' => $request->input('derivacion.fecha_para_atencion'),
+                    'hora_para_atencion' => $request->input('derivacion.hora_para_atencion'),
+                ]));
+
+                if (!$correoDerivacionFuncionario->isSuccessful()) {
+                    $atencion->delete();
+                    $medicinaGeneral->delete();
+                    DB::rollBack();
+                    return response()->json(['error' => 'Error al enviar correo al funcionario'], 500);
+                }
+            }
 
             DB::commit();
 

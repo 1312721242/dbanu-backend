@@ -43,11 +43,8 @@ class CpuAtencionesFisioterapiaContoller extends Controller
             'tipo_atencion'                => 'required|string|in:INICIAL,SUBSECUENTE,REAPERTURA',
             'informe_final'                => 'nullable|json',
             // Agendamiento
-            // 'turnos'                       => 'exclude_unless:tipo_atencion,REAPERTURA|required|json',
-            // 'id_area'                      => 'exclude_unless:tipo_atencion,REAPERTURA|required|integer',
-            'turnos'                       => 'nullable|json',
-            'id_area'                      => 'nullable|integer',
-            'puede_agendar'                => 'nullable|boolean',
+            'turnos'                       => 'exclude_unless:tipo_atencion,REAPERTURA|required|json',
+            'id_area'                      => 'exclude_unless:tipo_atencion,REAPERTURA|required|integer',
         ]);
 
         if ($validator->fails()) {
@@ -59,29 +56,10 @@ class CpuAtencionesFisioterapiaContoller extends Controller
         // ─────────────────────────────────────────────
         $tipo = $request->input('tipo_atencion');
 
-        $puedeAgendar = filter_var($request->input('puede_agendar', false), FILTER_VALIDATE_BOOLEAN);
-
-        // SUBSECUENTE: si **puede_agendar = true**, exigir estructura mínima de turnos e id_area
-        if ($tipo === 'SUBSECUENTE' && $puedeAgendar) {
-            if (!$request->filled('id_area')) {
-                return response()->json(['error' => 'En SUBSECUENTE con agendamiento debes enviar id_area.'], 422);
-            }
-            $turnosDecod = json_decode($request->input('turnos'), true);
-            if (empty($turnosDecod) || !is_array($turnosDecod)) {
-                return response()->json(['error' => 'En SUBSECUENTE con agendamiento debes enviar al menos un turno.'], 422);
-            }
-            foreach ($turnosDecod as $i => $t) {
-                if (empty($t['id_turno']) || empty($t['fecha']) || empty($t['hora'])) {
-                    return response()->json(['error' => "Turno #" . ($i + 1) . " incompleto (id_turno, fecha, hora son requeridos)."], 422);
-                }
-            }
-        }
-
         // Default coherente: numero_sesion = 0 para INICIAL y REAPERTURA si no viene
-        if (in_array($tipo, ['INICIAL', 'REAPERTURA', 'SUBSECUENTE']) && !$request->filled('numero_sesion')) {
+        if (in_array($tipo, ['INICIAL', 'REAPERTURA']) && !$request->filled('numero_sesion')) {
             $request->merge(['numero_sesion' => 0]);
         }
-
 
         // REAPERTURA: turnos obligatorios y con estructura mínima
         if ($tipo === 'REAPERTURA') {
@@ -249,12 +227,7 @@ class CpuAtencionesFisioterapiaContoller extends Controller
             }
 
             // Derivaciones / agendamientos (INICIAL opcional, REAPERTURA obligatorio ya validado)
-            // Derivaciones / agendamientos
-            if (
-                $tipo === 'INICIAL'
-                || $tipo === 'REAPERTURA'
-                || ($tipo === 'SUBSECUENTE' && $puedeAgendar)
-            ) {
+            if (in_array($tipo, ['INICIAL', 'REAPERTURA'])) {
                 $turnosJson = $request->input('turnos');
 
                 if (!empty($turnosJson)) {
@@ -291,15 +264,15 @@ class CpuAtencionesFisioterapiaContoller extends Controller
                         // correos de derivación (si hay médico destino)
                         if ($request->filled('id_doctor_al_que_derivan')) {
                             $correoDerivacionPaciente = $correoController->enviarCorreoDerivacionAreaSaludPaciente(new Request([
-                                'id_atencion'              => $idAtencion,
-                                'id_area_atencion'         => $request->input('id_area'),
-                                'motivo_derivacion'        => $request->input('motivo_derivacion'),
-                                'id_paciente'              => $request->input('id_paciente'),
-                                'id_funcionario'           => $request->input('id_funcionario'),
+                                'id_atencion'         => $idAtencion,
+                                'id_area_atencion'    => $request->input('id_area'),
+                                'motivo_derivacion'   => $request->input('motivo_derivacion'),
+                                'id_paciente'         => $request->input('id_paciente'),
+                                'id_funcionario'      => $request->input('id_funcionario'),
                                 'id_doctor_al_que_derivan' => $request->input('id_doctor_al_que_derivan'),
-                                'id_area_derivada'         => $request->input('id_area_derivada'),
-                                'fecha_para_atencion'      => $t['fecha'] ?? null,
-                                'hora_para_atencion'       => $horaNorm,
+                                'id_area_derivada'    => $request->input('id_area_derivada'),
+                                'fecha_para_atencion' => $t['fecha'] ?? null,
+                                'hora_para_atencion'  => $horaNorm,
                             ]));
                             if (!$correoDerivacionPaciente->isSuccessful()) {
                                 DB::rollBack();
@@ -307,15 +280,15 @@ class CpuAtencionesFisioterapiaContoller extends Controller
                             }
 
                             $correoDerivacionFuncionario = $correoController->enviarCorreoDerivacionAreaSaludFuncionario(new Request([
-                                'id_atencion'              => $idAtencion,
-                                'id_area_atencion'         => $request->input('id_area'),
-                                'motivo_derivacion'        => $request->input('motivo_derivacion'),
-                                'id_paciente'              => $request->input('id_paciente'),
-                                'id_funcionario'           => $request->input('id_funcionario'),
+                                'id_atencion'         => $idAtencion,
+                                'id_area_atencion'    => $request->input('id_area'),
+                                'motivo_derivacion'   => $request->input('motivo_derivacion'),
+                                'id_paciente'         => $request->input('id_paciente'),
+                                'id_funcionario'      => $request->input('id_funcionario'),
                                 'id_doctor_al_que_derivan' => $request->input('id_doctor_al_que_derivan'),
-                                'id_area_derivada'         => $request->input('id_area_derivada'),
-                                'fecha_para_atencion'      => $t['fecha'] ?? null,
-                                'hora_para_atencion'       => $horaNorm,
+                                'id_area_derivada'    => $request->input('id_area_derivada'),
+                                'fecha_para_atencion' => $t['fecha'] ?? null,
+                                'hora_para_atencion'  => $horaNorm,
                             ]));
                             if (!$correoDerivacionFuncionario->isSuccessful()) {
                                 DB::rollBack();

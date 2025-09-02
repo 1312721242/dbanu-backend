@@ -798,14 +798,6 @@ class CpuCorreoEnviadoController extends Controller
                         <strong>📍 Lugar:</strong> Universidad Laica Eloy Alfaro de Manabí<br>
                         <strong>📌 Dirección:</strong> Bienestar Universitario, Área de Fisioterapia</p>
                         <p>Le solicitamos presentarse <strong>15 minutos antes de la hora de la cita</strong> y acudir previamente al área de <strong>TRIAJE</strong>.</p>
-                        <p><strong>Para la atención en el área de Fisioterapia, es necesario llevar los siguientes implementos:</strong></p>
-                        <ul>
-                            <li>Documento de identidad</li>
-                            <li>Carnet de la Universidad</li>
-                            <li>Comprobante de pago de las sesiones (habitualmente se pagan 5 sesiones)</li>
-                            <li>1 toalla grande de baño</li>
-                            <li>Gel diclofenaco (de cualquier marca)</li>
-                        </ul>
                         <p><i><strong>Nota:</strong> Durante la primera sesión, el fisioterapeuta podrá solicitar otros implementos adicionales según sea necesario.</i></p>
                         <p>En caso de no poder asistir en la fecha y hora programadas, le pedimos que lo comunique oportunamente al correo <strong>$email_funcionario_derivado</strong>.</p>
                         <p>Agradecemos su atención y quedamos atentos a cualquier inquietud.</p>

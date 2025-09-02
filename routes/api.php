@@ -79,6 +79,8 @@ use App\Http\Controllers\NvDocentesController;
 use App\Http\Controllers\NvAsignaturasController;
 use App\Http\Controllers\NvParalelosController;
 use App\Http\Controllers\NvDocenteAsignaturaController;
+
+use App\Http\Controllers\AtencionesDiversidadController;
 // Autenticación
 Route::get('credencial-pdf/{identificacion}/{periodo}', [CpuBecadoController::class, 'generarCredencialPDF']);
 Route::post('/login', [AuthController::class, 'login']);
@@ -627,6 +629,18 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::post('/nv/docente-asignatura/bulk',      [NvDocenteAsignaturaController::class, 'bulkUpsert']);
     Route::put('/nv/docente-asignatura/{id}',      [NvDocenteAsignaturaController::class, 'update']);
     Route::delete('/nv/docente-asignatura/{id}',      [NvDocenteAsignaturaController::class, 'destroy']);
+
+    // Diversidad – Entrevistas (histórico por atención)
+    Route::get('/diversidad/entrevistas',             [AtencionesDiversidadController::class, 'index']);
+    Route::get('/diversidad/entrevistas/{id}',        [AtencionesDiversidadController::class, 'show']);
+    Route::post('/diversidad/entrevistas',            [AtencionesDiversidadController::class, 'store']);
+    Route::put('/diversidad/entrevistas/{id}',        [AtencionesDiversidadController::class, 'update']);
+    Route::patch('/diversidad/entrevistas/{id}',      [AtencionesDiversidadController::class, 'update']);
+    // Route::delete('/diversidad/entrevistas/{id}',   [AtencionesDiversidadController::class, 'destroy']); // opcional si habilitas borrado
+
+
+
+
 });
 
 // Route::put('/cpu-persona-update/{cedula}', [CpuPersonaController::class, 'update']);

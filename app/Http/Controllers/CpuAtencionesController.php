@@ -1304,12 +1304,12 @@ class CpuAtencionesController extends Controller
             //     'id_funcionario' => $request->input('id_funcionario'),
             // ]));
 
-            // if (!$correoAtencion->isSuccessful()) {
-            //     $atencion->delete();
-            //     $medicinaGeneral->delete();
-            //     DB::rollBack();
-            //     return response()->json(['error' => 'Error al enviar correo de atención'], 500);
-            // }
+            if (!$correoAtencion->isSuccessful()) {
+                $atencion->delete();
+                $medicinaGeneral->delete();
+                DB::rollBack();
+                return response()->json(['error' => 'Error al enviar correo de atención'], 500);
+            }
 
             // // Correo derivación (si aplica)
             // if ($request->input('derivacion')) {
@@ -1325,12 +1325,12 @@ class CpuAtencionesController extends Controller
             //         'hora_para_atencion' => $request->input('derivacion.hora_para_atencion'),
             //     ]));
 
-            //     if (!$correoDerivacionPaciente->isSuccessful()) {
-            //         $atencion->delete();
-            //         $medicinaGeneral->delete();
-            //         DB::rollBack();
-            //         return response()->json(['error' => 'Error al enviar correo al paciente'], 500);
-            //     }
+                if (!$correoDerivacionPaciente->isSuccessful()) {
+                    $atencion->delete();
+                    $medicinaGeneral->delete();
+                    DB::rollBack();
+                    return response()->json(['error' => 'Error al enviar correo al paciente'], 500);
+                }
 
             //     $correoDerivacionFuncionario = $correoController->enviarCorreoDerivacionAreaSaludFuncionario(new Request([
             //         'id_atencion' => $atencion->id,
@@ -1344,13 +1344,13 @@ class CpuAtencionesController extends Controller
             //         'hora_para_atencion' => $request->input('derivacion.hora_para_atencion'),
             //     ]));
 
-            //     if (!$correoDerivacionFuncionario->isSuccessful()) {
-            //         $atencion->delete();
-            //         $medicinaGeneral->delete();
-            //         DB::rollBack();
-            //         return response()->json(['error' => 'Error al enviar correo al funcionario'], 500);
-            //     }
-            // }
+                if (!$correoDerivacionFuncionario->isSuccessful()) {
+                    $atencion->delete();
+                    $medicinaGeneral->delete();
+                    DB::rollBack();
+                    return response()->json(['error' => 'Error al enviar correo al funcionario'], 500);
+                }
+            }
 
             DB::commit();
 

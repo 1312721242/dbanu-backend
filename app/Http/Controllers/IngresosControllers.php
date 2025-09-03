@@ -359,7 +359,9 @@ class IngresosControllers extends Controller
                     'mi_id_encabezado' => $id,
                 ]);
             }
-            $this->auditar('turnos', 'listarTurnosPorFuncionario', "", "", 'CONSULTA', 'Consulta de turnos por funcionario');
+            $description = "Se guardó el ingreso con ID: {$id}";
+            $this->auditoriaController->registrarAuditoria('cpu_encabezados_ingresos', 'guardarIngresos', json_encode($request->all()), $description, 'INSERT');
+           // $this->auditar('turnos', 'listarTurnosPorFuncionario', "", "", 'CONSULTA', 'Consulta de turnos por funcionario');
 
             return response()->json([
                 'success' => true,

@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\CpuTramite;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Carbon\Carbon;
 class CpuTramiteController extends Controller
 {
     /**
@@ -144,8 +145,8 @@ class CpuTramiteController extends Controller
             'tra_direccion_enviada' => 'nullable|max:255',
             'tra_observacion' => 'nullable|max:255',
             'tra_estado_tramite' => 'nullable|integer',
-            'tra_link_receptado' => 'nullable|max:255',
-            'tra_link_enviado' => 'nullable|max:255',
+            'tra_link_receptado' => 'nullable|string',
+            'tra_link_enviado' => 'nullable|string',
             'tra_cargo' => 'nullable|max:255',
             'otro_cargo' => 'nullable|max:255',
             'otra_dependencia' => 'nullable|max:255',
@@ -245,5 +246,44 @@ class CpuTramiteController extends Controller
             default:
                 return 0;
         }
+    }
+
+     /**
+     * Optimizado: Trámites de HOY
+     * GET /tramites/hoy
+     */
+    public function hoy(Request $request)
+    {
+        $hoy = Carbon::today()->format('Y-m-d');
+
+        $tramites = CpuTramite::whereDate('tra_fecha_recibido', $hoy)->orderByDesc('id_tramite')->get();
+
+        // auditoría (opcional)
+        $this->auditar('cpu_tramite', 'hoy', '', 'Consulta HOY', 'CONSULTA', 'Consulta de trámites de hoy', $request);
+
+        return response()->json($tramites);
+    }
+
+    /**
+     * Optimizado: No finalizados desde una fecha hasta HOY
+     * GET /tramites/no-finalizados?desde=YYYY-MM-DD
+     */
+    public function noFinalizados(Request $request)
+    {
+        $desde = $request->query('desde', '2024-01-01');
+        $hoy   = Carbon::today()->format('Y-m-d');
+
+        $tramites = CpuTramite::whereBetween('tra_fecha_recibido', [$desde, $hoy])
+            ->where('tra_estado_tramite', '!=', 3) // 3 = FINALIZADO
+            ->orderBy('tra_fecha_recibido', 'desc')
+            ->get()
+            ->map(function ($t) {
+                $t->dias_desde_recibido = Carbon::parse($t->tra_fecha_recibido)->diffInDays(Carbon::today());
+                return $t;
+            });
+
+        $this->auditar('cpu_tramite', 'no_finalizados', '', 'Consulta no finalizados', 'CONSULTA', 'Consulta de trámites no finalizados', $request);
+
+        return response()->json($tramites);
     }
 }

@@ -8,6 +8,8 @@ use App\Models\CpuAtencionesDivBeneficios;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
+use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Schema;
 
 class AtencionesDiversidadController extends Controller
 {
@@ -16,7 +18,7 @@ class AtencionesDiversidadController extends Controller
     {
         $personaId = $request->query('persona_id');
 
-        $query = CpuAtencion::with(['diversidad','beneficios'])
+        $query = CpuAtencion::with(['diversidad', 'beneficios'])
             ->where('tipo_atencion', 'DIVERSIDAD')
             ->orderByDesc('fecha_hora_atencion');
 
@@ -30,7 +32,7 @@ class AtencionesDiversidadController extends Controller
     /** GET /diversidad/entrevistas/{atencion_id} */
     public function show($atencionId)
     {
-        $at = CpuAtencion::with(['diversidad','beneficios'])->findOrFail($atencionId);
+        $at = CpuAtencion::with(['diversidad', 'beneficios'])->findOrFail($atencionId);
         return response()->json($at);
     }
 
@@ -41,7 +43,7 @@ class AtencionesDiversidadController extends Controller
             'id_funcionario' => 'required|integer',
             'id_persona'     => 'required|integer',
             'via_atencion'   => 'nullable|string',
-            'motivo_atencion'=> 'nullable|string',
+            'motivo_atencion' => 'nullable|string',
             'fecha_hora_atencion' => 'nullable|date', // o string
             'detalle_atencion' => 'nullable|string',
 
@@ -49,8 +51,8 @@ class AtencionesDiversidadController extends Controller
             'diversidad.carrera'                  => 'nullable|string',
             'diversidad.status_academico'         => 'nullable|string',
             'diversidad.nivel_academico'          => 'nullable|string',
-            'diversidad.fecha_inicio_primer_nivel'=> 'nullable|string',
-            'diversidad.fecha_ingreso_convalidacion'=> 'nullable|string',
+            'diversidad.fecha_inicio_primer_nivel' => 'nullable|string',
+            'diversidad.fecha_ingreso_convalidacion' => 'nullable|string',
             'diversidad.fecha_inicio_periodo'     => 'nullable|string',
             'diversidad.fecha_fin_periodo'        => 'nullable|string',
             'diversidad.segmentacion'             => 'nullable|string',
@@ -114,7 +116,7 @@ class AtencionesDiversidadController extends Controller
             $ben = $data['beneficios'] ?? [];
             CpuAtencionesDivBeneficios::create([
                 'id_atencion'     => $atencion->id,
-                'recibe_incentivo'=> $ben['recibe_incentivo'] ?? null,
+                'recibe_incentivo' => $ben['recibe_incentivo'] ?? null,
                 'recibe_credito'  => $ben['recibe_credito'] ?? null,
                 'recibe_beca'     => $ben['recibe_beca'] ?? null,
                 'anio_beca'       => $ben['anio_beca'] ?? null,
@@ -122,7 +124,7 @@ class AtencionesDiversidadController extends Controller
             ]);
 
             return response()->json(
-                CpuAtencion::with(['diversidad','beneficios'])->find($atencion->id),
+                CpuAtencion::with(['diversidad', 'beneficios'])->find($atencion->id),
                 201
             );
         });
@@ -131,11 +133,11 @@ class AtencionesDiversidadController extends Controller
     /** PUT/PATCH /diversidad/entrevistas/{atencion_id} */
     public function update(Request $request, $atencionId)
     {
-        $atencion = CpuAtencion::with(['diversidad','beneficios'])->findOrFail($atencionId);
+        $atencion = CpuAtencion::with(['diversidad', 'beneficios'])->findOrFail($atencionId);
 
         $data = $request->validate([
             'via_atencion'   => 'nullable|string',
-            'motivo_atencion'=> 'nullable|string',
+            'motivo_atencion' => 'nullable|string',
             'fecha_hora_atencion' => 'nullable|date',
             'detalle_atencion' => 'nullable|string',
 
@@ -173,12 +175,14 @@ class AtencionesDiversidadController extends Controller
                     'observacion'                 => $div['observacion'] ?? null,
                 ];
 
-                foreach ([
-                    'fecha_inicio_primer_nivel'   => 'fecha_inicio_primer_nivel',
-                    'fecha_ingreso_convalidacion' => 'fecha_ingreso_convalidacion',
-                    'fecha_inicio_periodo'        => 'fecha_inicio_periodo',
-                    'fecha_fin_periodo'           => 'fecha_fin_periodo',
-                ] as $in => $col) {
+                foreach (
+                    [
+                        'fecha_inicio_primer_nivel'   => 'fecha_inicio_primer_nivel',
+                        'fecha_ingreso_convalidacion' => 'fecha_ingreso_convalidacion',
+                        'fecha_inicio_periodo'        => 'fecha_inicio_periodo',
+                        'fecha_fin_periodo'           => 'fecha_fin_periodo',
+                    ] as $in => $col
+                ) {
                     if (array_key_exists($in, $div)) {
                         $payload[$col] = $div[$in] ? $date($div[$in]) : null;
                     }
@@ -204,8 +208,236 @@ class AtencionesDiversidadController extends Controller
             }
 
             return response()->json(
-                CpuAtencion::with(['diversidad','beneficios'])->find($atencion->id)
+                CpuAtencion::with(['diversidad', 'beneficios'])->find($atencion->id)
             );
         });
+    }
+
+    public function prefetch(Request $request)
+    {
+        $personaId = (int) $request->query('persona_id');
+        if (!$personaId) return response()->json(['ok' => false, 'msg' => 'persona_id requerido'], 422);
+
+        $row = DB::selectOne("SELECT public.f_div_modal_prefetch(?) AS payload", [$personaId]);
+        $payload = $row && isset($row->payload) ? json_decode($row->payload, true) : [];
+        return response()->json($payload);
+    }
+
+    public function actualizarSalud(Request $request)
+    {
+        $data = $request->validate([
+            'persona_id' => 'required|integer',
+
+            // Enfermedades catastróficas
+            'enfermedades_catastroficas' => 'required|boolean',
+            'detalle_enfermedades'       => 'nullable|array',
+
+            // Embarazo
+            'embarazada'               => 'nullable|boolean',
+            'ultima_fecha_mestruacion' => 'nullable|date',    // YYYY-MM-DD (tu columna es DATE)
+            'semanas_embarazo'         => 'nullable|numeric',
+            'fecha_estimada_parto'     => 'nullable|date',
+            'observacion_embarazo'     => 'nullable|string',
+
+            // Lactancia
+            'lactancia'         => 'nullable|boolean', // (si lo necesitas para front; no se guarda)
+            'lactancia_inicio'  => 'nullable|date',
+            'lactancia_fin'     => 'nullable|date',
+
+            // Partos
+            'partos'            => 'nullable|boolean',
+            'partos_data'       => 'nullable|array',
+        ]);
+        $personaId = (int) $data['persona_id'];
+
+        $payload = [
+            'id_persona'                => $personaId,
+            'enfermedades_catastroficas' => $data['enfermedades_catastroficas'],
+            'detalle_enfermedades'      => isset($data['detalle_enfermedades']) ? json_encode($data['detalle_enfermedades']) : null,
+
+            'embarazada'                => $data['embarazada'] ?? false,
+            'ultima_fecha_mestruacion'  => $data['ultima_fecha_mestruacion'] ?? null, // DATE
+            'semanas_embarazo'          => $data['semanas_embarazo'] ?? null,
+            'fecha_estimada_parto'      => $data['fecha_estimada_parto'] ?? null,
+            'observacion_embarazo'      => $data['observacion_embarazo'] ?? null,
+
+            'lactancia_inicio'          => $data['lactancia_inicio'] ?? null,
+            'lactancia_fin'             => $data['lactancia_fin'] ?? null,
+
+            'partos'                    => $data['partos'] ?? false,
+            'partos_data'               => isset($data['partos_data']) ? json_encode($data['partos_data']) : null,
+
+            'created_at'                => now(),
+            'updated_at'                => now(),
+        ];
+
+        // SIEMPRE INSERTA (historial)
+        DB::table('cpu_datos_medicos')->insert($payload);
+
+        return response()->json(['ok' => true]);
+    }
+
+
+    /** GET /diversidad/carreras
+     * Retorna string[] con valores únicos de cpu_datos_estudiantes.carrera
+     */
+    public function listarCarrerasDistinct()
+    {
+        $rows = DB::table('cpu_datos_estudiantes')
+            ->select('carrera')
+            ->whereNotNull('carrera')
+            ->whereRaw("trim(carrera) <> ''")
+            ->distinct()
+            ->pluck('carrera')
+            ->map(fn($s) => trim((string)$s))
+            ->unique()
+            ->sort()
+            ->values()
+            ->all();
+
+        return response()->json($rows);
+    }
+
+    /** GET /diversidad/personas/{personaId}/ultima-carrera
+     * Devuelve { carrera: string|null } tomando el último registro (created_at/updated_at/id)
+     */
+    public function ultimaCarreraDePersona($personaId)
+    {
+        $personaId = (int)$personaId;
+
+        // Heurística: prioriza updated_at, luego created_at, luego id desc
+        $row = DB::table('cpu_datos_estudiantes')
+            ->where('id_persona', $personaId)
+            ->whereNotNull('carrera')
+            ->whereRaw("trim(carrera) <> ''")
+            ->orderByDesc(DB::raw('COALESCE(updated_at, created_at, now())'))
+            ->orderByDesc('id')
+            ->select('carrera')
+            ->first();
+
+        return response()->json(['carrera' => $row->carrera ?? null]);
+    }
+
+    /** GET /diversidad/segmento?cedula=
+     * Busca el segmento poblacional en:
+     * 1) cpu_personas.pro_segmentacion_persona  (source='persona')
+     * 2) cpu_legalizacion_matricula (ajusta nombre de columna si difiere) (source='legalizacion')
+     * 3) (opcional) tabla MTN si existe, p.ej. cpu_mtn_personas.segmento (source='mtn')
+     */
+    public function resolverSegmentoPorCedula(Request $request)
+    {
+        $cedula = trim((string)$request->query('cedula', ''));
+        if ($cedula === '') {
+            return response()->json(['segmento' => null, 'source' => null]);
+        }
+
+        // 1) PERSONA -> ID por cedula
+        $personaId = DB::table('cpu_personas')
+            ->where('cedula', $cedula)   // tu tabla tiene 'cedula'
+            ->value('id');
+
+        // 2) Datos de estudiante (maestro que quieres usar)
+        if ($personaId) {
+            $segEst = DB::table('cpu_datos_estudiantes')
+                ->where('id_persona', $personaId)
+                ->whereNotNull('segmentacion_persona')
+                ->whereRaw("trim(segmentacion_persona) <> ''")
+                ->orderByDesc(DB::raw('COALESCE(updated_at, created_at, now())'))
+                ->orderByDesc('id')
+                ->value('segmentacion_persona');
+
+            if ($segEst && trim($segEst) !== '') {
+                // mantenemos 'persona' como source para que el front no vuelva a intentar actualizar
+                return response()->json(['segmento' => trim($segEst), 'source' => 'persona']);
+            }
+        } else {
+            // Join inverso por si no se encontró la persona por cualquier motivo
+            $segJoin = DB::table('cpu_datos_estudiantes as de')
+                ->join('cpu_personas as p', 'p.id', '=', 'de.id_persona')
+                ->where('p.cedula', $cedula)
+                ->whereNotNull('de.segmentacion_persona')
+                ->whereRaw("trim(de.segmentacion_persona) <> ''")
+                ->orderByDesc(DB::raw('COALESCE(de.updated_at, de.created_at, now())'))
+                ->orderByDesc('de.id')
+                ->value('de.segmentacion_persona');
+
+            if ($segJoin && trim($segJoin) !== '') {
+                return response()->json(['segmento' => trim($segJoin), 'source' => 'persona']);
+            }
+        }
+
+        // 3) LEGALIZACIÓN: tu columna es 'segmento_persona'
+        if (Schema::hasTable('cpu_legalizacion_matricula')) {
+            // Evita columnas inexistentes en el WHERE
+            $q = DB::table('cpu_legalizacion_matricula');
+            $q->where(function ($w) use ($cedula) {
+                $w->where('cedula', $cedula);
+                // si en el futuro agregas otras, añádelas con hasColumn
+            });
+
+            $segLegal = Schema::hasColumn('cpu_legalizacion_matricula', 'segmento_persona')
+                ? $q->orderByDesc(DB::raw('COALESCE(updated_at, created_at, now())'))
+                ->orderByDesc('id')
+                ->value('segmento_persona')
+                : null;
+
+            if ($segLegal && trim($segLegal) !== '') {
+                return response()->json(['segmento' => trim($segLegal), 'source' => 'legalizacion']);
+            }
+        }
+
+        // 4) MTN (tu tabla es cpu_mtn_2018_2022 con columnas 'cedula' y 'segmento')
+        if (Schema::hasTable('cpu_mtn_2018_2022')) {
+            $segMtn = DB::table('cpu_mtn_2018_2022')
+                ->where('cedula', $cedula)
+                ->orderByDesc('id')
+                ->value('segmento');
+
+            if ($segMtn && trim($segMtn) !== '') {
+                return response()->json(['segmento' => trim($segMtn), 'source' => 'mtn']);
+            }
+        }
+
+        return response()->json(['segmento' => null, 'source' => null]);
+    }
+
+    /** PUT /diversidad/personas/{personaId}/segmento
+     * Actualiza cpu_personas.pro_segmentacion_persona
+     * body: { segmento: string }
+     */
+    public function actualizarSegmentoPersona(Request $request, $personaId)
+    {
+        $personaId = (int)$personaId;
+        $data = $request->validate([
+            'segmento' => 'nullable|string'
+        ]);
+        $segmento = isset($data['segmento']) ? trim((string)$data['segmento']) : null;
+
+        // Buscar el registro más reciente en cpu_datos_estudiantes
+        $row = DB::table('cpu_datos_estudiantes')
+            ->where('id_persona', $personaId)
+            ->orderByDesc(DB::raw('COALESCE(updated_at, created_at, now())'))
+            ->orderByDesc('id')
+            ->first();
+
+        if ($row) {
+            // Actualiza el registro más reciente
+            $updated = DB::table('cpu_datos_estudiantes')
+                ->where('id', $row->id)
+                ->update([
+                    'segmentacion_persona' => $segmento ?: null,
+                    'updated_at' => now(),
+                ]);
+            return response()->json(['ok' => (bool)$updated]);
+        } else {
+            // Si no hay fila para ese id_persona, crea una mínima
+            DB::table('cpu_datos_estudiantes')->insert([
+                'id_persona' => $personaId,
+                'segmentacion_persona' => $segmento ?: null,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+            return response()->json(['ok' => true, 'created' => true]);
+        }
     }
 }

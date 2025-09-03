@@ -82,6 +82,8 @@ use App\Http\Controllers\NvParalelosController;
 use App\Http\Controllers\NvDocenteAsignaturaController;
 
 use App\Http\Controllers\AtencionesDiversidadController;
+use App\Http\Controllers\CpuCasosMedicosController;
+
 // Autenticación
 Route::get('credencial-pdf/{identificacion}/{periodo}', [CpuBecadoController::class, 'generarCredencialPDF']);
 Route::post('/login', [AuthController::class, 'login']);
@@ -299,7 +301,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::post('casos-matricula/{idCaso}/revision-documentos', [CpuCasosMatriculaController::class, 'revisionDocumentos']);
 
 
-    
+
     Route::get('matricula-cases/{id_usuario}/{id_periodo}', [CpuCasosMatriculaController::class, 'getMatriculaCases']);
     Route::get('matricula-cases-all/{id_periodo}', [CpuCasosMatriculaController::class, 'getAllMatriculaCases']);
 
@@ -511,7 +513,9 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::put('/tramites/{id}', [CpuTramiteController::class, 'update']);
     Route::delete('/tramites/{id}', [CpuTramiteController::class, 'destroy']);
     Route::get('/tramites', [CpuTramiteController::class, 'show']);
-
+// NUEVOS endpoints optimizados:
+Route::get('/tramites/hoy', [CpuTramiteController::class, 'hoy']);
+Route::get('/tramites/no-finalizados', [CpuTramiteController::class, 'noFinalizados']);
     // API para obtener tipos de becas filtrados
     Route::get('/tipos-beca/filtrados', [CpuTipoBecaController::class, 'show']);
 
@@ -643,9 +647,20 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::patch('/diversidad/entrevistas/{id}',      [AtencionesDiversidadController::class, 'update']);
     // Route::delete('/diversidad/entrevistas/{id}',   [AtencionesDiversidadController::class, 'destroy']); // opcional si habilitas borrado
 
+    // Casos Médicos
+    Route::get('/casos-abiertos/{id_funcionario}', [CpuCasosMedicosController::class, 'getCasosAbiertos']);
 
 
+    // Diversidad – Prefetch (última entrevista + conteos + salud)
+    Route::get('/diversidad/prefetch', [AtencionesDiversidadController::class, 'prefetch']);
 
+    // Diversidad – Actualizar salud (maestro cpu_datos_medicos)
+    Route::put('/diversidad/salud', [AtencionesDiversidadController::class, 'actualizarSalud']);
+    // Diversidad – listas auxiliares y segmento
+    Route::get('/diversidad/carreras', [AtencionesDiversidadController::class, 'listarCarrerasDistinct']);
+    Route::get('/diversidad/personas/{personaId}/ultima-carrera', [AtencionesDiversidadController::class, 'ultimaCarreraDePersona']);
+    Route::get('/diversidad/segmento', [AtencionesDiversidadController::class, 'resolverSegmentoPorCedula']);
+    Route::put('/diversidad/personas/{personaId}/segmento', [AtencionesDiversidadController::class, 'actualizarSegmentoPersona']);
 });
 
 // Route::put('/cpu-persona-update/{cedula}', [CpuPersonaController::class, 'update']);

@@ -776,8 +776,8 @@ class CpuCorreoEnviadoController extends Controller
             $motivo_atencion = $request->input('motivo_atencion');
             $funcionario_atendio = DB::table('users')->where('id', $request->input('id_funcionario'))->value('name') ?? null;
 
-            // $email_funcionario = DB::table('users')->where('id', $request->input('id_funcionario'))->value('email');
-            $email_funcionario = 'junior.zamora@uleam.edu.ec';
+            $email_funcionario = DB::table('users')->where('id', $request->input('id_funcionario'))->value('email');
+            // $email_funcionario = 'junior.zamora@uleam.edu.ec';
 
             $area_atencion = DB::table('cpu_userrole')->where('id_userrole', $request->input('id_area_atencion'))->value('role');
             $funcionario_derivado = DB::table('users')->where('id', $request->input('id_doctor_al_que_derivan'))->value('name') ?? null;

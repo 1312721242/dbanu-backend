@@ -82,6 +82,8 @@ use App\Http\Controllers\NvParalelosController;
 use App\Http\Controllers\NvDocenteAsignaturaController;
 
 use App\Http\Controllers\AtencionesDiversidadController;
+use App\Http\Controllers\CpuCasosMedicosController;
+
 // Autenticación
 Route::get('credencial-pdf/{identificacion}/{periodo}', [CpuBecadoController::class, 'generarCredencialPDF']);
 Route::post('/login', [AuthController::class, 'login']);
@@ -299,7 +301,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::post('casos-matricula/{idCaso}/revision-documentos', [CpuCasosMatriculaController::class, 'revisionDocumentos']);
 
 
-    
+
     Route::get('matricula-cases/{id_usuario}/{id_periodo}', [CpuCasosMatriculaController::class, 'getMatriculaCases']);
     Route::get('matricula-cases-all/{id_periodo}', [CpuCasosMatriculaController::class, 'getAllMatriculaCases']);
 
@@ -643,7 +645,8 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::patch('/diversidad/entrevistas/{id}',      [AtencionesDiversidadController::class, 'update']);
     // Route::delete('/diversidad/entrevistas/{id}',   [AtencionesDiversidadController::class, 'destroy']); // opcional si habilitas borrado
 
-
+    // Casos Médicos
+    Route::get('/casos-abiertos/{id_funcionario}', [CpuCasosMedicosController::class, 'getCasosAbiertos']);
 
 
 });

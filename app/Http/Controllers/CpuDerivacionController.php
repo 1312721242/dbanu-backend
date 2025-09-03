@@ -11,6 +11,7 @@ use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\Http;
 
 class CpuDerivacionController extends Controller
 {
@@ -604,147 +605,174 @@ class CpuDerivacionController extends Controller
         }
     }
 
-
-
-
-
-
     public function enviarCorreoPaciente(array $validatedData, $tipo)
     {
-        // Obtener los datos necesarios desde el array validado
-        // $email_paciente = $validatedData['email_paciente'];
-        $email_paciente = 'p1311836587@dn.uleam.edu.ec';
-        $area_atencion = $validatedData['area_atencion'];
-        $fecha_para_atencion = $validatedData['fecha_para_atencion'];
-        $hora_para_atencion = $validatedData['hora_para_atencion'];
-        $nombres_funcionario = $validatedData['nombres_funcionario'];
+        Log::info('Datos correo al paciente', [
+            'data' => $validatedData,
+            'tipo' => $tipo
+        ]);
 
-        // Ajustar el asunto y el cuerpo del correo según el tipo
-        if ($tipo === 'no_show') {
-            $asunto = "Cita no asistida en el área de $area_atencion";
-            $cuerpo = "<p>Estimado(a) ciudadano(a); La Dirección de Bienestar, Admisión y Nivelación Universitaria, informa que no asistió a su cita programada para el área de $area_atencion el día $fecha_para_atencion a las $hora_para_atencion. Si desea reagendar su cita, por favor acerquese al área de salud de la dirección. Saludos cordiales.</p>";
-        } else {
-            $asunto = "Reagendamiento de cita programada para el área de $area_atencion";
-            $cuerpo = "<p>Estimado(a) ciudadano(a); La Dirección de Bienestar, Admisión y Nivelación Universitaria, registra el reagendamiento de una cita programada para el área de $area_atencion para la fecha $fecha_para_atencion a las $hora_para_atencion con el funcionario $nombres_funcionario, por favor presentarse 10 minutos antes, saludos cordiales.</p>";
+        try {
+            // Usar el email que ya viene en $validatedData
+            $email_paciente = $validatedData['email_paciente'];
+            $area_atencion = $validatedData['area_atencion'];
+            $fecha_para_atencion = $validatedData['fecha_para_atencion'];
+            $hora_para_atencion = $validatedData['hora_para_atencion'];
+            $nombres_funcionario = $validatedData['nombres_funcionario'];
+
+            // 📌 Construir asunto y cuerpo del correo
+            if ($tipo === 'no_show') {
+                $asunto = "Cita no asistida en el área de $area_atencion";
+                $cuerpo = "<p>Estimado(a) ciudadano(a); La Dirección de Bienestar, Admisión y Nivelación Universitaria, informa que no asistió a su cita programada para el área de <strong>$area_atencion</strong> el día <strong>$fecha_para_atencion</strong> a las <strong>$hora_para_atencion</strong>. Si desea reagendar su cita, por favor acérquese al área de salud de la dirección.<br><br>Saludos cordiales.</p>";
+            } else {
+                $asunto = "Reagendamiento de cita programada para el área de $area_atencion";
+                $cuerpo = "<p>Estimado(a) ciudadano(a); La Dirección de Bienestar, Admisión y Nivelación Universitaria, registra el reagendamiento de una cita programada para el área de <strong>$area_atencion</strong> para la fecha <strong>$fecha_para_atencion</strong> a las <strong>$hora_para_atencion</strong> con el funcionario <strong>$nombres_funcionario</strong>. Por favor presentarse 15 minutos antes.<br><br>Saludos cordiales.</p>";
+            }
+
+            // 1. Obtener token de Microsoft Graph
+            $tokenResponse = Http::withOptions(['verify' => false])->asForm()->post(
+                'https://login.microsoftonline.com/31a17900-7589-4cfc-b11a-f4e83c27b8ed/oauth2/v2.0/token',
+                [
+                    'grant_type' => 'client_credentials',
+                    'client_id' => '24e03a5e-0d5b-4c08-8382-bda010b7c3d4',
+                    'client_secret' => 'QvD8Q~7K93W8JZUZjFyOvOy2FlS.pBmELA1SNb0S',
+                    'scope' => 'https://graph.microsoft.com/.default'
+                ]
+            )->json();
+
+            if (!isset($tokenResponse['access_token'])) {
+                Log::error('Error al obtener token de Microsoft Graph', ['response' => $tokenResponse]);
+                return response()->json(['error' => 'No se pudo obtener el token de autenticación'], 500);
+            }
+
+            $accessToken = $tokenResponse['access_token'];
+
+            // 2. Enviar el correo vía Graph API con el remitente bienestar@uleam.edu.ec
+            $sender = 'bienestar@uleam.edu.ec';
+            $mailUrl = "https://graph.microsoft.com/v1.0/users/$sender/sendMail";
+            $mailData = [
+                "message" => [
+                    "subject" => $asunto,
+                    "body" => [
+                        "contentType" => "html",
+                        "content" => $cuerpo
+                    ],
+                    "toRecipients" => [
+                        [
+                            "emailAddress" => ["address" => $email_paciente]
+                        ]
+                    ]
+                ]
+            ];
+
+            $sendResponse = Http::withOptions(['verify' => false])
+                ->withToken($accessToken)
+                ->post($mailUrl, $mailData);
+
+            if ($sendResponse->successful()) {
+                Log::info('Correo enviado al paciente (Graph)', ['email' => $email_paciente]);
+                return response()->json(['message' => 'Correo enviado correctamente'], 200);
+            } else {
+                Log::error('Error al enviar correo al paciente (Graph)', [
+                    'status' => $sendResponse->status(),
+                    'response' => $sendResponse->body()
+                ]);
+                return response()->json(['error' => 'Error al enviar el correo'], $sendResponse->status());
+            }
+        } catch (\Exception $e) {
+            Log::error('Excepción al enviar correo al paciente (Graph)', [
+                'message' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+                'data' => $validatedData
+            ]);
+            return response()->json(['error' => 'Error interno al enviar el correo'], 500);
         }
-
-        $persona = [
-            "destinatarios" => $email_paciente,
-            "cc" => "",
-            "cco" => "",
-            "asunto" => $asunto,
-            "cuerpo" => $cuerpo
-        ];
-
-        // Codificar los datos
-        $datosCodificados = json_encode($persona);
-
-        // URL de destino
-        $url = "https://prod-44.westus.logic.azure.com:443/workflows/4046dc46113a4d8bb5da374ef1ee3e32/triggers/manual/paths/invoke?api-version=2016-06-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=lA40KwffEyLqEjVA4uyHaWAHblO77vk2jXYEkjUG08s";
-
-        // Inicializar cURL
-        $ch = curl_init($url);
-
-        // Configurar opciones de cURL
-        curl_setopt_array($ch, array(
-            CURLOPT_CUSTOMREQUEST => "POST",
-            CURLOPT_POSTFIELDS => $datosCodificados,
-            CURLOPT_HTTPHEADER => array(
-                'Content-Type: application/json',
-                'Content-Length: ' . strlen($datosCodificados),
-                'Personalizado: ¡Hola mundo!',
-            ),
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_SSL_VERIFYPEER => false, // Deshabilitar verificación SSL (solo para pruebas)
-            CURLOPT_SSL_VERIFYHOST => false, // Deshabilitar verificación del host SSL (solo para pruebas)
-        ));
-
-        // Realizar la solicitud cURL
-        $resultado = curl_exec($ch);
-        $codigoRespuesta = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        curl_close($ch);
-
-        // Procesar la respuesta
-        if ($codigoRespuesta === 200) {
-            $respuestaDecodificada = json_decode($resultado);
-            // Realiza acciones adicionales si es necesario
-        } else {
-            // Manejar errores
-            return response()->json(['error' => "Error consultando. Código de respuesta: $codigoRespuesta"], $codigoRespuesta);
-        }
-
-        // Devolver una respuesta
-        return response()->json(['message' => 'Solicitud enviada correctamente'], 200);
     }
-
 
     public function enviarCorreoFuncionario(array $validatedData, $tipo)
     {
-        // Obtener los datos necesarios desde el array validado
-        // $funcionario_email = $validatedData['funcionario_email'];
-        $funcionario_email = 'p1311836587@dn.uleam.edu.ec';
-        $area_atencion = $validatedData['area_atencion'];
-        $fecha_para_atencion = $validatedData['fecha_para_atencion'];
-        $hora_para_atencion = $validatedData['hora_para_atencion'];
-        $nombres_paciente = $validatedData['nombres_paciente'];
+        Log::info('Datos correo al funcionario', [
+            'data' => $validatedData,
+            'tipo' => $tipo
+        ]);
 
-        // Ajustar el asunto y el cuerpo del correo según el tipo
-        if ($tipo === 'no_show') {
-            $asunto = "Paciente no asistió a la cita en el área de $area_atencion";
-            $cuerpo = "<p>Estimado(a) funcionario(a); La Dirección de Bienestar, Admisión y Nivelación Universitaria, informa que el ciudadano(a) $nombres_paciente no asistió a su cita programada para el área de $area_atencion el día $fecha_para_atencion a las $hora_para_atencion. Saludos cordiales.</p>";
-        } else {
-            $asunto = "Reagendamiento de cita programada para el área de $area_atencion";
-            $cuerpo = "<p>Estimado(a) funcionario(a); La Dirección de Bienestar, Admisión y Nivelación Universitaria, registra el reagendamiento de una cita para el área de $area_atencion para la fecha $fecha_para_atencion a las $hora_para_atencion con el ciudadano(a) $nombres_paciente, saludos cordiales.</p>";
+        try {
+            // 📌 Usar el email que ya viene en $validatedData
+            $funcionario_email = $validatedData['funcionario_email'];
+            $area_atencion = $validatedData['area_atencion'];
+            $fecha_para_atencion = $validatedData['fecha_para_atencion'];
+            $hora_para_atencion = $validatedData['hora_para_atencion'];
+            $nombres_paciente = $validatedData['nombres_paciente'];
+
+            // 📌 Construir asunto y cuerpo
+            if ($tipo === 'no_show') {
+                $asunto = "Paciente no asistió a la cita en el área de $area_atencion";
+                $cuerpo = "<p>Estimado(a) funcionario(a); La Dirección de Bienestar, Admisión y Nivelación Universitaria, informa que el ciudadano(a) <strong>$nombres_paciente</strong> no asistió a su cita programada para el área de <strong>$area_atencion</strong> el día <strong>$fecha_para_atencion</strong> a las <strong>$hora_para_atencion</strong>.<br><br>Saludos cordiales.</p>";
+            } else {
+                $asunto = "Reagendamiento de cita programada para el área de $area_atencion";
+                $cuerpo = "<p>Estimado(a) funcionario(a); La Dirección de Bienestar, Admisión y Nivelación Universitaria, registra el reagendamiento de una cita para el área de <strong>$area_atencion</strong> para la fecha <strong>$fecha_para_atencion</strong> a las <strong>$hora_para_atencion</strong> con el ciudadano(a) <strong>$nombres_paciente</strong>.<br><br>Saludos cordiales.</p>";
+            }
+
+            // 1. Obtener token de Microsoft Graph
+            $tokenResponse = Http::withOptions(['verify' => false])->asForm()->post(
+                'https://login.microsoftonline.com/31a17900-7589-4cfc-b11a-f4e83c27b8ed/oauth2/v2.0/token',
+                [
+                    'grant_type' => 'client_credentials',
+                    'client_id' => '24e03a5e-0d5b-4c08-8382-bda010b7c3d4',
+                    'client_secret' => 'QvD8Q~7K93W8JZUZjFyOvOy2FlS.pBmELA1SNb0S',
+                    'scope' => 'https://graph.microsoft.com/.default'
+                ]
+            )->json();
+
+            if (!isset($tokenResponse['access_token'])) {
+                Log::error('Error al obtener token de Microsoft Graph', ['response' => $tokenResponse]);
+                return response()->json(['error' => 'No se pudo obtener el token de autenticación'], 500);
+            }
+
+            $accessToken = $tokenResponse['access_token'];
+
+            // 2. Enviar el correo vía Graph API con el remitente bienestar@uleam.edu.ec
+            $sender = 'bienestar@uleam.edu.ec';
+            $mailUrl = "https://graph.microsoft.com/v1.0/users/$sender/sendMail";
+            $mailData = [
+                "message" => [
+                    "subject" => $asunto,
+                    "body" => [
+                        "contentType" => "html",
+                        "content" => $cuerpo
+                    ],
+                    "toRecipients" => [
+                        [
+                            "emailAddress" => ["address" => $funcionario_email]
+                        ]
+                    ]
+                ]
+            ];
+
+            $sendResponse = Http::withOptions(['verify' => false])
+                ->withToken($accessToken)
+                ->post($mailUrl, $mailData);
+
+            if ($sendResponse->successful()) {
+                Log::info('Correo enviado al funcionario', ['email' => $funcionario_email]);
+                return response()->json(['message' => 'Correo enviado correctamente'], 200);
+            } else {
+                Log::error('Error al enviar correo al funcionario', [
+                    'status' => $sendResponse->status(),
+                    'response' => $sendResponse->body()
+                ]);
+                return response()->json(['error' => 'Error al enviar el correo'], $sendResponse->status());
+            }
+        } catch (\Exception $e) {
+            Log::error('Excepción al enviar correo al funcionario (Graph)', [
+                'message' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+                'data' => $validatedData
+            ]);
+            return response()->json(['error' => 'Error interno al enviar el correo'], 500);
         }
-
-        $persona = [
-            "destinatarios" => $funcionario_email,
-            "cc" => "",
-            "cco" => "",
-            "asunto" => $asunto,
-            "cuerpo" => $cuerpo
-        ];
-
-        // Codificar los datos
-        $datosCodificados = json_encode($persona);
-
-        // URL de destino
-        $url = "https://prod-44.westus.logic.azure.com:443/workflows/4046dc46113a4d8bb5da374ef1ee3e32/triggers/manual/paths/invoke?api-version=2016-06-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=lA40KwffEyLqEjVA4uyHaWAHblO77vk2jXYEkjUG08s";
-
-        // Inicializar cURL
-        $ch = curl_init($url);
-
-        // Configurar opciones de cURL
-        curl_setopt_array($ch, array(
-            CURLOPT_CUSTOMREQUEST => "POST",
-            CURLOPT_POSTFIELDS => $datosCodificados,
-            CURLOPT_HTTPHEADER => array(
-                'Content-Type: application/json',
-                'Content-Length: ' . strlen($datosCodificados),
-                'Personalizado: ¡Hola mundo!',
-            ),
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_SSL_VERIFYPEER => false, // Deshabilitar verificación SSL (solo para pruebas)
-            CURLOPT_SSL_VERIFYHOST => false, // Deshabilitar verificación del host SSL (solo para pruebas)
-        ));
-
-        // Realizar la solicitud cURL
-        $resultado = curl_exec($ch);
-        $codigoRespuesta = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        curl_close($ch);
-
-        // Procesar la respuesta
-        if ($codigoRespuesta === 200) {
-            $respuestaDecodificada = json_decode($resultado);
-            // Realiza acciones adicionales si es necesario
-        } else {
-            // Manejar errores
-            return response()->json(['error' => "Error consultando. Código de respuesta: $codigoRespuesta"], $codigoRespuesta);
-        }
-
-        // Devolver una respuesta
-        return response()->json(['message' => 'Solicitud enviada correctamente'], 200);
     }
+
 
     //funcion para auditar
     private function auditar($tabla, $campo, $dataOld, $dataNew, $tipo, $descripcion, $request = null)

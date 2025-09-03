@@ -71,6 +71,7 @@ use App\Http\Controllers\CategoriaActivosControllers;
 use App\Http\Controllers\IngresosControllers;
 use App\Http\Controllers\EgresosControllers;
 use App\Http\Controllers\ApiControllers;
+use App\Http\Controllers\CpuResumenAgendaFisioterapiaController;
 use App\Http\Controllers\OrdenesAnalisisControllers;
 use App\Http\Controllers\TiposAnalisisControllers;
 use App\Models\CpuAtencionFisioterapia;
@@ -81,6 +82,8 @@ use App\Http\Controllers\NvParalelosController;
 use App\Http\Controllers\NvDocenteAsignaturaController;
 
 use App\Http\Controllers\AtencionesDiversidadController;
+use App\Http\Controllers\CpuCasosMedicosController;
+
 // Autenticación
 Route::get('credencial-pdf/{identificacion}/{periodo}', [CpuBecadoController::class, 'generarCredencialPDF']);
 Route::post('/login', [AuthController::class, 'login']);
@@ -530,6 +533,7 @@ Route::get('/tramites/no-finalizados', [CpuTramiteController::class, 'noFinaliza
     //API para guardar atenciones fisioterapia
     Route::post('/atenciones-fisioterapia', [CpuAtencionesFisioterapiaContoller::class, 'guardarAtencionFisioterapia']);
     Route::get('/ultima-consulta-fisioterapia/{area_atencion}/{usr_tipo}/{id_persona}/{id_caso}', [CpuAtencionesFisioterapiaContoller::class, 'obtenerUltimaConsultaFisioterapia']);
+    Route::get('/resumen-agenda-fisioterapia', [CpuResumenAgendaFisioterapiaController::class, 'resumen']);
 
     //API  - secretaria de direccion
     Route::post('/usuarios/externos/secretaria', [CpuPersonaController::class, 'store']);
@@ -642,6 +646,11 @@ Route::get('/tramites/no-finalizados', [CpuTramiteController::class, 'noFinaliza
     Route::put('/diversidad/entrevistas/{id}',        [AtencionesDiversidadController::class, 'update']);
     Route::patch('/diversidad/entrevistas/{id}',      [AtencionesDiversidadController::class, 'update']);
     // Route::delete('/diversidad/entrevistas/{id}',   [AtencionesDiversidadController::class, 'destroy']); // opcional si habilitas borrado
+
+    // Casos Médicos
+    Route::get('/casos-abiertos/{id_funcionario}', [CpuCasosMedicosController::class, 'getCasosAbiertos']);
+
+
     // Diversidad – Prefetch (última entrevista + conteos + salud)
     Route::get('/diversidad/prefetch', [AtencionesDiversidadController::class, 'prefetch']);
 

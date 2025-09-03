@@ -262,19 +262,6 @@ class TurnosController extends Controller
         // Log para depuración
         Log::info("Funcionario: $idFuncionario, Fecha: $fecha, Área: $area, Hora Actual: $horaActual, Área Deriva: $area_deriva");
 
-
-        // if ($area == 8) {
-        //     $turnosQuery = CpuTurno::where('id_medico', $idFuncionario)
-        //         ->where('estado', 1)
-        //         ->where('area', $area)
-        //         ->where('tipo_atencion', 2)
-        //         ->whereDate('fehca_turno', $fecha);
-        // } else {
-        //     $turnosQuery = CpuTurno::where('id_medico', $idFuncionario)
-        //         ->where('estado', 1)
-        //         ->where('area', $area)
-        //         ->whereDate('fehca_turno', $fecha);
-        // }
         if ($area_deriva === 'FISIOTERAPIA') {
             $turnosQuery = CpuTurno::where('id_medico', $idFuncionario)
                 ->where('estado', 1)

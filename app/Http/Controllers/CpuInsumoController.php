@@ -39,6 +39,7 @@ class CpuInsumoController extends Controller
             ->orderBy('ins_descripcion', 'asc')
             ->select('id', 'id_tipo_insumo', 'ins_descripcion', 'cantidad_unidades', 'ins_cantidad')
             ->get();
+            
         $this->auditar('cpu_insumo', 'getInsumos', '', $insumosMedicos, 'CONSULTA', 'Consulta de insumos médicos');
         return response()->json([
             'insumosMedicos' => $insumosMedicos,
@@ -253,6 +254,8 @@ class CpuInsumoController extends Controller
             $id_in = DB::table('cpu_insumo')->insertGetId([
                 'id_tipo_insumo' => $data['select-tipo'],
                 'ins_descripcion' => $data['txt-descripcion'],
+                'cantidad_unidades' => $data['txt-stock-inicial'],
+                'ins_cantidad' => $data['txt-stock-inicial'],
                 'codigo' => $data['txt-codigo'],
                 'id_estado' => $data['select-estado'],
                 'unidad_medida' => $data['select-unidad-medida'],
@@ -266,7 +269,7 @@ class CpuInsumoController extends Controller
 
             $id_m = DB::table('cpu_movimientos_inventarios')->insertGetId([
                 'mi_id_insumo' => $id_in,
-                'mi_cantidad' => 0,
+                'mi_cantidad' => $data['txt-stock-inicial'],
                 'mi_stock_anterior' => 0,
                 'mi_stock_actual' => $data['txt-stock-inicial'],
                 'mi_tipo_transaccion' => 1,

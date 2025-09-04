@@ -376,7 +376,6 @@ class EgresosControllers extends Controller
 
         try {
             DB::beginTransaction();
-
             $detalleEgreso = DB::table('cpu_encabezados_egresos')
                 ->where('ee_id', $request->idEgreso)
                 ->value('ee_detalle');
@@ -389,26 +388,19 @@ class EgresosControllers extends Controller
                     $idInsumo = $value['idInsumo'];
                     $cantidad = (int) $value['cantidad'];
 
-                    $stock = DB::select("
-                        SELECT mi_stock_actual
-                        FROM cpu_movimientos_inventarios
-                        WHERE mi_id = (
-                            SELECT MAX(mi_id)
-                            FROM cpu_movimientos_inventarios
-                            WHERE mi_id_insumo = :idInsumo
-                        )
-                    ", ['idInsumo' => $value['idInsumo']]);
+                    $stockAnterior = DB::table('cpu_movimientos_inventarios')
+                        ->where('mi_id_insumo', $idInsumo)
+                        ->orderBy('mi_created_at', 'desc')
+                        ->value('mi_stock_actual') ?? 0;
 
-                    $stockAnterior = $stock[0]->mi_stock_actual ?? 0;
-
-                    $stockNuevo = $stockAnterior - $cantidad;
+                    $stockNuevo = $stockAnterior + $cantidad;
 
                     $insertId = DB::table('cpu_movimientos_inventarios')->insertGetId([
                         'mi_id_insumo'        => $idInsumo,
                         'mi_cantidad'         => $cantidad,
                         'mi_stock_anterior'   => $stockAnterior,
                         'mi_stock_actual'     => $stockNuevo,
-                        'mi_tipo_transaccion' => 2,
+                        'mi_tipo_transaccion' => 1,
                         'mi_fecha'            => Carbon::now()->toDateTimeString(),
                         'mi_created_at'       => Carbon::now()->toDateTimeString(),
                         'mi_updated_at'       => Carbon::now()->toDateTimeString(),
@@ -424,6 +416,10 @@ class EgresosControllers extends Controller
                         'stockAnterior' => $stockAnterior,
                         'stockNuevo'    => $stockNuevo
                     ];
+
+                    DB::table('cpu_insumo')
+                        ->where('id',$idInsumo)
+                        ->update(['cantidad_unidades' => $stockNuevo]);
                 }
             }
 
@@ -434,6 +430,7 @@ class EgresosControllers extends Controller
                     'ee_observacion' => $request->observacion ?? null,
                     'ee_id_user'   => $request->user()->id
                 ]);
+
 
             $auditoriaConsolidada[] = [
                 'accion'      => 'UPDATE_ESTADO',

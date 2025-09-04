@@ -115,7 +115,31 @@ class CpuInsumoController extends Controller
 
     public function consultarInsumos()
     {
-        $data = DB::select('SELECT * FROM public.view_insumos');
+        $data = DB::select("
+            SELECT i.id,
+            i.id_tipo_insumo,
+            i.ins_descripcion,
+            i.ins_cantidad,
+            i.estado_insumo,
+            i.id_estado,
+            e.estado,
+            i.modo_adquirido,
+            i.num_documento,
+            i.nombre_proveedor,
+            i.fecha_recibido,
+            i.fecha_ingreso_sistema,
+            i.fecha_update,
+            i.codigo,
+            i.unidad_medida,
+            i.serie,
+            i.modelo,
+            i.marca,
+            i.cantidad_unidades
+        FROM cpu_insumo i
+            JOIN cpu_estados e ON e.id = i.id_estado
+        WHERE i.id_estado = 8
+        ORDER BY i.id DESC
+        ");
         return response()->json($data);
     }
 
@@ -286,41 +310,78 @@ class CpuInsumoController extends Controller
 
     public function modificarInsumo(Request $request, $id)
     {
-        log::info('data', $request->all());
+        Log::info('Datos recibidos para modificar insumo:', $request->all());
         $data = $request->all();
-        $userId = Session::get('user_id');
+        $userId = Session::get('user_id') ?? null;
 
         $validator = Validator::make($request->all(), [
             'txt-descripcion' => 'required|string|max:500',
-            'txt-codigo' => 'required|string|max:500'
+            'txt-codigo' => 'required|string|max:500',
+            'select-tipo' => 'required|integer',
+            'select-estado' => 'required|integer',
+            'select-unidad-medida' => 'required|string',
         ]);
 
         if ($validator->fails()) {
-            return response()->json(['error' => $validator->errors()], 400);
+            $this->logController->saveLog(
+                'Controlador: InsumosController, Función: modificarInsumo()',
+                'Error de validación: ' . json_encode($validator->errors())
+            );
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Error de validación',
+                'data' => $validator->errors()
+            ], 400);
         }
 
-        $facultadNombre = $request->input('fac_nombre');
-        $usuario = $request->user()->name;
-        $ip = $request->ip();
-        $nombreequipo = gethostbyaddr($ip);
-        $fecha = now();
+        try {
+            $updated = DB::table('cpu_insumo')
+                ->where('id', $id)
+                ->update([
+                    'id_tipo_insumo' => $data['select-tipo'],
+                    'ins_descripcion' => $data['txt-descripcion'],
+                    'codigo' => $data['txt-codigo'],
+                    'id_estado' => $data['select-estado'],
+                    'unidad_medida' => $data['select-unidad-medida'],
+                    'updated_at' => now(),
+                    'id_usuario' => $userId
+                ]);
 
+            if (!$updated) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No se encontró el insumo con ID ' . $id
+                ], 404);
+            }
 
-        $id_in = DB::table('cpu_insumo')
-            ->where('id', $id)
-            ->update([
-                'id_tipo_insumo' => $data['select-tipo'],
-                'ins_descripcion' => $data['txt-descripcion'],
-                'codigo' => $data['txt-codigo'],
-                'id_estado' => $data['select-estado'],
-                'unidad_medida' => $data['select-unidad-medida'],
-                'updated_at' => now(),
-                'id_usuario' => $userId
+            $descripcionAuditoria = 'Se modificó el insumo: "' . $data['txt-descripcion'] .
+                '" con código: "' . $data['txt-codigo'] . '" (ID Insumo: ' . $id . ')';
+
+            $this->auditoriaController->auditar(
+                'cpu_insumo',
+                'modificarInsumo',
+                '',
+                json_encode($data),
+                'UPDATE',
+                $descripcionAuditoria
+            );
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Insumo modificado correctamente',
+                'data' => ['id' => $id]
             ]);
+        } catch (\Exception $e) {
+            $this->logController->saveLog(
+                'Controlador: InsumosController, Función: modificarInsumo()',
+                'Error al modificar insumo: ' . $e->getMessage()
+            );
 
-        $descripcionAuditoria = 'Se modifico el insumo: ' . $data['txt-descripcion'] . ' con codigo: ' . $data['txt-codigo'] . ' y ID: ' . $id;
-        $this->auditoriaController->auditar('cpu_insumo', 'saveInsumos', '', json_encode($data), 'INSERT', $descripcionAuditoria);;
-
-        return response()->json(['success' => true, 'message' => 'Insumo modificado correctamente']);
+            return response()->json([
+                'success' => false,
+                'message' => 'Hubo un problema al modificar el insumo: ' . $e->getMessage()
+            ], 500);
+        }
     }
 }

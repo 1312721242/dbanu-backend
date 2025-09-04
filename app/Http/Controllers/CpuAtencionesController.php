@@ -1080,7 +1080,6 @@ class CpuAtencionesController extends Controller
 
     public function guardarAtencionMedicinaGeneral(Request $request)
     {
-        // Validar que los campos requeridos estén presentes
         $request->validate([
             'id_funcionario' => 'required|integer|exists:users,id',
             'id_persona' => 'required|integer|exists:cpu_personas,id',

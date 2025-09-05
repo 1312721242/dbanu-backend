@@ -37,4 +37,26 @@ class CpuTramite extends Model
         'created_at',
         'updated_at',
     ];
+
+    public function personaRecibe()
+    {
+        return $this->belongsTo(User::class, 'tra_person_recibe', 'id')->select('id','name');
+    }
+
+    public function personaModifico()
+    {
+        return $this->belongsTo(User::class, 'tra_id_persona_modifico', 'id')->select('id','name');
+    }
+
+    public function areaDerivada()
+    {
+        return $this->belongsTo(CpuUserrole::class, 'tra_area_derivada', 'id_userrole')
+                    ->select('id_userrole','role');
+    }
+
+    public function getEstadoLabelAttribute()
+    {
+        $map = [1=>'RECIBIDO', 2=>'DERIVADO', 3=>'FINALIZADO', 4=>'PENDIENTE'];
+        return $map[(int)$this->tra_estado_tramite] ?? '—';
+    }
 }

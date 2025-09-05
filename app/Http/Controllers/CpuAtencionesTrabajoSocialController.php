@@ -12,6 +12,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Cache;
+
 class CpuAtencionesTrabajoSocialController extends Controller
 {
     /**
@@ -33,10 +34,102 @@ class CpuAtencionesTrabajoSocialController extends Controller
     /**
      * Store a newly created resource in storage.
      */
+    // public function store(Request $request)
+    // {
+    //     // Convertir fecha_hora_atencion al formato requerido
+    //     $fecha_hora_atencion = \Carbon\Carbon::createFromFormat('Y-m-d\TH:i', $request->input('fecha_hora_atencion'))->format('Y-m-d H:i:s');
+    //     $request->merge(['fecha_hora_atencion' => $fecha_hora_atencion]);
+
+    //     // Validar los datos para guardar la atención
+    //     $validator = Validator::make($request->all(), [
+    //         'id_funcionario' => 'required|integer',
+    //         'id_persona' => 'required|integer',
+    //         'via_atencion' => 'required|string',
+    //         'motivo_atencion' => 'required|string',
+    //         'fecha_hora_atencion' => 'required|date_format:Y-m-d H:i:s',
+    //         'anio_atencion' => 'required|integer',
+    //         'tipo_usuario' => 'required|integer',
+    //         'tipo_atencion' => 'required|string',
+    //         'detalle_atencion' => 'required|string',
+    //         'tipo_modal' => 'required|string',
+    //         'id_derivacion' => 'nullable|integer',
+    //     ]);
+
+    //     if ($validator->fails()) {
+    //         return response()->json(['error' => $validator->errors()], 400);
+    //     }
+
+    //     // Iniciar una transacción
+    //     DB::beginTransaction();
+
+    //     try {
+    //         // Guardar la atención
+    //         $atencion = new CpuAtencion();
+    //         $atencion->id_funcionario = $request->input('id_funcionario');
+    //         $atencion->id_persona = $request->input('id_persona');
+    //         $atencion->via_atencion = $request->input('via_atencion');
+    //         $atencion->motivo_atencion = $request->input('motivo_atencion');
+    //         $atencion->detalle_atencion = $request->input('detalle_atencion');
+    //         $atencion->fecha_hora_atencion = $request->input('fecha_hora_atencion');
+    //         $atencion->anio_atencion = $request->input('anio_atencion');
+    //         $atencion->id_tipo_usuario = $request->input('tipo_usuario');
+    //         $atencion->tipo_atencion = $request->input('tipo_atencion');
+    //         $atencion->save();
+
+    //         // Validar los datos para guardar la atención de trabajo social
+    //         $validated = $request->validate([
+    //             'tipo_informe' => 'required|string',
+    //             'requiriente' => 'required|string',
+    //             'numero_tramite' => 'required|string',
+    //             'detalle_general' => 'required|string',
+    //             'observaciones' => 'required|string',
+    //             'periodo' => 'required|string',
+    //         ]);
+
+    //         // Agregar el id_atenciones al array validado
+    //         $validated['id_atenciones'] = $atencion->id;
+
+    //         // Guardar la atención de trabajo social
+    //         $atencionTrabajoSocial = CpuAtencionesTrabajoSocial::create($validated);
+
+    //         if ($request->input('tipo_modal') === 'derivacion') {
+    //             // Actualizar la derivación
+    //             $derivacion = CpuDerivacion::findOrFail($request->input('id_derivacion'));
+    //             $derivacion->id_estado_derivacion = 2;
+    //             $derivacion->save();
+
+    //             // Actualizar el estado del turno relacionado
+    //             $turno = CpuTurno::findOrFail($derivacion->id_turno_asignado);
+    //             $turno->estado = 2;
+    //             $turno->save();
+    //         }
+
+    //         // Auditoría
+    //         $this->auditar('cpu_atenciones_trabajo_social', 'id', '', $atencionTrabajoSocial->id, 'INSERCION', "INSERCION DE NUEVA ATENCION DE TRABAJO SOCIAL: {$atencionTrabajoSocial->id},
+    //                                                                             FUNCIONARIO: {$request->input('id_funcionario')},
+    //                                                                             PACIENTE: {$request->input('id_persona')},
+    //                                                                             VIA DE ATENCION: {$request->input('via_atencion')},
+    //                                                                             MOTIVO DE ATENCION: {$request->input('motivo_atencion')},
+    //                                                                             FECHA Y HORA DE ATENCION: {$request->input('fecha_hora_atencion')}");
+
+    //         // Confirmar la transacción
+    //         DB::commit();
+
+    //         return response()->json(['message' => 'Atención de Trabajo Social guardada exitosamente', 'data' => $atencionTrabajoSocial]);
+    //     } catch (\Exception $e) {
+    //         // Deshacer la transacción en caso de error
+    //         DB::rollBack();
+    //         Log::error('Error al guardar la atención de trabajo social:', ['exception' => $e->getMessage()]);
+    //         return response()->json(['error' => 'Error al guardar la atención de trabajo social'], 500);
+    //     }
+    // }
+
     public function store(Request $request)
     {
         // Convertir fecha_hora_atencion al formato requerido
-        $fecha_hora_atencion = \Carbon\Carbon::createFromFormat('Y-m-d\TH:i', $request->input('fecha_hora_atencion'))->format('Y-m-d H:i:s');
+        $fecha_hora_atencion = \Carbon\Carbon::parse($request->input('fecha_hora_atencion'))
+            ->timezone('America/Guayaquil')
+            ->format('Y-m-d H:i:s');
         $request->merge(['fecha_hora_atencion' => $fecha_hora_atencion]);
 
         // Validar los datos para guardar la atención
@@ -52,76 +145,148 @@ class CpuAtencionesTrabajoSocialController extends Controller
             'detalle_atencion' => 'required|string',
             'tipo_modal' => 'required|string',
             'id_derivacion' => 'nullable|integer',
+            // si el front la envía, pasa directo; si no, la función de correo cae a "TRABAJO SOCIAL"
+            'id_area_atencion' => 'nullable|integer',
         ]);
 
         if ($validator->fails()) {
             return response()->json(['error' => $validator->errors()], 400);
         }
 
-        // Iniciar una transacción
         DB::beginTransaction();
 
         try {
-            // Guardar la atención
+            // 1) Guardar atención base
             $atencion = new CpuAtencion();
-            $atencion->id_funcionario = $request->input('id_funcionario');
-            $atencion->id_persona = $request->input('id_persona');
-            $atencion->via_atencion = $request->input('via_atencion');
-            $atencion->motivo_atencion = $request->input('motivo_atencion');
-            $atencion->detalle_atencion = $request->input('detalle_atencion');
+            $atencion->id_funcionario     = $request->input('id_funcionario');
+            $atencion->id_persona         = $request->input('id_persona');
+            $atencion->via_atencion       = $request->input('via_atencion');
+            $atencion->motivo_atencion    = $request->input('motivo_atencion');
+            $atencion->detalle_atencion   = $request->input('detalle_atencion');
             $atencion->fecha_hora_atencion = $request->input('fecha_hora_atencion');
-            $atencion->anio_atencion = $request->input('anio_atencion');
-            $atencion->id_tipo_usuario = $request->input('tipo_usuario');
-            $atencion->tipo_atencion = $request->input('tipo_atencion');
+            $atencion->anio_atencion      = $request->input('anio_atencion');
+            $atencion->id_tipo_usuario    = $request->input('tipo_usuario');
+            $atencion->tipo_atencion      = $request->input('tipo_atencion');
             $atencion->save();
 
-            // Validar los datos para guardar la atención de trabajo social
+            // 2) Guardar atención Trabajo Social
             $validated = $request->validate([
-                'tipo_informe' => 'required|string',
-                'requiriente' => 'required|string',
-                'numero_tramite' => 'required|string',
-                'detalle_general' => 'required|string',
-                'observaciones' => 'required|string',
-                'periodo' => 'required|string',
+                'tipo_informe'     => 'required|string',
+                'requiriente'      => 'required|string',
+                'numero_tramite'   => 'required|string',
+                'detalle_general'  => 'required|string',
+                'observaciones'    => 'required|string',
+                'periodo'          => 'required|string',
             ]);
-
-            // Agregar el id_atenciones al array validado
             $validated['id_atenciones'] = $atencion->id;
 
-            // Guardar la atención de trabajo social
             $atencionTrabajoSocial = CpuAtencionesTrabajoSocial::create($validated);
 
+            // 3) Si vino de una derivación, actualizar derivación y turno
+            $derivacion = null; // la usaremos para armar el correo
             if ($request->input('tipo_modal') === 'derivacion') {
-                // Actualizar la derivación
                 $derivacion = CpuDerivacion::findOrFail($request->input('id_derivacion'));
                 $derivacion->id_estado_derivacion = 2;
                 $derivacion->save();
 
-                // Actualizar el estado del turno relacionado
                 $turno = CpuTurno::findOrFail($derivacion->id_turno_asignado);
                 $turno->estado = 2;
                 $turno->save();
             }
 
-            // Auditoría
-            $this->auditar('cpu_atenciones_trabajo_social', 'id', '', $atencionTrabajoSocial->id, 'INSERCION', "INSERCION DE NUEVA ATENCION DE TRABAJO SOCIAL: {$atencionTrabajoSocial->id},
-                                                                                FUNCIONARIO: {$request->input('id_funcionario')},
-                                                                                PACIENTE: {$request->input('id_persona')},
-                                                                                VIA DE ATENCION: {$request->input('via_atencion')},
-                                                                                MOTIVO DE ATENCION: {$request->input('motivo_atencion')},
-                                                                                FECHA Y HORA DE ATENCION: {$request->input('fecha_hora_atencion')}");
+            // 4) Auditoría
+            $this->auditar(
+                'cpu_atenciones_trabajo_social',
+                'id',
+                '',
+                $atencionTrabajoSocial->id,
+                'INSERCION',
+                "INSERCION DE NUEVA ATENCION DE TRABAJO SOCIAL: {$atencionTrabajoSocial->id},
+             FUNCIONARIO: {$request->input('id_funcionario')},
+             PACIENTE: {$request->input('id_persona')},
+             VIA DE ATENCION: {$request->input('via_atencion')},
+             MOTIVO DE ATENCION: {$request->input('motivo_atencion')},
+             FECHA Y HORA DE ATENCION: {$request->input('fecha_hora_atencion')}"
+            );
 
-            // Confirmar la transacción
             DB::commit();
 
-            return response()->json(['message' => 'Atención de Trabajo Social guardada exitosamente', 'data' => $atencionTrabajoSocial]);
+            // 5) ---- Envío de correos (fuera de la transacción) ----
+            try {
+                // 5.1 - Correo de ATENCIÓN (siempre)
+                $correoCtrl = app(\App\Http\Controllers\CpuCorreoEnviadoController::class);
+
+                $correoDataBase = [
+                    'id_paciente'         => $atencion->id_persona,
+                    'id_funcionario'      => $atencion->id_funcionario,
+                    'id_area_atencion'    => $request->input('id_area_atencion'), // opcional
+                    'fecha_hora_atencion' => $atencion->fecha_hora_atencion,
+                    'motivo_atencion'     => $atencion->motivo_atencion,
+                    'detalle_atencion'    => $atencion->detalle_atencion,
+                    'id_atencion'         => $atencion->id,
+                ];
+
+                $reqAtencion = new \Illuminate\Http\Request();
+                $reqAtencion->replace($correoDataBase);
+
+                $respAtencion = $correoCtrl->enviarCorreoTrabajoSocialPaciente($reqAtencion);
+                $okAtencion   = method_exists($respAtencion, 'getStatusCode')
+                    ? ($respAtencion->getStatusCode() === 200)
+                    : false;
+
+                // 5.2 - Correo de DERIVACIÓN (si aplica)
+                $okDerivacion = false;
+
+                // Si el front envió el bloque "correo_derivacion"
+                $cd = $request->input('correo_derivacion', []);
+                $hayDatosDerivacion = !empty($cd) && (
+                    !empty($cd['id_doctor_al_que_derivan']) ||
+                    !empty($cd['id_area_derivada']) ||
+                    !empty($cd['fecha_para_atencion']) ||
+                    !empty($cd['hora_para_atencion'])
+                );
+
+                if ($hayDatosDerivacion) {
+                    $correoDataDer = array_merge($correoDataBase, [
+                        'id_area_derivada'          => $cd['id_area_derivada'] ?? null,
+                        'id_doctor_al_que_derivan'  => $cd['id_doctor_al_que_derivan'] ?? null,
+                        'fecha_para_atencion'       => $cd['fecha_para_atencion'] ?? null,
+                        'hora_para_atencion'        => $cd['hora_para_atencion'] ?? null,
+                        'motivo_derivacion'         => $cd['motivo_derivacion'] ?? null,
+                    ]);
+
+                    $reqDeriv = new \Illuminate\Http\Request();
+                    $reqDeriv->replace($correoDataDer);
+
+                    $respDeriv = $correoCtrl->enviarCorreoTrabajoSocialPaciente($reqDeriv);
+                    $okDerivacion = method_exists($respDeriv, 'getStatusCode')
+                        ? ($respDeriv->getStatusCode() === 200)
+                        : false;
+                }
+
+                return response()->json([
+                    'message'                 => 'Atención de Trabajo Social guardada exitosamente',
+                    'data'                    => $atencionTrabajoSocial,
+                    'email_atencion_enviado'  => $okAtencion,
+                    'email_derivacion_enviado' => $okDerivacion,
+                ]);
+            } catch (\Throwable $ex) {
+                Log::error('Fallo al enviar correos TS post-commit', ['msg' => $ex->getMessage()]);
+                // No romper el flujo si el correo falla
+                return response()->json([
+                    'message'                 => 'Atención de Trabajo Social guardada exitosamente',
+                    'data'                    => $atencionTrabajoSocial,
+                    'email_atencion_enviado'  => false,
+                    'email_derivacion_enviado' => false,
+                ]);
+            }
         } catch (\Exception $e) {
-            // Deshacer la transacción en caso de error
             DB::rollBack();
             Log::error('Error al guardar la atención de trabajo social:', ['exception' => $e->getMessage()]);
             return response()->json(['error' => 'Error al guardar la atención de trabajo social'], 500);
         }
     }
+
 
     /**
      * Display the specified resource.
@@ -253,7 +418,7 @@ class CpuAtencionesTrabajoSocialController extends Controller
         $nombreUsuarioEquipo = get_current_user() . ' en ' . $tipoEquipo;
 
         $fecha = now();
-        $codigo_auditoria = strtoupper($tabla . '_' . $campo . '_' . $tipo );
+        $codigo_auditoria = strtoupper($tabla . '_' . $campo . '_' . $tipo);
         DB::table('cpu_auditoria')->insert([
             'aud_user' => $usuario,
             'aud_tabla' => $tabla,

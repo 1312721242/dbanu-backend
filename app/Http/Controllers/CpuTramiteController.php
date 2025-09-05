@@ -6,6 +6,7 @@ use App\Models\CpuTramite;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
+
 class CpuTramiteController extends Controller
 {
     /**
@@ -61,7 +62,6 @@ class CpuTramiteController extends Controller
                 'message' => 'Trámite creado exitosamente',
                 'data' => $tramite
             ], 201);
-
         } catch (\Exception $e) {
             // Revertir transacción en caso de error
             DB::rollBack();
@@ -87,7 +87,7 @@ class CpuTramiteController extends Controller
     public function show(Request $request)
     {
         $fechaInicio = $request->query('fechaInicio');
-        $fechaFin = $request->query('fechaFin');
+        $fechaFin    = $request->query('fechaFin');
 
         if (!$fechaInicio || !$fechaFin) {
             return response()->json([
@@ -95,23 +95,56 @@ class CpuTramiteController extends Controller
             ], 400);
         }
 
-        // Obtener trámites dentro del rango de fechas proporcionado
-        $tramitesEnRango = CpuTramite::whereBetween('tra_fecha_recibido', [$fechaInicio, $fechaFin])->get();
+        // Normaliza formato (YYYY-MM-DD)
+        try {
+            $ini = Carbon::parse($fechaInicio)->format('Y-m-d');
+            $fin = Carbon::parse($fechaFin)->format('Y-m-d');
+        } catch (\Throwable $e) {
+            return response()->json(['message' => 'Formato de fecha inválido'], 400);
+        }
 
-        // Obtener trámites a partir del 01-01-2024 hasta la fecha actual con estado diferente de "FINALIZADO"
-        $fechaActual = now()->format('Y-m-d');
-        $tramitesNoFinalizados = CpuTramite::where('tra_fecha_recibido', '>=', '2024-01-01')
-            ->where('tra_estado_tramite', '!=', 3)
+        // Trámites en rango (independiente del estado)
+        $tramitesEnRango = CpuTramite::with(['personaRecibe:id,name', 'personaModifico:id,name', 'areaDerivada:id_userrole,role'])
+            ->whereBetween('tra_fecha_recibido', [$ini, $fin])
+            ->orderByDesc('tra_fecha_recibido')
+            ->orderByDesc('id_tramite')
             ->get()
-            ->map(function ($tramite) use ($fechaActual) {
-                $tramite->dias_desde_recibido = now()->diffInDays($tramite->tra_fecha_recibido);
-                return $tramite;
+            ->map(function ($t) {
+                // Estado legible
+                $map = [1 => 'RECIBIDO', 2 => 'DERIVADO', 3 => 'FINALIZADO', 4 => 'PENDIENTE'];
+                $t->estado_label = $map[(int) $t->tra_estado_tramite] ?? '—';
+
+                // Nombres
+                $t->tra_person_recibe_nombre    = optional($t->personaRecibe)->name;
+                $t->tra_persona_modifico_nombre = optional($t->personaModifico)->name;
+                $t->tra_area_derivada_nombre    = optional($t->areaDerivada)->role;
+
+                return $t;
             });
-        $this->auditar('cpu_tramite', 'show', '', $tramitesEnRango, 'CONSULTA', 'Consulta de trámites en rango de fechas');
+
+        // Compatibilidad: No finalizados desde 2024-01-01 a HOY
+        $hoy = Carbon::today()->format('Y-m-d');
+        $tramitesNoFinalizados = CpuTramite::with(['personaRecibe:id,name', 'personaModifico:id,name', 'areaDerivada:id_userrole,role'])
+            ->where('tra_fecha_recibido', '>=', '2024-01-01')
+            ->where('tra_estado_tramite', '!=', 3) // 3 = FINALIZADO
+            ->orderBy('tra_fecha_recibido', 'desc')
+            ->get()
+            ->map(function ($t) {
+                $t->dias_desde_recibido = Carbon::parse($t->tra_fecha_recibido)->diffInDays(Carbon::today());
+                $map = [1 => 'RECIBIDO', 2 => 'DERIVADO', 3 => 'FINALIZADO', 4 => 'PENDIENTE'];
+                $t->estado_label = $map[(int) $t->tra_estado_tramite] ?? '—';
+                $t->tra_person_recibe_nombre    = optional($t->personaRecibe)->name;
+                $t->tra_persona_modifico_nombre = optional($t->personaModifico)->name;
+                $t->tra_area_derivada_nombre    = optional($t->areaDerivada)->role;
+                return $t;
+            });
+
+        // Auditoría
+        $this->auditar('cpu_tramite', 'show', '', "Consulta de trámites en rango {$ini} - {$fin}", 'CONSULTA', 'Consulta por rango de fechas', $request);
 
         return response()->json([
-            'tramitesEnRango' => $tramitesEnRango,
-            'tramitesNoFinalizados' => $tramitesNoFinalizados
+            'tramitesEnRango'     => $tramitesEnRango,
+            'tramitesNoFinalizados' => $tramitesNoFinalizados,
         ]);
     }
 
@@ -131,7 +164,7 @@ class CpuTramiteController extends Controller
         // Validar los datos recibidos
         $validatedData = $request->validate([
             'tra_id_persona_modifico' => 'nullable|integer',
-            'tra_tipo' => 'nullable|integer',
+            'tra_tipo' => 'nullable|string',
             'tra_fecha_recibido' => 'nullable|date',
             'tra_fecha_documento' => 'nullable|date',
             'tra_num_documento' => 'nullable|max:255',
@@ -180,6 +213,55 @@ class CpuTramiteController extends Controller
         $tramite->delete();
         return response()->json(['message' => 'Trámite eliminado correctamente']);
     }
+    /**
+     * Optimizado: Trámites de HOY
+     * GET /tramites/hoy
+     */
+    // app/Http/Controllers/CpuTramiteController.php
+
+    public function hoy(Request $request)
+    {
+        $hoy = Carbon::today()->format('Y-m-d');
+
+        $tramites = CpuTramite::with(['personaRecibe', 'personaModifico', 'areaDerivada'])
+            ->whereDate('tra_fecha_recibido', $hoy)
+            ->orderByDesc('id_tramite')
+            ->get()
+            ->map(function ($t) {
+                $arr = $t->toArray();
+                $arr['tra_person_recibe_nombre']      = optional($t->personaRecibe)->name;
+                $arr['tra_persona_modifico_nombre']   = optional($t->personaModifico)->name;
+                $arr['tra_area_derivada_nombre']      = optional($t->areaDerivada)->role;
+                // ya viene 'estado_label' por $appends
+                return $arr;
+            });
+
+        $this->auditar('cpu_tramite', 'hoy', '', 'Consulta HOY', 'CONSULTA', 'Consulta de trámites de hoy', $request);
+        return response()->json($tramites);
+    }
+
+    public function noFinalizados(Request $request)
+    {
+        $desde = $request->query('desde', '2024-01-01');
+        $hoy   = Carbon::today()->format('Y-m-d');
+
+        $tramites = CpuTramite::with(['personaRecibe', 'personaModifico', 'areaDerivada'])
+            ->whereBetween('tra_fecha_recibido', [$desde, $hoy])
+            ->where('tra_estado_tramite', '!=', 3)
+            ->orderBy('tra_fecha_recibido', 'desc')
+            ->get()
+            ->map(function ($t) {
+                $t->dias_desde_recibido = Carbon::parse($t->tra_fecha_recibido)->diffInDays(Carbon::today());
+                $arr = $t->toArray();
+                $arr['tra_person_recibe_nombre']      = optional($t->personaRecibe)->name;
+                $arr['tra_persona_modifico_nombre']   = optional($t->personaModifico)->name;
+                $arr['tra_area_derivada_nombre']      = optional($t->areaDerivada)->role;
+                return $arr;
+            });
+
+        $this->auditar('cpu_tramite', 'no_finalizados', '', 'Consulta no finalizados', 'CONSULTA', 'Consulta de trámites no finalizados', $request);
+        return response()->json($tramites);
+    }
 
     //funcion para auditar
     private function auditar($tabla, $campo, $dataOld, $dataNew, $tipo, $descripcion, $request = null)
@@ -205,7 +287,7 @@ class CpuTramiteController extends Controller
         $nombreUsuarioEquipo = get_current_user() . ' en ' . $tipoEquipo;
 
         $fecha = now();
-        $codigo_auditoria = strtoupper($tabla . '_' . $campo . '_' . $tipo );
+        $codigo_auditoria = strtoupper($tabla . '_' . $campo . '_' . $tipo);
         DB::table('cpu_auditoria')->insert([
             'aud_user' => $usuario,
             'aud_tabla' => $tabla,
@@ -246,44 +328,5 @@ class CpuTramiteController extends Controller
             default:
                 return 0;
         }
-    }
-
-     /**
-     * Optimizado: Trámites de HOY
-     * GET /tramites/hoy
-     */
-    public function hoy(Request $request)
-    {
-        $hoy = Carbon::today()->format('Y-m-d');
-
-        $tramites = CpuTramite::whereDate('tra_fecha_recibido', $hoy)->orderByDesc('id_tramite')->get();
-
-        // auditoría (opcional)
-        $this->auditar('cpu_tramite', 'hoy', '', 'Consulta HOY', 'CONSULTA', 'Consulta de trámites de hoy', $request);
-
-        return response()->json($tramites);
-    }
-
-    /**
-     * Optimizado: No finalizados desde una fecha hasta HOY
-     * GET /tramites/no-finalizados?desde=YYYY-MM-DD
-     */
-    public function noFinalizados(Request $request)
-    {
-        $desde = $request->query('desde', '2024-01-01');
-        $hoy   = Carbon::today()->format('Y-m-d');
-
-        $tramites = CpuTramite::whereBetween('tra_fecha_recibido', [$desde, $hoy])
-            ->where('tra_estado_tramite', '!=', 3) // 3 = FINALIZADO
-            ->orderBy('tra_fecha_recibido', 'desc')
-            ->get()
-            ->map(function ($t) {
-                $t->dias_desde_recibido = Carbon::parse($t->tra_fecha_recibido)->diffInDays(Carbon::today());
-                return $t;
-            });
-
-        $this->auditar('cpu_tramite', 'no_finalizados', '', 'Consulta no finalizados', 'CONSULTA', 'Consulta de trámites no finalizados', $request);
-
-        return response()->json($tramites);
     }
 }

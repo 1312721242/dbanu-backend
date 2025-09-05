@@ -371,89 +371,101 @@ class EgresosControllers extends Controller
             ->where('ee_id', $request->idEgreso)
             ->value('ee_numero_egreso');
 
+        $estado_egreeso = DB::table('cpu_encabezados_egresos')
+            ->where('ee_id', $request->idEgreso)
+            ->value('ee_id_estado');
+
         $estadoEgreso = $request->estado;
         $auditoriaConsolidada = [];
 
         try {
             DB::beginTransaction();
-            $detalleEgreso = DB::table('cpu_encabezados_egresos')
-                ->where('ee_id', $request->idEgreso)
-                ->value('ee_detalle');
+            if (in_array($estadoEgreso, [2, 5])) {
+                return response()->json([
+                    'success' => false,
+                    'message' => "La atención ya fue realizada (estado: {$estadoEgreso})"
+                ], 409);
+            } else {
 
-            // Si es estado 5, se suman stocks y registran movimientos
-            if ($estadoEgreso == 5 && $detalleEgreso) {
-                $detalleEgreso = json_decode($detalleEgreso, true);
+                $detalleEgreso = DB::table('cpu_encabezados_egresos')
+                    ->where('ee_id', $request->idEgreso)
+                    ->value('ee_detalle');
 
-                foreach ($detalleEgreso as $value) {
-                    $idInsumo = $value['idInsumo'];
-                    $cantidad = (int) $value['cantidad'];
+                // Si es estado 5, se suman stocks y registran movimientos
+                if ($estadoEgreso == 5 && $detalleEgreso) {
+                    $detalleEgreso = json_decode($detalleEgreso, true);
 
-                    $stockAnterior = DB::table('cpu_movimientos_inventarios')
-                        ->where('mi_id_insumo', $idInsumo)
-                        ->orderBy('mi_created_at', 'desc')
-                        ->value('mi_stock_actual') ?? 0;
+                    foreach ($detalleEgreso as $value) {
+                        $idInsumo = $value['idInsumo'];
+                        $cantidad = (int) $value['cantidad'];
 
-                    $stockNuevo = $stockAnterior + $cantidad;
+                        $stockAnterior = DB::table('cpu_movimientos_inventarios')
+                            ->where('mi_id_insumo', $idInsumo)
+                            ->orderBy('mi_created_at', 'desc')
+                            ->value('mi_stock_actual') ?? 0;
 
-                    $insertId = DB::table('cpu_movimientos_inventarios')->insertGetId([
-                        'mi_id_insumo'        => $idInsumo,
-                        'mi_cantidad'         => $cantidad,
-                        'mi_stock_anterior'   => $stockAnterior,
-                        'mi_stock_actual'     => $stockNuevo,
-                        'mi_tipo_transaccion' => 1,
-                        'mi_fecha'            => Carbon::now()->toDateTimeString(),
-                        'mi_created_at'       => Carbon::now()->toDateTimeString(),
-                        'mi_updated_at'       => Carbon::now()->toDateTimeString(),
-                        'mi_user_id'          => $request->user()->id,
-                        'mi_id_encabezado'    => $request->idEgreso,
-                    ], 'mi_id');
+                        $stockNuevo = $stockAnterior + $cantidad;
 
-                    $auditoriaConsolidada[] = [
-                        'accion'        => 'MOVIMIENTO_INSUMO',
-                        'descripcion'   => "Movimiento registrado: ID {$insertId}, insumo {$idInsumo}, stock anterior {$stockAnterior}, stock nuevo {$stockNuevo}",
-                        'idMovimiento'  => $insertId,
-                        'insumo'        => $idInsumo,
-                        'stockAnterior' => $stockAnterior,
-                        'stockNuevo'    => $stockNuevo
-                    ];
+                        $insertId = DB::table('cpu_movimientos_inventarios')->insertGetId([
+                            'mi_id_insumo'        => $idInsumo,
+                            'mi_cantidad'         => $cantidad,
+                            'mi_stock_anterior'   => $stockAnterior,
+                            'mi_stock_actual'     => $stockNuevo,
+                            'mi_tipo_transaccion' => 1,
+                            'mi_fecha'            => Carbon::now()->toDateTimeString(),
+                            'mi_created_at'       => Carbon::now()->toDateTimeString(),
+                            'mi_updated_at'       => Carbon::now()->toDateTimeString(),
+                            'mi_user_id'          => $request->user()->id,
+                            'mi_id_encabezado'    => $request->idEgreso,
+                        ], 'mi_id');
 
-                    DB::table('cpu_insumo')
-                        ->where('id',$idInsumo)
-                        ->update(['cantidad_unidades' => $stockNuevo]);
+                        $auditoriaConsolidada[] = [
+                            'accion'        => 'MOVIMIENTO_INSUMO',
+                            'descripcion'   => "Movimiento registrado: ID {$insertId}, insumo {$idInsumo}, stock anterior {$stockAnterior}, stock nuevo {$stockNuevo}",
+                            'idMovimiento'  => $insertId,
+                            'insumo'        => $idInsumo,
+                            'stockAnterior' => $stockAnterior,
+                            'stockNuevo'    => $stockNuevo
+                        ];
+
+                        DB::table('cpu_insumo')
+                            ->where('id', $idInsumo)
+                            ->update(['cantidad_unidades' => $stockNuevo]);
+                    }
                 }
+
+                $update = DB::table('cpu_encabezados_egresos')
+                    ->where('ee_id', $request->idEgreso)
+                    ->update([
+                        'ee_id_estado' => $estadoEgreso == 5 ? 5 : 2,
+                        'ee_observacion' => $request->observacion ?? null,
+                        'ee_id_user'   => $request->user()->id
+                    ]);
+
+
+                $auditoriaConsolidada[] = [
+                    'accion'      => 'UPDATE_ESTADO',
+                    'descripcion' => "Se actualizó el estado del egreso #{$nroEgreso} a {$estadoEgreso}",
+                    'nuevoEstado' => $estadoEgreso
+                ];
+
+                // Auditoría consolidada final
+                $this->auditoriaController->auditar(
+                    'cpu_encabezados_egresos',
+                    'guardarAtencionEgreso(Request $request) - AUDITORIA CONSOLIDADA',
+                    '',
+                    json_encode($request->all()),
+                    'INSERT',
+                    json_encode($auditoriaConsolidada),
+                );
+
+                DB::commit();
+
+                return response()->json([
+                    'success' => true,
+                    'message' => "Atención guardada correctamente."
+                ], 200);
             }
-
-            $update = DB::table('cpu_encabezados_egresos')
-                ->where('ee_id', $request->idEgreso)
-                ->update([
-                    'ee_id_estado' => $estadoEgreso == 5 ? 5 : 2,
-                    'ee_observacion' => $request->observacion ?? null,
-                    'ee_id_user'   => $request->user()->id
-                ]);
-
-
-            $auditoriaConsolidada[] = [
-                'accion'      => 'UPDATE_ESTADO',
-                'descripcion' => "Se actualizó el estado del egreso #{$nroEgreso} a {$estadoEgreso}",
-                'nuevoEstado' => $estadoEgreso
-            ];
-
-            // Auditoría consolidada final
-            $this->auditoriaController->auditar(
-                'cpu_encabezados_egresos',
-                'guardarAtencionEgreso(Request $request) - AUDITORIA CONSOLIDADA',
-                '',
-                json_encode($request->all()),
-                'INSERT',
-                json_encode($auditoriaConsolidada),
-            );
-
-            DB::commit();
-
-            return response()->json([
-                'success' => true,
-                'message' => "Atención guardada correctamente."
-            ], 200);
         } catch (\Exception $e) {
             DB::rollBack();
             $this->logController->saveLog(

@@ -310,6 +310,12 @@ class IngresosControllers extends Controller
                 // ACTUALIZAR ENCABEZADO EXISTENTE
                 $id = $encabezado['id_ingreso'];
 
+                $dataOld = DB::select("
+                SELECT *
+                FROM cpu_encabezados_ingresos
+                WHERE ei_id = ?
+                ", [$id]);
+
                 // 1. ELIMINAR MOVIMIENTOS ANTERIORES de ese ingreso
                 DB::table('cpu_movimientos_inventarios')
                     ->where('mi_id_encabezado', $id)
@@ -331,6 +337,9 @@ class IngresosControllers extends Controller
                         'ei_ruta_comprobante' => $nombreArchivo,
                         'ei_detalle_producto' => json_encode($detalleProductos)
                     ]);
+
+                $description = "Se guardó el ingreso con ID: {$id}";
+                $this->auditoriaController->auditar('cpu_encabezados_ingresos', 'guardarIngresos(Request $request)',json_encode($dataOld), json_encode($request->all()), 'UPDATE',  $description);
             }
 
             // 3. REINSERTAR MOVIMIENTOS y RECALCULAR STOCK
@@ -361,10 +370,12 @@ class IngresosControllers extends Controller
 
                 DB::table('cpu_insumo')
                     ->where('id', $idInsumo)
-                    ->update(['cantidad_unidades' => $stockNuevo]);
+                    ->update([
+                        'cantidad_unidades' => $stockNuevo,
+                        'updated_at' => now()
+                    ]);
             }
-            $description = "Se guardó el ingreso con ID: {$id}";
-            $this->auditoriaController->registrarAuditoria('cpu_encabezados_ingresos', 'guardarIngresos', json_encode($request->all()), $description, 'INSERT');
+
             // $this->auditar('turnos', 'listarTurnosPorFuncionario', "", "", 'CONSULTA', 'Consulta de turnos por funcionario');
 
             return response()->json([

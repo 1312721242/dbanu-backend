@@ -1162,7 +1162,7 @@ class CpuCorreoEnviadoController extends Controller
                 <strong>📍 Lugar:</strong> Universidad Laica Eloy Alfaro de Manabí<br>
                 <strong>📌 Dirección:</strong> Bienestar Universitario, Área de {$area_derivada}.</p>
                 <p>Le solicitamos presentarse <strong>15 minutos antes de la hora de la cita</strong>.</p>
-                <p>En caso de no poder asistir en la fecha y hora programadas, le pedimos que lo comunique oportunamente al correo <strong>{$email_funcionario}</strong>.</p>";
+                <p>En caso de no poder asistir en la fecha y hora programadas, le pedimos que lo comunique oportunamente al correo <strong>{$email_funcionario_derivado}</strong>.</p>";
             } else {
                 // Solo atención registrada en Trabajo Social (sin derivación)
                 $asunto = "Constancia de atención — $area_atencion";

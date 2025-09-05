@@ -23,6 +23,7 @@ class EgresosControllers extends Controller
             $data = DB::table('cpu_encabezados_egresos as cee')
                 ->select(
                     'cee.ee_id',
+                    'cee.ee_numero_egreso',
 
                     'cee.ee_id_funcionario',
                     'uf.name as nombre_funcionario',
@@ -375,7 +376,6 @@ class EgresosControllers extends Controller
 
         try {
             DB::beginTransaction();
-
             $detalleEgreso = DB::table('cpu_encabezados_egresos')
                 ->where('ee_id', $request->idEgreso)
                 ->value('ee_detalle');
@@ -400,7 +400,7 @@ class EgresosControllers extends Controller
                         'mi_cantidad'         => $cantidad,
                         'mi_stock_anterior'   => $stockAnterior,
                         'mi_stock_actual'     => $stockNuevo,
-                        'mi_tipo_transaccion' => 2,
+                        'mi_tipo_transaccion' => 1,
                         'mi_fecha'            => Carbon::now()->toDateTimeString(),
                         'mi_created_at'       => Carbon::now()->toDateTimeString(),
                         'mi_updated_at'       => Carbon::now()->toDateTimeString(),
@@ -416,16 +416,21 @@ class EgresosControllers extends Controller
                         'stockAnterior' => $stockAnterior,
                         'stockNuevo'    => $stockNuevo
                     ];
+
+                    DB::table('cpu_insumo')
+                        ->where('id',$idInsumo)
+                        ->update(['cantidad_unidades' => $stockNuevo]);
                 }
             }
 
-            // Actualizar estado del egreso (2 o 5)
             $update = DB::table('cpu_encabezados_egresos')
                 ->where('ee_id', $request->idEgreso)
                 ->update([
                     'ee_id_estado' => $estadoEgreso == 5 ? 5 : 2,
+                    'ee_observacion' => $request->observacion ?? null,
                     'ee_id_user'   => $request->user()->id
                 ]);
+
 
             $auditoriaConsolidada[] = [
                 'accion'      => 'UPDATE_ESTADO',
@@ -438,9 +443,9 @@ class EgresosControllers extends Controller
                 'cpu_encabezados_egresos',
                 'guardarAtencionEgreso(Request $request) - AUDITORIA CONSOLIDADA',
                 '',
-                json_encode($auditoriaConsolidada),
+                json_encode($request->all()),
                 'INSERT',
-                'Auditoría completa de la función guardarAtencionEgreso'
+                json_encode($auditoriaConsolidada),
             );
 
             DB::commit();
@@ -462,9 +467,6 @@ class EgresosControllers extends Controller
             ], 500);
         }
     }
-
-
-
 
     public function index()
     {

@@ -1080,7 +1080,6 @@ class CpuAtencionesController extends Controller
 
     public function guardarAtencionMedicinaGeneral(Request $request)
     {
-        // Validar que los campos requeridos estén presentes
         $request->validate([
             'id_funcionario' => 'required|integer|exists:users,id',
             'id_persona' => 'required|integer|exists:cpu_personas,id',
@@ -1147,13 +1146,13 @@ class CpuAtencionesController extends Controller
 
             // Guardar insumos
             if ($request->has('insumos')) {
-
                 foreach ($request->input('insumos') as $insumo) {
                     $nombre_insumo = DB::table('cpu_insumo')->where('id', $insumo['id'])->value('ins_descripcion');
                     $listaInsumos[] = [
                         'idInsumo' => $insumo['id'],
-                        'nombre' => $nombre_insumo,
-                        'cantidad' => (string)$insumo['cantidad'],
+                        'tipoInsumo' => $insumo['id_tipo_insumo'],
+                        'nombre' => (string)$insumo['ins_descripcion'],
+                        'cantidad' => $insumo['cantidad'],
                     ];
 
                     $insumoOcupado = new CpuInsumoOcupado();
@@ -1177,15 +1176,15 @@ class CpuAtencionesController extends Controller
                     }
                 }
             }
-
             // Guardar medicamentos
             if ($request->has('medicamentos')) {
                 foreach ($request->input('medicamentos') as $medicamento) {
-                    $nombre_insumo = DB::table('cpu_insumo')->where('id', $insumo['id'])->value('ins_descripcion');
+                    //$nombre_insumo = DB::table('cpu_insumo')->where('id', $insumo['id'])->value('ins_descripcion');
                     $listaInsumos[] = [
                         'idInsumo' => $medicamento['id'],
-                        'nombre' => $nombre_insumo,
-                        'cantidad' => (string)$medicamento['cantidad'],
+                        'tipoInsumo' => $medicamento['id_tipo_insumo'],
+                        'nombre' => (string)$medicamento['ins_descripcion'],
+                        'cantidad' => $medicamento['cantidad'],
                     ];
 
                     $insumoOcupado = new CpuInsumoOcupado();
@@ -1208,6 +1207,118 @@ class CpuAtencionesController extends Controller
                     }
                 }
             }
+
+            // // Guardar en cpu_encabezados_egresos
+            // $ee_id = DB::table('cpu_encabezados_egresos')->insertGetId([
+            //     'ee_id_funcionario' => $request->input('id_funcionario'),
+            //     'ee_numero_egreso' => 'ULEAM-DBU-E-' . str_pad(DB::table('cpu_encabezados_egresos')->max('ee_id') + 1, 6, '0', STR_PAD_LEFT),
+            //     'ee_id_paciente' => $request->input('id_persona'),
+            //     'ee_id_atencion_medicina_general' => $medicinaGeneral->id,
+            //     'ee_detalle' => $listaInsumos ? json_encode($listaInsumos) : null,
+            //     'ee_id_estado' => 21,
+            //     'ee_created_at' => Carbon::now(),
+            //     'ee_updated_at' => Carbon::now(),
+            // ], 'ee_id');
+
+            // $descripcion = "Se registró un egreso con ID {$ee_id} para la atención {$medicinaGeneral->id} con los siguientes insumos: " . json_encode($listaInsumos);
+            // $this->auditoriaController->auditar('cpu_encabezados_egresos', 'guardarAtencionMedicinaGeneral(Request $request)', '', $ee_id, 'INSERT', $descripcion);
+
+            // foreach ($listaInsumos as $value) {
+
+            //     $idInsumo = $value->idInsumo ?? $value['idInsumo'];
+            //     $cantidad = (int) $value->cantidad  ?? (int)$value['cantidad'];
+            //     $stockAnterior = DB::table('cpu_movimientos_inventarios')
+            //         ->where('mi_id_insumo', $idInsumo)
+            //         ->orderBy('mi_created_at', 'desc')
+            //         ->value('mi_stock_actual') ?? 0;
+
+            //     $stockNuevo = $stockAnterior + $cantidad;
+
+            //     $insertId = DB::table('cpu_movimientos_inventarios')->insertGetId([
+            //         'mi_id_insumo'        => $idInsumo,
+            //         'mi_cantidad'         => $cantidad,
+            //         'mi_stock_anterior'   => $stockAnterior,
+            //         'mi_stock_actual'     => $stockNuevo,
+            //         'mi_tipo_transaccion' => 2,
+            //         'mi_fecha'            => Carbon::now()->toDateTimeString(),
+            //         'mi_created_at'       => Carbon::now()->toDateTimeString(),
+            //         'mi_updated_at'       => Carbon::now()->toDateTimeString(),
+            //         'mi_user_id'          => $request->user()->id,
+            //         'mi_id_encabezado'    => $ee_id,
+            //     ]);
+            // }
+            try {
+                DB::beginTransaction();
+
+                if (count($listaInsumos) > 0) {
+                    // Guardar en cpu_encabezados_egresos
+                    $ee_id = DB::table('cpu_encabezados_egresos')->insertGetId([
+                        'ee_id_funcionario' => $request->input('id_funcionario'),
+                        'ee_numero_egreso' => 'ULEAM-DBU-E-' . str_pad(DB::table('cpu_encabezados_egresos')->max('ee_id') + 1, 6, '0', STR_PAD_LEFT),
+                        'ee_id_paciente' => $request->input('id_persona'),
+                        'ee_id_atencion_medicina_general' => $medicinaGeneral->id,
+                        'ee_detalle' => $listaInsumos ? json_encode($listaInsumos) : null,
+                        'ee_id_estado' => 21,
+                        'ee_created_at' => Carbon::now(),
+                        'ee_updated_at' => Carbon::now(),
+                    ], 'ee_id');
+
+                    foreach ($listaInsumos as $value) {
+                        $idInsumo = $value['idInsumo'];
+                        $cantidad = (int) $value['cantidad'];
+                        $stockAnterior = DB::table('cpu_movimientos_inventarios')
+                            ->where('mi_id_insumo', $idInsumo)
+                            ->orderBy('mi_created_at', 'desc')
+                            ->value('mi_stock_actual') ?? 0;
+
+                        $stockNuevo = $stockAnterior + $cantidad;
+
+                        $insertId = DB::table('cpu_movimientos_inventarios')->insertGetId([
+                            'mi_id_insumo'        => $idInsumo,
+                            'mi_cantidad'         => $cantidad,
+                            'mi_stock_anterior'   => $stockAnterior,
+                            'mi_stock_actual'     => $stockNuevo,
+                            'mi_tipo_transaccion' => 2,
+                            'mi_fecha'            => Carbon::now()->toDateTimeString(),
+                            'mi_created_at'       => Carbon::now()->toDateTimeString(),
+                            'mi_updated_at'       => Carbon::now()->toDateTimeString(),
+                            'mi_user_id'          => $request->user()->id,
+                            'mi_id_encabezado'    => $ee_id,
+                        ], 'mi_id');
+                    }
+
+                    $descripcion = "Se registró un egreso con ID {$ee_id} para la atención {$medicinaGeneral->id} con los siguientes insumos: " . json_encode($listaInsumos);
+                    $this->auditoriaController->auditar('cpu_encabezados_egresos', 'guardarAtencionMedicinaGeneral(Request $request)', '', $ee_id, 'INSERT', $descripcion);
+                }
+
+                DB::commit();
+            } catch (\Throwable $e) {
+                DB::rollBack();
+
+                // DB::table('cpu_log')->insert([
+                //     'tabla'       => 'cpu_encabezados_egresos',
+                //     'accion'      => 'guardarAtencionMedicinaGeneral',
+                //     'descripcion' => $e->getMessage(),
+                //     'detalle'     => $e->getTraceAsString(),
+                //     'created_at'  => Carbon::now(),
+                // ]);
+
+                $errorData = [
+                    'descripcion' => $e->getMessage(),
+                    'detalle'     => $e->getTraceAsString()
+                ];
+
+                Log::error("Error en guardarAtencionMedicinaGeneral: " . $e->getMessage(), [
+                    'trace' => $e->getTraceAsString(),
+                ]);
+
+                $this->logController->saveLog(
+                    'Nmobre de Controlador: EgresosController, Nombre de la Funcion: guardarAtencionEgreso()',
+                    json_encode($errorData, JSON_UNESCAPED_UNICODE)
+                );
+                throw $e;
+            }
+
 
             // Manejar derivación si está marcada
             if ($request->input('derivacion')) {
@@ -1248,48 +1359,8 @@ class CpuAtencionesController extends Controller
                 }
             }
 
-            if (count($listaInsumos) > 0) {
-                // Guardar en cpu_encabezados_egresos
-                $ee_id = DB::table('cpu_encabezados_egresos')->insertGetId([
-                    'ee_id_funcionario' => $request->input('id_funcionario'),
-                    'ee_numero_egreso' => 'ULEAM-DBU-E-' . str_pad(DB::table('cpu_encabezados_egresos')->max('ee_id') + 1, 6, '0', STR_PAD_LEFT),
-                    'ee_id_paciente' => $request->input('id_persona'),
-                    'ee_id_atencion_medicina_general' => $medicinaGeneral->id,
-                    'ee_detalle' => $listaInsumos ? json_encode($listaInsumos) : null,
-                    'ee_id_estado' => 21,
-                    'ee_created_at' => Carbon::now(),
-                    'ee_updated_at' => Carbon::now(),
-                ], 'ee_id');
 
-                foreach ($listaInsumos as $value) {
-                    $idInsumo = $value['idInsumo'];
-                    $cantidad = (int) $value['cantidad'];
-                    $stockAnterior = DB::table('cpu_movimientos_inventarios')
-                        ->where('mi_id_insumo', $idInsumo)
-                        ->orderBy('mi_created_at', 'desc')
-                        ->value('mi_stock_actual') ?? 0;
 
-                    $stockNuevo = $stockAnterior + $cantidad;
-
-                    $insertId = DB::table('cpu_movimientos_inventarios')->insertGetId([
-                        'mi_id_insumo'        => $idInsumo,
-                        'mi_cantidad'         => $cantidad ,
-                        'mi_stock_anterior'   => $stockAnterior,
-                        'mi_stock_actual'     => $stockNuevo,
-                        'mi_tipo_transaccion' => 2,
-                        'mi_fecha'            => Carbon::now()->toDateTimeString(),
-                        'mi_created_at'       => Carbon::now()->toDateTimeString(),
-                        'mi_updated_at'       => Carbon::now()->toDateTimeString(),
-                        'mi_user_id'          => $request->user()->id,
-                        'mi_id_encabezado'    => $ee_id,
-                    ]);
-                }
-
-                $descripcion = "Se registró un egreso con ID {$ee_id} para la atención {$medicinaGeneral->id} con los siguientes insumos: " . json_encode($listaInsumos);
-                $this->auditoriaController->auditar('cpu_encabezados_egresos', 'guardarAtencionMedicinaGeneral(Request $request)', '', $ee_id, 'INSERT', $descripcion);
-            }
-
-            // ✅ ENVÍO DE CORREOS
             $correoController = new CpuCorreoEnviadoController();
 
             // Correo atención paciente
@@ -1302,12 +1373,12 @@ class CpuAtencionesController extends Controller
                 'id_funcionario' => $request->input('id_funcionario'),
             ]));
 
-            if (!$correoAtencion->isSuccessful()) {
-                $atencion->delete();
-                $medicinaGeneral->delete();
-                DB::rollBack();
-                return response()->json(['error' => 'Error al enviar correo de atención'], 500);
-            }
+            // if (!$correoAtencion->isSuccessful()) {
+            //     $atencion->delete();
+            //     $medicinaGeneral->delete();
+            //     DB::rollBack();
+            //     return response()->json(['error' => 'Error al enviar correo de atención'], 500);
+            // }
 
             // Correo derivación (si aplica)
             if ($request->input('derivacion')) {
@@ -1322,48 +1393,31 @@ class CpuAtencionesController extends Controller
                     'fecha_para_atencion' => $request->input('derivacion.fecha_para_atencion'),
                     'hora_para_atencion' => $request->input('derivacion.hora_para_atencion'),
                 ]));
-
-                if (!$correoDerivacionPaciente->isSuccessful()) {
-                    $atencion->delete();
-                    $medicinaGeneral->delete();
-                    DB::rollBack();
-                    return response()->json(['error' => 'Error al enviar correo al paciente'], 500);
-                }
-
-                $correoDerivacionFuncionario = $correoController->enviarCorreoDerivacionAreaSaludFuncionario(new Request([
-                    'id_atencion' => $atencion->id,
-                    'id_area_atencion' => $request->input('id_area_atencion'),
-                    'motivo_derivacion' => $request->input('derivacion.motivo_derivacion'),
-                    'id_paciente' => $request->input('id_persona'),
-                    'id_funcionario' => $request->input('id_funcionario'),
-                    'id_doctor_al_que_derivan' => $request->input('derivacion.id_doctor_al_que_derivan'),
-                    'id_area_derivada' => $request->input('derivacion.id_area'),
-                    'fecha_para_atencion' => $request->input('derivacion.fecha_para_atencion'),
-                    'hora_para_atencion' => $request->input('derivacion.hora_para_atencion'),
-                ]));
-
-                if (!$correoDerivacionFuncionario->isSuccessful()) {
-                    $atencion->delete();
-                    $medicinaGeneral->delete();
-                    DB::rollBack();
-                    return response()->json(['error' => 'Error al enviar correo al funcionario'], 500);
-                }
             }
 
-            DB::commit();
+            //     if (!$correoDerivacionPaciente->isSuccessful()) {
+            //         $atencion->delete();
+            //         $medicinaGeneral->delete();
+            //         DB::rollBack();
+            //         return response()->json(['error' => 'Error al enviar correo al paciente'], 500);
+            //     }
 
+            $correoDerivacionFuncionario = $correoController->enviarCorreoDerivacionAreaSaludFuncionario(new Request([
+                'id_atencion' => $atencion->id,
+                'id_area_atencion' => $request->input('id_area_atencion'),
+                'motivo_derivacion' => $request->input('derivacion.motivo_derivacion'),
+                'id_paciente' => $request->input('id_persona'),
+                'id_funcionario' => $request->input('id_funcionario'),
+                'id_doctor_al_que_derivan' => $request->input('derivacion.id_doctor_al_que_derivan'),
+                'id_area_derivada' => $request->input('derivacion.id_area'),
+                'fecha_para_atencion' => $request->input('derivacion.fecha_para_atencion'),
+                'hora_para_atencion' => $request->input('derivacion.hora_para_atencion'),
+            ]));
+
+
+            DB::commit();
             $descripcion = "Se guardó la atención de medicina general con ID {$atencion->id} para el paciente {$request->input('id_persona')} y funcionario {$request->input('id_funcionario')}. Motivo: {$request->input('motivo_atencion')}, Fecha y hora: {$request->input('fecha_hora_atencion')}, Año de atención: {$request->input('anio_atencion')}";
             $this->auditoriaController->auditar('cpu_atencion', 'guardarAtencionMedicinaGeneral(Request $request)', '',  json_encode($atencion), 'INSERT', $descripcion);
-
-            // Auditoría
-            // $this->auditar('cpu_atencion', 'id', '', $atencion->id, 'INSERCION', "INSERCION DE NUEVA ATENCION MEDICINA GENERAL: {$atencion->id},
-            //                                                                     PACIENTE: {$request->input('id_persona')},
-            //                                                                     FUNCIONARIO: {$request->input('id_funcionario')},
-            //                                                                     VIA DE ATENCION: {$request->input('via_atencion')},
-            //                                                                     MOTIVO DE ATENCION: {$request->input('motivo_atencion')},
-            //                                                                     FECHA Y HORA DE ATENCION: {$request->input('fecha_hora_atencion')},
-            //                                                                     ANIO DE ATENCION: {$request->input('anio_atencion')}");
-
             return response()->json(['success' => true, 'atencion_id' => $atencion->id]);
         } catch (\Exception $e) {
             DB::rollBack();

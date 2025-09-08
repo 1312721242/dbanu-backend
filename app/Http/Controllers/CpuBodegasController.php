@@ -27,8 +27,7 @@ class CpuBodegasController extends Controller
             'idSede' => $idSede,
             'idFacultad' => $idFacultad
         ]);
-
-        return $data;
+        return response()->json($data);
     }
 
     public function index()

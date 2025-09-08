@@ -83,6 +83,8 @@ use App\Http\Controllers\NvDocenteAsignaturaController;
 
 use App\Http\Controllers\AtencionesDiversidadController;
 use App\Http\Controllers\CpuCasosMedicosController;
+use App\Http\Controllers\CpuBodegasController;
+
 
 // Autenticación
 Route::get('credencial-pdf/{identificacion}/{periodo}', [CpuBecadoController::class, 'generarCredencialPDF']);
@@ -679,3 +681,7 @@ Route::delete('/eliminar-carrera/{id}', [CpuCarreraController::class, 'eliminarC
 
 Route::get('/consultar-carreras', [CpuCarreraController::class, 'consultarCarreras']);
 Route::get('/get-carrera', [CpuCarreraController::class, 'getCarreras']);
+
+// Bodegas
+
+Route::get('/consultar-bodega/{idSede}/{idFacultad}', [CpuBodegasController::class, 'getBodegas']);

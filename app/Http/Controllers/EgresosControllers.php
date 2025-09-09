@@ -12,7 +12,7 @@ class EgresosControllers extends Controller
 {
     public function __construct()
     {
-         $this->middleware('auth:api');
+        $this->middleware('auth:api');
         $this->auditoriaController = new AuditoriaControllers();
         $this->inventariosController = new CpuInventariosController();
         $this->logController = new LogController();
@@ -365,11 +365,11 @@ class EgresosControllers extends Controller
             ->where('ee_id', $request->idEgreso)
             ->value('ee_numero_egreso');
 
-        $estado_egreeso = DB::table('cpu_encabezados_egresos')
+        $estadoEgreso = DB::table('cpu_encabezados_egresos')
             ->where('ee_id', $request->idEgreso)
             ->value('ee_id_estado');
 
-        $estadoEgreso = $request->estado;
+
         $auditoriaConsolidada = [];
 
         try {
@@ -384,62 +384,23 @@ class EgresosControllers extends Controller
                     ->where('ee_id', $request->idEgreso)
                     ->value('ee_detalle');
 
-                // Si es estado 5 que es No Asistio, se devuelven los stocks y registran movimientos
-                if ($estadoEgreso == 5 && $detalleEgreso) {
-                   $detalleProductos = json_decode($detalleEgreso, true);
+                $detalleEgreso = json_decode($detalleEgreso, true);
 
-                    // $this->inventariosController->guardarMovimientoInventario(
-                    //     $detalleProductos,
-                    //     $encabezadoReq['select_bodega'],
-                    //     'INGRESO',
-                    //     $request->user()->id,
-                    //     $idEncabezado
-                    // );
-                    // foreach ($detalleEgreso as $value) {
-                    //     $idInsumo = $value['idInsumo'];
-                    //     $cantidad = (int) $value['cantidad'];
-
-                    //     $stockAnterior = DB::table('cpu_movimientos_inventarios')
-                    //         ->where('mi_id_insumo', $idInsumo)
-                    //         ->orderBy('mi_created_at', 'desc')
-                    //         ->value('mi_stock_actual') ?? 0;
-
-                    //     $stockNuevo = $stockAnterior + $cantidad;
-
-                    //     $insertId = DB::table('cpu_movimientos_inventarios')->insertGetId([
-                    //         'mi_id_insumo'        => $idInsumo,
-                    //         'mi_cantidad'         => $cantidad,
-                    //         'mi_stock_anterior'   => $stockAnterior,
-                    //         'mi_stock_actual'     => $stockNuevo,
-                    //         'mi_tipo_transaccion' => 1,
-                    //         'mi_fecha'            => Carbon::now()->toDateTimeString(),
-                    //         'mi_created_at'       => Carbon::now()->toDateTimeString(),
-                    //         'mi_updated_at'       => Carbon::now()->toDateTimeString(),
-                    //         'mi_user_id'          => $request->user()->id,
-                    //         'mi_id_encabezado'    => $request->idEgreso,
-                    //     ], 'mi_id');
-
-                    //     $auditoriaConsolidada[] = [
-                    //         'accion'        => 'MOVIMIENTO_INSUMO',
-                    //         'descripcion'   => "Movimiento registrado: ID {$insertId}, insumo {$idInsumo}, stock anterior {$stockAnterior}, stock nuevo {$stockNuevo}",
-                    //         'idMovimiento'  => $insertId,
-                    //         'insumo'        => $idInsumo,
-                    //         'stockAnterior' => $stockAnterior,
-                    //         'stockNuevo'    => $stockNuevo
-                    //     ];
-
-                    //     DB::table('cpu_insumo')
-                    //         ->where('id', $idInsumo)
-                    //         ->update(['cantidad_unidades' => $stockNuevo]);
-                    // }
-                }
+                $this->inventariosController->guardarMovimientoInventario(
+                    $detalleEgreso,
+                    $request->select_bodega,
+                    'INGRESO',
+                    $request->user()->id,
+                    $request->idEgreso
+                );
 
                 $update = DB::table('cpu_encabezados_egresos')
                     ->where('ee_id', $request->idEgreso)
                     ->update([
-                        'ee_id_estado' => $estadoEgreso == 5 ? 5 : 2,
+                        'ee_id_estado' => $request->estado == 5 ? 5 : 2,
                         'ee_observacion' => $request->observacion ?? null,
-                        'ee_id_user' => $request->user()->id
+                        'ee_id_user' => $request->user()->id,
+                        'ee_id_bodega' => $request->select_bodega,
                     ]);
 
                 $auditoriaConsolidada[] = [

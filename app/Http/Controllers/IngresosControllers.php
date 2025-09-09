@@ -360,7 +360,6 @@ class IngresosControllers extends Controller
                     ->update(['ei_ruta_comprobante' => $nombreArchivo]);
 
                 $descripcionAuditoria[] = "Se subió archivo para ingreso ID {$idEncabezado} en la ruta {$ruta}/{$nombreArchivo}";
-
             }
             DB::commit();
 
@@ -442,115 +441,123 @@ class IngresosControllers extends Controller
         try {
             $data = DB::select("
                  SELECT 
-                    -- Identificadores
-                    m.mi_id,
-                    m.mi_id_insumo,
-                    m.mi_id_bodega,
-                    
-                    -- Datos del insumo
-                    ins.ins_descripcion AS nombre_insumo,
-                    ins.codigo AS codigo_insumo,
-                    
-                    -- Cantidades y stocks
-                    m.mi_cantidad,
-                    m.mi_stock_anterior,
-                    m.mi_stock_actual,
-                    sb.sb_stock_minimo,
-                    
-                    -- Estado de stock comparado con el mínimo
-                    CASE 
-                        WHEN (
-                            SUM(
-                                CASE 
-                                    WHEN m.mi_tipo_transaccion = 1 THEN m.mi_cantidad
-                                    WHEN m.mi_tipo_transaccion = 2 THEN -m.mi_cantidad
-                                    ELSE 0
-                                END
-                            ) OVER (
-                                PARTITION BY m.mi_id_insumo, m.mi_id_bodega
-                                ORDER BY m.mi_fecha, m.mi_created_at
-                                ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
-                            )
-                        ) < sb.sb_stock_minimo 
-                        THEN 'BAJO MINIMO'
-                        ELSE 'OK'
-                    END AS estado_stock,
-                    
-                    -- Tipo de movimiento y número
-                    CASE 
-                        WHEN m.mi_tipo_transaccion = 1 THEN 'Ingreso'
-                        WHEN m.mi_tipo_transaccion = 2 THEN 'Egreso'
-                        ELSE 'Otro'
-                    END AS tipo_movimiento,
-                    
-                    CASE 
-                        WHEN m.mi_tipo_transaccion = 1 THEN i.ei_numero_comprobante
-                        WHEN m.mi_tipo_transaccion = 2 THEN e.ee_numero_egreso
-                        ELSE 'N/A'
-                    END AS numero_comprobante,
-                    
-                    CASE 
-                        WHEN m.mi_tipo_transaccion = 1 THEN i.ei_numero_ingreso
-                        WHEN m.mi_tipo_transaccion = 2 THEN e.ee_numero_egreso
-                        ELSE 'N/A'
-                    END AS numero_movimiento,
-                    
-                    -- Datos del usuario
-                    u.name AS nombre_usuario,
-                    u.email AS email_usuario,
-                    
-                    -- Datos de la bodega
-                    b.bod_nombre AS nombre_bodega,
-                    b.bod_id_sede,
-                    
-                    -- Fechas
-                    m.mi_fecha,
-                    m.mi_created_at,
-                    m.mi_updated_at,
-                    
-                    -- Stock acumulado por insumo y bodega
-                    SUM(
-                        CASE 
-                            WHEN m.mi_tipo_transaccion = 1 THEN m.mi_cantidad
-                            WHEN m.mi_tipo_transaccion = 2 THEN -m.mi_cantidad
-                            ELSE 0
-                        END
-                    ) OVER (
-                        PARTITION BY m.mi_id_insumo, m.mi_id_bodega
-                        ORDER BY m.mi_fecha, m.mi_created_at
-                        ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
-                    ) AS stock_actual_acumulado,
-                    
-                    -- Datos extra de ingresos
-                    i.ei_id AS id_ingreso,
-                    i.ei_id_proveedor,
-                    i.ei_fecha_emision,
-                    
-                    -- Datos extra de egresos
-                    e.ee_id AS id_egreso,
-                    e.ee_id_funcionario,
-                    e.ee_cedula_funcionario,
-                    e.ee_id_paciente,
-                    e.ee_cedula_paciente,
-                    e.ee_observacion
+    -- Identificadores
+    m.mi_id,
+    m.mi_id_insumo,
+    m.mi_id_bodega,
+    m.mi_id_encabezado,
+    
+    -- Datos del insumo
+    ins.ins_descripcion AS nombre_insumo,
+    ins.codigo AS codigo_insumo,
+    
+    -- Cantidades y stocks
+    m.mi_cantidad,
+    m.mi_stock_anterior,
+    m.mi_stock_actual,
+    sb.sb_stock_minimo,
+    
+    -- Estado de stock comparado con el mínimo
+    CASE 
+        WHEN (
+            SUM(
+                CASE 
+                    WHEN m.mi_tipo_transaccion = 1 THEN m.mi_cantidad
+                    WHEN m.mi_tipo_transaccion = 2 THEN -m.mi_cantidad
+                    ELSE 0
+                END
+            ) OVER (
+                PARTITION BY m.mi_id_insumo, m.mi_id_bodega
+                ORDER BY m.mi_fecha, m.mi_created_at
+                ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
+            )
+        ) < sb.sb_stock_minimo 
+        THEN 'BAJO MINIMO'
+        ELSE 'OK'
+    END AS estado_stock,
+    
+    -- Tipo de movimiento y número
+    CASE 
+        WHEN m.mi_tipo_transaccion = 1 THEN 'Ingreso'
+        WHEN m.mi_tipo_transaccion = 2 THEN 'Egreso'
+        ELSE 'Otro'
+    END AS tipo_movimiento,
+    
+    CASE 
+        WHEN m.mi_tipo_transaccion = 1 THEN COALESCE(i.ei_numero_comprobante, 'N/A')
+        WHEN m.mi_tipo_transaccion = 2 THEN COALESCE(e.ee_numero_egreso, 'N/A')
+        ELSE 'N/A'
+    END AS numero_comprobante,
+    
+    CASE 
+        WHEN m.mi_tipo_transaccion = 1 THEN COALESCE(i.ei_numero_ingreso, 'N/A')
+        WHEN m.mi_tipo_transaccion = 2 THEN COALESCE(e.ee_numero_egreso, 'N/A')
+        ELSE 'N/A'
+    END AS numero_movimiento,
+    
+    -- Datos del usuario
+    u.name AS nombre_usuario,
+    u.email AS email_usuario,
+    
+    -- Datos de la bodega
+    b.bod_nombre AS nombre_bodega,
+    b.bod_id_sede,
+    f.fac_nombre AS nombre_facultad,
+    s.nombre_sede,
+    
+    -- Fechas
+    m.mi_fecha,
+    m.mi_created_at,
+    m.mi_updated_at,
+    
+    -- Stock acumulado por insumo y bodega
+    SUM(
+        CASE 
+            WHEN m.mi_tipo_transaccion = 1 THEN m.mi_cantidad
+            WHEN m.mi_tipo_transaccion = 2 THEN -m.mi_cantidad
+            ELSE 0
+        END
+    ) OVER (
+        PARTITION BY m.mi_id_insumo, m.mi_id_bodega
+        ORDER BY m.mi_fecha, m.mi_created_at
+        ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
+    ) AS stock_actual_acumulado,
+    
+    -- Datos extra de ingresos
+    i.ei_id AS id_ingreso,
+    i.ei_id_proveedor,
+    i.ei_fecha_emision,
+    
+    -- Datos extra de egresos
+    e.ee_id AS id_egreso,
+    e.ee_id_funcionario,
+    e.ee_cedula_funcionario,
+    e.ee_id_paciente,
+    e.ee_cedula_paciente,
+    e.ee_observacion
 
-                FROM cpu_movimientos_inventarios m
-                LEFT JOIN cpu_encabezados_ingresos i 
-                    ON m.mi_id_encabezado = i.ei_id 
-                    AND m.mi_tipo_transaccion = 1
-                LEFT JOIN cpu_encabezados_egresos e 
-                    ON m.mi_id_encabezado = e.ee_id 
-                    AND m.mi_tipo_transaccion = 2
-                LEFT JOIN cpu_insumo ins
-                    ON ins.id = m.mi_id_insumo
-                LEFT JOIN users u
-                    ON u.id = m.mi_user_id
-                LEFT JOIN cpu_bodegas b
-                    ON b.bod_id = m.mi_id_bodega
-                LEFT JOIN cpu_stock_bodegas sb
-                    ON sb.sb_id_insumo = m.mi_id_insumo
-                AND sb.sb_id_bodega = m.mi_id_bodega
-                ORDER BY m.mi_id DESC;
+FROM cpu_movimientos_inventarios m
+LEFT JOIN cpu_encabezados_ingresos i 
+    ON m.mi_id_encabezado = i.ei_id 
+    AND m.mi_tipo_transaccion = 1
+LEFT JOIN cpu_encabezados_egresos e 
+    ON m.mi_id_encabezado = e.ee_id 
+    AND m.mi_tipo_transaccion = 2
+LEFT JOIN cpu_insumo ins
+    ON ins.id = m.mi_id_insumo
+LEFT JOIN users u
+    ON u.id = m.mi_user_id
+LEFT JOIN cpu_bodegas b
+    ON b.bod_id = m.mi_id_bodega
+LEFT JOIN cpu_facultad f
+    ON b.bod_id_facultad = f.id
+LEFT JOIN cpu_sede s
+    ON b.bod_id_sede = s.id
+LEFT JOIN cpu_stock_bodegas sb
+    ON sb.sb_id_insumo = m.mi_id_insumo
+   AND sb.sb_id_bodega = m.mi_id_bodega
+ORDER BY m.mi_id DESC;
+
             ");
             return response()->json($data);
         } catch (\Exception $e) {

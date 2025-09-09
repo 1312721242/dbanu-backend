@@ -315,11 +315,9 @@ class IngresosControllers extends Controller
         DB::beginTransaction();
         $descripcionAuditoria = [];
         try {
-            // Decodificar encabezado y detalle
             $encabezadoReq = json_decode($request->input('encabezado'), true);
             $detalleProductos = json_decode($request->input('detalleProductos'), true);
 
-            // Preparar encabezado para insertar
             $encabezado = [
                 'ei_numero_comprobante' => $encabezadoReq['n_comprobante'],
                 'ei_numero_ingreso'     => $encabezadoReq['n_ingreso'],
@@ -335,7 +333,6 @@ class IngresosControllers extends Controller
                 'ei_detalle_producto'   => json_encode($detalleProductos),
             ];
 
-            // Insertar encabezado y obtener ID
             $idEncabezado = DB::table('cpu_encabezados_ingresos')->insertGetId($encabezado, 'ei_id');
             $descripcionAuditoria[] = "Se creó encabezado de ingreso con ID: {$idEncabezado}";
 
@@ -347,14 +344,6 @@ class IngresosControllers extends Controller
                 $idEncabezado
             );
 
-            // // Guardar archivo si viene
-            // if ($request->hasFile('archivo_comprobante')) {
-            //     $file = $request->file('archivo_comprobante');
-            //     $path = $file->store('comprobantes_ingresos');
-
-            //     DB::table('cpu_encabezados_ingresos')
-            //         ->where('ei_id', $idEncabezado)
-            //         ->update(['ei_ruta_comprobante' => $path]);
             $nombreArchivo = null;
 
             if ($request->hasFile('archivo_comprobante')) {
@@ -373,9 +362,6 @@ class IngresosControllers extends Controller
                 $descripcionAuditoria[] = "Se subió archivo para ingreso ID {$idEncabezado} en la ruta {$ruta}/{$nombreArchivo}";
 
             }
-
-            
-
             DB::commit();
 
             // Auditoría
@@ -406,7 +392,7 @@ class IngresosControllers extends Controller
             );
 
             $this->logController->saveLog(
-                'IngresosController - guardarIngresos(Request $request)',
+                'Controlador: IngresosController, Función: guardarIngresos(Request $request)',
                 'Error al guardar: ' . $e->getMessage()
             );
 

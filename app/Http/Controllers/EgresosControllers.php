@@ -2,18 +2,19 @@
 
 namespace App\Http\Controllers;
 
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Log;
-use Carbon\Carbon;
+use Illuminate\Support\Facades\Validator;
 
 class EgresosControllers extends Controller
 {
     public function __construct()
     {
-        $this->middleware('auth:api');
+         $this->middleware('auth:api');
         $this->auditoriaController = new AuditoriaControllers();
+        $this->inventariosController = new CpuInventariosController();
         $this->logController = new LogController();
     }
 
@@ -24,25 +25,20 @@ class EgresosControllers extends Controller
                 ->select(
                     'cee.ee_id',
                     'cee.ee_numero_egreso',
-
                     'cee.ee_id_funcionario',
                     'uf.name as nombre_funcionario',
                     'uf.email as email_funcionario',
                     'cee.ee_cedula_funcionario',
-
                     'cee.ee_id_paciente',
                     'p.nombres as nombre_paciente',
                     'p.cedula as cedula_paciente',
                     'p.celular as celular_paciente',
-
                     'cee.ee_detalle',
                     'cee.ee_id_estado',
                     'e.estado as nombre_estado',
-
                     'cee.ee_id_user',
                     'uu.name as nombre_usuario',
                     'uu.email as email_usuario',
-
                     'cee.ee_created_at',
                     'cee.ee_updated_at',
                     'cee.ee_observacion',
@@ -69,9 +65,9 @@ class EgresosControllers extends Controller
                 ->select(
                     'ee_id',
                     'ee_id_funcionario',
-                    //'ee_cedula_funcionario',
+                    // 'ee_cedula_funcionario',
                     'ee_id_paciente',
-                    //'ee_cedula_paciente',
+                    // 'ee_cedula_paciente',
                     'ee_detalle',
                     'ee_id_estado',
                     'ee_id_user',
@@ -115,7 +111,6 @@ class EgresosControllers extends Controller
 
     //         // $descripcionAuditoria = 'Se actualizó la obaservación de atención del egreso #: ' . $nroEgreso . ' con la abservación: ' . $request->observacion;
     //         // $this->auditoriaController->auditar('cpu_encabezados_egresos', 'guardarAtencionEgreso(Request $request)', $dataold, $request->observacion, 'UPDATE', $descripcionAuditoria);
-
 
     //         $detalleEgreso = DB::table('cpu_encabezados_egresos')
     //             ->where('ee_id', $request->idEgreso)
@@ -182,7 +177,6 @@ class EgresosControllers extends Controller
     //     }
     // }
 
-
     public function guardarAtencionEgreso2(Request $request)
     {
         $validator = Validator::make($request->all(), [
@@ -210,7 +204,7 @@ class EgresosControllers extends Controller
         try {
             DB::beginTransaction();
             $estado = DB::select(
-                "SELECT ee_id_estado FROM cpu_encabezados_egresos WHERE ee_id = :idEgreso",
+                'SELECT ee_id_estado FROM cpu_encabezados_egresos WHERE ee_id = :idEgreso',
                 ['idEgreso' => $request->idEgreso]
             );
 
@@ -222,7 +216,7 @@ class EgresosControllers extends Controller
 
                 return response()->json([
                     'success' => false,
-                    'message' => "El egreso ya ha sido atendido previamente.",
+                    'message' => 'El egreso ya ha sido atendido previamente.',
                 ], 400);
             }
 
@@ -260,16 +254,16 @@ class EgresosControllers extends Controller
 
                     $stockNuevo = $stockAnterior - $cantidad;
                     $insertId = DB::table('cpu_movimientos_inventarios')->insertGetId([
-                        'mi_id_insumo'        => $idInsumo,
-                        'mi_cantidad'         => $cantidad,
-                        'mi_stock_anterior'   => $stockAnterior,
-                        'mi_stock_actual'     => $stockNuevo,
+                        'mi_id_insumo' => $idInsumo,
+                        'mi_cantidad' => $cantidad,
+                        'mi_stock_anterior' => $stockAnterior,
+                        'mi_stock_actual' => $stockNuevo,
                         'mi_tipo_transaccion' => 2,
-                        'mi_fecha'            => Carbon::now()->toDateTimeString(),
-                        'mi_created_at'       => Carbon::now()->toDateTimeString(),
-                        'mi_updated_at'       => Carbon::now()->toDateTimeString(),
-                        'mi_user_id'          => $request->user()->id,
-                        'mi_id_encabezado'    => $request->idEgreso,
+                        'mi_fecha' => Carbon::now()->toDateTimeString(),
+                        'mi_created_at' => Carbon::now()->toDateTimeString(),
+                        'mi_updated_at' => Carbon::now()->toDateTimeString(),
+                        'mi_user_id' => $request->user()->id,
+                        'mi_id_encabezado' => $request->idEgreso,
                     ]);
 
                     // Auditoría individual de insert
@@ -329,7 +323,7 @@ class EgresosControllers extends Controller
 
             return response()->json([
                 'success' => true,
-                'message' => "Atención guardada correctamente."
+                'message' => 'Atención guardada correctamente.'
             ], 200);
         } catch (\Exception $e) {
             DB::rollBack();
@@ -350,7 +344,7 @@ class EgresosControllers extends Controller
     {
         $validator = Validator::make($request->all(), [
             'idEgreso' => 'required|integer',
-            'estado'   => 'required|integer'
+            'estado' => 'required|integer'
         ]);
 
         if ($validator->fails()) {
@@ -386,52 +380,58 @@ class EgresosControllers extends Controller
                     'message' => "La atención ya fue realizada (estado: {$estadoEgreso})"
                 ], 409);
             } else {
-
                 $detalleEgreso = DB::table('cpu_encabezados_egresos')
                     ->where('ee_id', $request->idEgreso)
                     ->value('ee_detalle');
 
-                // Si es estado 5, se suman stocks y registran movimientos
+                // Si es estado 5 que es No Asistio, se devuelven los stocks y registran movimientos
                 if ($estadoEgreso == 5 && $detalleEgreso) {
-                    $detalleEgreso = json_decode($detalleEgreso, true);
+                   $detalleProductos = json_decode($detalleEgreso, true);
 
-                    foreach ($detalleEgreso as $value) {
-                        $idInsumo = $value['idInsumo'];
-                        $cantidad = (int) $value['cantidad'];
+                    // $this->inventariosController->guardarMovimientoInventario(
+                    //     $detalleProductos,
+                    //     $encabezadoReq['select_bodega'],
+                    //     'INGRESO',
+                    //     $request->user()->id,
+                    //     $idEncabezado
+                    // );
+                    // foreach ($detalleEgreso as $value) {
+                    //     $idInsumo = $value['idInsumo'];
+                    //     $cantidad = (int) $value['cantidad'];
 
-                        $stockAnterior = DB::table('cpu_movimientos_inventarios')
-                            ->where('mi_id_insumo', $idInsumo)
-                            ->orderBy('mi_created_at', 'desc')
-                            ->value('mi_stock_actual') ?? 0;
+                    //     $stockAnterior = DB::table('cpu_movimientos_inventarios')
+                    //         ->where('mi_id_insumo', $idInsumo)
+                    //         ->orderBy('mi_created_at', 'desc')
+                    //         ->value('mi_stock_actual') ?? 0;
 
-                        $stockNuevo = $stockAnterior + $cantidad;
+                    //     $stockNuevo = $stockAnterior + $cantidad;
 
-                        $insertId = DB::table('cpu_movimientos_inventarios')->insertGetId([
-                            'mi_id_insumo'        => $idInsumo,
-                            'mi_cantidad'         => $cantidad,
-                            'mi_stock_anterior'   => $stockAnterior,
-                            'mi_stock_actual'     => $stockNuevo,
-                            'mi_tipo_transaccion' => 1,
-                            'mi_fecha'            => Carbon::now()->toDateTimeString(),
-                            'mi_created_at'       => Carbon::now()->toDateTimeString(),
-                            'mi_updated_at'       => Carbon::now()->toDateTimeString(),
-                            'mi_user_id'          => $request->user()->id,
-                            'mi_id_encabezado'    => $request->idEgreso,
-                        ], 'mi_id');
+                    //     $insertId = DB::table('cpu_movimientos_inventarios')->insertGetId([
+                    //         'mi_id_insumo'        => $idInsumo,
+                    //         'mi_cantidad'         => $cantidad,
+                    //         'mi_stock_anterior'   => $stockAnterior,
+                    //         'mi_stock_actual'     => $stockNuevo,
+                    //         'mi_tipo_transaccion' => 1,
+                    //         'mi_fecha'            => Carbon::now()->toDateTimeString(),
+                    //         'mi_created_at'       => Carbon::now()->toDateTimeString(),
+                    //         'mi_updated_at'       => Carbon::now()->toDateTimeString(),
+                    //         'mi_user_id'          => $request->user()->id,
+                    //         'mi_id_encabezado'    => $request->idEgreso,
+                    //     ], 'mi_id');
 
-                        $auditoriaConsolidada[] = [
-                            'accion'        => 'MOVIMIENTO_INSUMO',
-                            'descripcion'   => "Movimiento registrado: ID {$insertId}, insumo {$idInsumo}, stock anterior {$stockAnterior}, stock nuevo {$stockNuevo}",
-                            'idMovimiento'  => $insertId,
-                            'insumo'        => $idInsumo,
-                            'stockAnterior' => $stockAnterior,
-                            'stockNuevo'    => $stockNuevo
-                        ];
+                    //     $auditoriaConsolidada[] = [
+                    //         'accion'        => 'MOVIMIENTO_INSUMO',
+                    //         'descripcion'   => "Movimiento registrado: ID {$insertId}, insumo {$idInsumo}, stock anterior {$stockAnterior}, stock nuevo {$stockNuevo}",
+                    //         'idMovimiento'  => $insertId,
+                    //         'insumo'        => $idInsumo,
+                    //         'stockAnterior' => $stockAnterior,
+                    //         'stockNuevo'    => $stockNuevo
+                    //     ];
 
-                        DB::table('cpu_insumo')
-                            ->where('id', $idInsumo)
-                            ->update(['cantidad_unidades' => $stockNuevo]);
-                    }
+                    //     DB::table('cpu_insumo')
+                    //         ->where('id', $idInsumo)
+                    //         ->update(['cantidad_unidades' => $stockNuevo]);
+                    // }
                 }
 
                 $update = DB::table('cpu_encabezados_egresos')
@@ -439,12 +439,11 @@ class EgresosControllers extends Controller
                     ->update([
                         'ee_id_estado' => $estadoEgreso == 5 ? 5 : 2,
                         'ee_observacion' => $request->observacion ?? null,
-                        'ee_id_user'   => $request->user()->id
+                        'ee_id_user' => $request->user()->id
                     ]);
 
-
                 $auditoriaConsolidada[] = [
-                    'accion'      => 'UPDATE_ESTADO',
+                    'accion' => 'UPDATE_ESTADO',
                     'descripcion' => "Se actualizó el estado del egreso #{$nroEgreso} a {$estadoEgreso}",
                     'nuevoEstado' => $estadoEgreso
                 ];
@@ -463,7 +462,7 @@ class EgresosControllers extends Controller
 
                 return response()->json([
                     'success' => true,
-                    'message' => "Atención guardada correctamente."
+                    'message' => 'Atención guardada correctamente.'
                 ], 200);
             }
         } catch (\Exception $e) {

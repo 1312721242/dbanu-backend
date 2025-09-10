@@ -335,11 +335,15 @@ class IngresosControllers extends Controller
 
             $idEncabezado = DB::table('cpu_encabezados_ingresos')->insertGetId($encabezado, 'ei_id');
             $descripcionAuditoria[] = "Se creó encabezado de ingreso con ID: {$idEncabezado}";
+            
+            $descripcionAuditoria[] =  $encabezadoReq['tipo_adquisicion'] == 2 ? "Tipo de adquisición: Donación" : "Tipo de adquisición: Factura";
+            $estado_movimiento = $encabezadoReq['tipo_adquisicion'] == 2 ? 25 : 24;
 
             $this->inventariosController->guardarMovimientoInventario(
                 $detalleProductos,
                 $encabezadoReq['select_bodega'],
                 'INGRESO',
+                $estado_movimiento,
                 $request->user()->id,
                 $idEncabezado
             );
@@ -440,12 +444,14 @@ class IngresosControllers extends Controller
     {
         try {
             $data = DB::select("
-                 SELECT 
+                    SELECT 
     -- Identificadores
     m.mi_id,
     m.mi_id_insumo,
     m.mi_id_bodega,
     m.mi_id_encabezado,
+	m.mi_id_estado,
+	est.estado,
     
     -- Datos del insumo
     ins.ins_descripcion AS nombre_insumo,
@@ -509,20 +515,6 @@ class IngresosControllers extends Controller
     m.mi_fecha,
     m.mi_created_at,
     m.mi_updated_at,
-    
-    -- Stock acumulado por insumo y bodega
-    SUM(
-        CASE 
-            WHEN m.mi_tipo_transaccion = 1 THEN m.mi_cantidad
-            WHEN m.mi_tipo_transaccion = 2 THEN -m.mi_cantidad
-            ELSE 0
-        END
-    ) OVER (
-        PARTITION BY m.mi_id_insumo, m.mi_id_bodega
-        ORDER BY m.mi_fecha, m.mi_created_at
-        ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
-    ) AS stock_actual_acumulado,
-    
     -- Datos extra de ingresos
     i.ei_id AS id_ingreso,
     i.ei_id_proveedor,
@@ -551,13 +543,14 @@ LEFT JOIN cpu_bodegas b
     ON b.bod_id = m.mi_id_bodega
 LEFT JOIN cpu_facultad f
     ON b.bod_id_facultad = f.id
+LEFT JOIN cpu_estados est
+    ON est.id = m.mi_id_estado
 LEFT JOIN cpu_sede s
     ON b.bod_id_sede = s.id
 LEFT JOIN cpu_stock_bodegas sb
     ON sb.sb_id_insumo = m.mi_id_insumo
    AND sb.sb_id_bodega = m.mi_id_bodega
 ORDER BY m.mi_id DESC;
-
             ");
             return response()->json($data);
         } catch (\Exception $e) {

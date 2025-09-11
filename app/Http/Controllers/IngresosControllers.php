@@ -335,7 +335,7 @@ class IngresosControllers extends Controller
 
             $idEncabezado = DB::table('cpu_encabezados_ingresos')->insertGetId($encabezado, 'ei_id');
             $descripcionAuditoria[] = "Se creó encabezado de ingreso con ID: {$idEncabezado}";
-            
+
             $descripcionAuditoria[] =  $encabezadoReq['tipo_adquisicion'] == 2 ? "Tipo de adquisición: Donación" : "Tipo de adquisición: Factura";
             $estado_movimiento = $encabezadoReq['tipo_adquisicion'] == 2 ? 25 : 24;
 

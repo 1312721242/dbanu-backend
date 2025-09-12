@@ -515,9 +515,9 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::put('/tramites/{id}', [CpuTramiteController::class, 'update']);
     Route::delete('/tramites/{id}', [CpuTramiteController::class, 'destroy']);
     Route::get('/tramites', [CpuTramiteController::class, 'show']);
-// NUEVOS endpoints optimizados:
-Route::get('/tramites/hoy', [CpuTramiteController::class, 'hoy']);
-Route::get('/tramites/no-finalizados', [CpuTramiteController::class, 'noFinalizados']);
+    // NUEVOS endpoints optimizados:
+    Route::get('/tramites/hoy', [CpuTramiteController::class, 'hoy']);
+    Route::get('/tramites/no-finalizados', [CpuTramiteController::class, 'noFinalizados']);
     // API para obtener tipos de becas filtrados
     Route::get('/tipos-beca/filtrados', [CpuTipoBecaController::class, 'show']);
 
@@ -663,25 +663,27 @@ Route::get('/tramites/no-finalizados', [CpuTramiteController::class, 'noFinaliza
     Route::get('/diversidad/personas/{personaId}/ultima-carrera', [AtencionesDiversidadController::class, 'ultimaCarreraDePersona']);
     Route::get('/diversidad/segmento', [AtencionesDiversidadController::class, 'resolverSegmentoPorCedula']);
     Route::put('/diversidad/personas/{personaId}/segmento', [AtencionesDiversidadController::class, 'actualizarSegmentoPersona']);
+
+    //MODULO DE TERAPIA DE LENGUAJE
+    Route::get('/terapia-lenguaje', [CpuTerapiaLenguajeController::class, 'guardarConsultaTerapia']);
+
+    Route::get('/datos-medicos', [CpuDatosMedicosController::class, 'index']);
+    Route::get('/roles/{id}', [RoleController::class, 'consultarRol']);
+
+
+    // Carrera
+    Route::post('/agregar-carrera', [CpuCarreraController::class, 'agregarCarrera']);
+    Route::put('/modificar-carrera/{id}', [CpuCarreraController::class, 'modificarCarrera']);
+    Route::delete('/eliminar-carrera/{id}', [CpuCarreraController::class, 'eliminarCarrera']);
+
+    Route::get('/consultar-carreras', [CpuCarreraController::class, 'consultarCarreras']);
+    Route::get('/get-carrera', [CpuCarreraController::class, 'getCarreras']);
+
+
+    // Bodegas
+
+    Route::get('/consultar-bodega/{idSede}/{idFacultad}', [CpuBodegasController::class, 'getBodegas']);
+    Route::get('/get-bodega-id/{idSede}/{idFacultad}/{idBodega}', [CpuBodegasController::class, 'getIdBodegas']);
 });
 
 // Route::put('/cpu-persona-update/{cedula}', [CpuPersonaController::class, 'update']);
-
-//MODULO DE TERAPIA DE LENGUAJE
-Route::get('/terapia-lenguaje', [CpuTerapiaLenguajeController::class, 'guardarConsultaTerapia']);
-
-Route::get('/datos-medicos', [CpuDatosMedicosController::class, 'index']);
-Route::get('/roles/{id}', [RoleController::class, 'consultarRol']);
-
-
-// Carrera
-Route::post('/agregar-carrera', [CpuCarreraController::class, 'agregarCarrera']);
-Route::put('/modificar-carrera/{id}', [CpuCarreraController::class, 'modificarCarrera']);
-Route::delete('/eliminar-carrera/{id}', [CpuCarreraController::class, 'eliminarCarrera']);
-
-Route::get('/consultar-carreras', [CpuCarreraController::class, 'consultarCarreras']);
-Route::get('/get-carrera', [CpuCarreraController::class, 'getCarreras']);
-
-// Bodegas
-
-Route::get('/consultar-bodega/{idSede}/{idFacultad}', [CpuBodegasController::class, 'getBodegas']);

@@ -39,7 +39,7 @@ class CpuInsumoController extends Controller
             ->orderBy('ins_descripcion', 'asc')
             ->select('id', 'id_tipo_insumo', 'ins_descripcion', 'cantidad_unidades', 'ins_cantidad')
             ->get();
-            
+
         $this->auditar('cpu_insumo', 'getInsumos', '', $insumosMedicos, 'CONSULTA', 'Consulta de insumos médicos');
         return response()->json([
             'insumosMedicos' => $insumosMedicos,
@@ -117,29 +117,31 @@ class CpuInsumoController extends Controller
     public function consultarInsumos()
     {
         $data = DB::select("
-            SELECT i.id,
-            i.id_tipo_insumo,
+           SELECT 
+            sb.sb_id,
+            sb.sb_cantidad AS stock_bodega,
+            sb.sb_stock_minimo,
+            sb.sb_id_bodega,
+            b.bod_nombre AS nombre_bodega,
+            b.bod_id_sede,
+            s.nombre_sede,
+            b.bod_id_facultad,
+            f.fac_nombre,
+            i.id AS id_insumo,
+            i.codigo,
             i.ins_descripcion,
-            i.ins_cantidad,
+            i.id_tipo_insumo,
             i.estado_insumo,
             i.id_estado,
             e.estado,
-            i.modo_adquirido,
-            i.num_documento,
-            i.nombre_proveedor,
-            i.fecha_recibido,
-            i.fecha_ingreso_sistema,
-            i.fecha_update,
-            i.codigo,
-            i.unidad_medida,
-            i.serie,
-            i.modelo,
-            i.marca,
-            i.cantidad_unidades
-        FROM cpu_insumo i
-            JOIN cpu_estados e ON e.id = i.id_estado
-        WHERE i.id_estado = 8
-        ORDER BY i.id DESC
+            i.modo_adquirido
+        FROM cpu_stock_bodegas sb
+        JOIN cpu_bodegas b ON b.bod_id = sb.sb_id_bodega
+        LEFT JOIN cpu_sede s ON s.id = b.bod_id_sede
+        LEFT JOIN cpu_facultad f ON f.id = b.bod_id_facultad
+        JOIN cpu_insumo i ON i.id = sb.sb_id_insumo
+        JOIN cpu_estados e ON e.id = i.id_estado
+        WHERE i.id_estado = 8 
         ");
         return response()->json($data);
     }
@@ -387,4 +389,6 @@ class CpuInsumoController extends Controller
             ], 500);
         }
     }
+
+   
 }

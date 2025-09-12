@@ -30,6 +30,52 @@ class CpuBodegasController extends Controller
         return response()->json($data);
     }
 
+
+ public function getIdBodegas($id_sede, $id_facultad, $id_bodega)
+{
+    $query = DB::table('cpu_stock_bodegas as sb')
+        ->join('cpu_bodegas as b', 'sb.sb_id_bodega', '=', 'b.bod_id')
+        ->leftJoin('cpu_sede as s', 's.id', '=', 'b.bod_id_sede')
+        ->leftJoin('cpu_facultad as f', 'f.id', '=', 'b.bod_id_facultad')
+        ->join('cpu_insumo as i', 'i.id', '=', 'sb.sb_id_insumo')
+        ->join('cpu_estados as e', 'e.id', '=', 'i.id_estado')
+        ->select(
+            'sb.sb_id',
+            'sb.sb_cantidad as stock_bodega',
+            'sb.sb_stock_minimo',
+            'sb.sb_id_bodega',
+            'b.bod_nombre as nombre_bodega',
+            'b.bod_id_sede',
+            's.nombre_sede',
+            'b.bod_id_facultad',
+            'f.fac_nombre',
+            'i.id as id_insumo',
+            'i.codigo',
+            'i.ins_descripcion',
+            'i.id_tipo_insumo',
+            'i.estado_insumo',
+            'i.id_estado',
+            'e.estado',
+            'i.modo_adquirido'
+        )
+        ->where('i.id_estado', 8);
+
+    if ($id_sede) {
+        $query->where('b.bod_id_sede', $id_sede);
+    }
+    if ($id_facultad) {
+        $query->where('b.bod_id_facultad', $id_facultad);
+    }
+    if ($id_bodega) {
+        $query->where('sb.sb_id_bodega', $id_bodega);
+    }
+
+    $data = $query->orderByDesc('i.id')->get();
+
+    return response()->json($data);
+}
+
+
     public function index()
     {
         //

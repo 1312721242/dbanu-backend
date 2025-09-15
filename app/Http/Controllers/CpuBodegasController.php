@@ -49,7 +49,7 @@ class CpuBodegasController extends Controller
             's.nombre_sede',
             'b.bod_id_facultad',
             'f.fac_nombre',
-            'i.id as id_insumo',
+            'i.id as idInsumo',
             'i.codigo',
             'i.ins_descripcion',
             'i.id_tipo_insumo',

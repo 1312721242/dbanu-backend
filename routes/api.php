@@ -84,7 +84,7 @@ use App\Http\Controllers\NvDocenteAsignaturaController;
 use App\Http\Controllers\AtencionesDiversidadController;
 use App\Http\Controllers\CpuCasosMedicosController;
 use App\Http\Controllers\CpuBodegasController;
-
+use App\Http\Controllers\CpuInventariosController;
 
 // Autenticación
 Route::get('credencial-pdf/{identificacion}/{periodo}', [CpuBecadoController::class, 'generarCredencialPDF']);
@@ -440,12 +440,13 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::delete('/cpu-tipos-usuario/{id}', [CpuTipoUsuarioController::class, 'destroy']);
 
     //INSUMOS
-
     Route::get('/cpu-insumos', [CpuInsumoController::class, 'getInsumos']);
     Route::get('/get-insumo', [CpuInsumoController::class, 'consultarInsumos']);
     Route::get('/get-tipo-insumo', [CpuInsumoController::class, 'consultarTiposInsumos']);
     Route::post('/guardar-insumo', [CpuInsumoController::class, 'saveInsumos']);
     Route::put('/modificar-insumo/{id}', [CpuInsumoController::class, 'modificarInsumo']);
+    Route::get('/get-insumo-id/{id}', [CpuInsumoController::class, 'getInsumoById']);
+
 
     //apis para busqueda de cie11
     Route::post('/get-token', [ICDController::class, 'getToken']);
@@ -681,9 +682,14 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
 
     // Bodegas
-
     Route::get('/consultar-bodega/{idSede}/{idFacultad}', [CpuBodegasController::class, 'getBodegas']);
     Route::get('/get-bodega-id/{idSede}/{idFacultad}/{idBodega}', [CpuBodegasController::class, 'getIdBodegas']);
+
+    //Inventario
+   // Route::get('/get-inventario', [CpuInventarioController::class, 'consultarInventario']);
+    Route::post('/guardar-inventario-inicial', [CpuInventariosController::class, 'guardarInventarioInicial']);
+    Route::get('/get-stock-bodega-insumo-id/{id}', [CpuInventariosController::class, 'getStockBodegaInsumoId']);
+    // Route::put('/modificar-inventario/{id}', [CpuInventarioController::class, 'modificarInventario']);
 });
 
 // Route::put('/cpu-persona-update/{cedula}', [CpuPersonaController::class, 'update']);

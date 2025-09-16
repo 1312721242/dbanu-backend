@@ -773,6 +773,74 @@ class CpuDerivacionController extends Controller
         }
     }
 
+    public function getDerivacionesNoAsistidasPorMedico(Request $request, $doctorId)
+    {
+        // Validar solo fechas (el doctor viene por parámetro de ruta)
+        $request->validate([
+            'fecha_inicio' => 'required|date',
+            'fecha_fin'    => 'required|date',
+        ]);
+
+        // Si quieres validar que ese doctor exista:
+        // \Illuminate\Support\Facades\Validator::make(['doctor_id' => $doctorId], [
+        //     'doctor_id' => 'required|integer|exists:users,id',
+        // ])->validate();
+
+        $fechaInicio = \Carbon\Carbon::parse($request->input('fecha_inicio'))->startOfDay();
+        $fechaFin    = \Carbon\Carbon::parse($request->input('fecha_fin'))->endOfDay();
+
+        $ini = $fechaInicio->format('Y-m-d H:i:s');
+        $fin = $fechaFin->format('Y-m-d H:i:s');
+
+        try {
+            $rows = DB::select(
+                'SELECT * FROM public.f_obtener_derivaciones_por_medico_y_fecha(?, ?, ?)',
+                [(int)$doctorId, $ini, $fin]
+            );
+
+            if (!empty($rows)) {
+                $tramites = DB::table('cpu_tramites')
+                    ->select('id_tramite', 'tra_link_receptado', 'tra_link_enviado')
+                    ->whereIn('id_tramite', collect($rows)->pluck('id_tramite')->filter()->unique()->values())
+                    ->get()
+                    ->keyBy('id_tramite');
+
+                foreach ($rows as $r) {
+                    if (!empty($r->id_tramite) && isset($tramites[$r->id_tramite])) {
+                        $r->tra_link_receptado = $tramites[$r->id_tramite]->tra_link_receptado ?? null;
+                        $r->tra_link_enviado   = $tramites[$r->id_tramite]->tra_link_enviado ?? null;
+                    }
+                }
+            }
+
+            $this->auditar(
+                'cpu_derivacion',
+                'getDerivacionesNoAsistidasPorMedico',
+                '',
+                json_encode($rows),
+                'CONSULTA',
+                'Consulta derivaciones no asistidas por médico y fechas'
+            );
+
+            return response()->json($rows, 200);
+        } catch (\Throwable $e) {
+            Log::error('[getDerivacionesNoAsistidasPorMedico] Error al consultar función PG', [
+                'error' => $e->getMessage(),
+                'doctor_id' => (int)$doctorId,
+                'fecha_inicio' => $ini,
+                'fecha_fin' => $fin,
+            ]);
+
+            return response()->json([
+                'error' => 'Error al obtener derivaciones: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+
+
+
+
     //funcion para auditar
     private function auditar($tabla, $campo, $dataOld, $dataNew, $tipo, $descripcion, $request = null)
     {

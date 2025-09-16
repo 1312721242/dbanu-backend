@@ -664,6 +664,9 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('/diversidad/personas/{personaId}/ultima-carrera', [AtencionesDiversidadController::class, 'ultimaCarreraDePersona']);
     Route::get('/diversidad/segmento', [AtencionesDiversidadController::class, 'resolverSegmentoPorCedula']);
     Route::put('/diversidad/personas/{personaId}/segmento', [AtencionesDiversidadController::class, 'actualizarSegmentoPersona']);
+    //RUTAS PARA BUSCAR LOS NO ASISTIDOS
+
+    Route::get('/derivaciones/doctor/{doctorId}/rango-fechas', [CpuDerivacionController::class, 'getDerivacionesNoAsistidasPorMedico']);
 
     //MODULO DE TERAPIA DE LENGUAJE
     Route::get('/terapia-lenguaje', [CpuTerapiaLenguajeController::class, 'guardarConsultaTerapia']);

@@ -14,9 +14,10 @@ use Illuminate\Support\Facades\DB;
 use App\Models\CpuSecretariaMatricula;
 use App\Models\CpuSede;
 
+
 class LegalizacionMatriculaSecretariaController extends Controller
 {
-    public function exportTemplate()
+    public function exportTemplateAnterior()
     {
         $spreadsheet = new Spreadsheet();
         $sheet = $spreadsheet->getActiveSheet();
@@ -68,7 +69,7 @@ class LegalizacionMatriculaSecretariaController extends Controller
 
 
 
-    public function upload(Request $request, $id_periodo)
+    public function uploadAnterior(Request $request, $id_periodo)
     {
         $request->validate([
             'file' => 'required|mimes:xlsx,xls'
@@ -93,7 +94,9 @@ class LegalizacionMatriculaSecretariaController extends Controller
                 continue; // Saltar la primera fila
             }
 
-            if (count(array_filter($row, function($value) { return !is_null($value) && $value !== ''; })) === 0) {
+            if (count(array_filter($row, function ($value) {
+                return !is_null($value) && $value !== '';
+            })) === 0) {
                 continue; // Si todos los valores en la fila están vacíos, salta la fila
             }
 
@@ -160,6 +163,130 @@ class LegalizacionMatriculaSecretariaController extends Controller
             'omitted_reasons' => $omittedReasons
         ]);
     }
+
+    public function upload(Request $request, $id_periodo)
+    {
+        $request->validate([
+            'file' => 'required|mimes:xlsx,xls'
+        ]);
+
+        $file = $request->file('file');
+
+        $reader = new \PhpOffice\PhpSpreadsheet\Reader\Xlsx();
+        $spreadsheet = $reader->load($file->getRealPath());
+        $sheetData = $spreadsheet->getActiveSheet()->toArray(null, true, true, true);
+
+        $firstRow = true;
+        $insertedCount = 0;
+        $omittedCount = 0;
+        $omittedReasons = [];
+
+        foreach ($sheetData as $key => $row) {
+            if ($firstRow) {
+                $firstRow = false;
+                continue;
+            }
+            if (count(array_filter($row, fn($v) => !is_null($v) && $v !== '')) === 0) continue;
+
+            $data = [
+                'id_periodo'             => $id_periodo,
+                'id_registro_nacional'   => $row['A'] ?? null,
+                'id_postulacion'         => $row['B'] ?? null,
+                'ciudad_campus'          => $row['C'] ?? null,
+                'id_sede'                => $row['D'] ?? null,
+                'id_facultad'            => $row['E'] ?? null,
+                'id_carrera'             => $row['F'] ?? null,
+                'email'                  => $row['G'] ?? null,
+                'cedula'                 => $row['H'] ?? null,
+                'apellidos'              => $row['I'] ?? null,
+                'nombres'                => $row['J'] ?? null,
+                'genero'                 => $row['K'] ?? null,
+                'etnia'                  => $row['L'] ?? null,
+                'discapacidad'           => $row['M'] ?? null,
+                'segmento_persona'       => $row['N'] ?? null,
+                'nota_postulacion'       => $row['O'] ?? null,
+                'canton_reside'          => $row['P'] ?? null,
+                'instancia_postulacion'  => $row['Q'] ?? null,
+                'instancia_de_asignacion' => $row['R'] ?? null,
+                'gratuidad'              => $row['S'] ?? null,
+                'observacion_gratuidad'  => $row['T'] ?? null,
+                'tipo_matricula'         => $row['T'] ?? null,
+            ];
+
+            if ($data['id_periodo'] && $data['cedula']) {
+                $exists = CpuLegalizacionMatricula::where('id_periodo', $data['id_periodo'])
+                    ->where('cedula', $data['cedula'])
+                    ->exists();
+
+                if (!$exists) {
+                    $model = new CpuLegalizacionMatricula();
+                    $model->fill($data);
+                    $model->save();
+                    $insertedCount++;
+                } else {
+                    $omittedCount++;
+                    $omittedReasons[] = ['row' => $key, 'reason' => 'Registro existente para el período y cédula.'];
+                }
+            } else {
+                $omittedCount++;
+                $omittedReasons[] = ['row' => $key, 'reason' => 'Datos incompletos: id_periodo o cédula faltante.'];
+            }
+        }
+
+        return response()->json([
+            'message' => 'Archivo cargado exitosamente',
+            'inserted' => $insertedCount,
+            'omitted' => $omittedCount,
+            'omitted_reasons' => $omittedReasons
+        ]);
+    }
+
+
+ 
+
+    public function exportTemplate()
+    {
+        $spreadsheet = new Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+
+        $headers = [
+            'id_registro_nacional (text)',
+            'id_postulacion (integer)',
+            'ciudad_campus (text)',
+            'id_sede (integer)',
+            'id_facultad (integer)',
+            'id_carrera (integer)',
+            'email (text)',
+            'cedula (text)',
+            'apellidos (text)',
+            'nombres (text)',
+            'genero (text)',
+            'etnia (text)',
+            'discapacidad (text)',
+            'segmento_persona (text)',
+            'nota_postulacion (text)',
+            'canton_reside (text)',
+            'instancia_postulacion (text)',
+            'instancia_de_asignacion (text)',
+            'gratuidad (text)',
+            'observacion_gratuidad (text)',
+            'tipo_matricula (text)'
+        ];
+
+        $col = 'A';
+        foreach ($headers as $header) {
+            $sheet->setCellValue($col . '1', $header);
+            $col++;
+        }
+
+        $filename = 'legalizacion_matricula_template.xlsx';
+        $writer = new Xlsx($spreadsheet);
+        $writer->save($filename);
+
+        return response()->download($filename)->deleteFileAfterSend(true);
+    }
+
+
 
     //eliminar registros de carreras no aperturadas
     public function deleteCarrerasNoAperturadas(Request $request, $id_periodo)

@@ -692,6 +692,9 @@ Route::middleware(['auth:sanctum'])->group(function () {
    // Route::get('/get-inventario', [CpuInventarioController::class, 'consultarInventario']);
     Route::post('/guardar-inventario-inicial', [CpuInventariosController::class, 'guardarInventarioInicial']);
     Route::get('/get-stock-bodega-insumo-id/{id}', [CpuInventariosController::class, 'getStockBodegaInsumoId']);
+
+
+  
     // Route::put('/modificar-inventario/{id}', [CpuInventarioController::class, 'modificarInventario']);
 });
 

@@ -65,15 +65,16 @@ class CpuInventariosController extends Controller
                             'sb_cantidad' => $stockActual,
                         ]);
                     $descripcionAuditoria[] = "Actualización de stock en bodega {$idBodega}, insumo ID {$idInsumo}: de {$stockAnterior} a {$stockActual}";
-                } else {
-                    DB::table('cpu_stock_bodegas')->insert([
-                        'sb_id_bodega' => $idBodega,
-                        'sb_id_insumo' => $idInsumo,
-                        'sb_cantidad' => $stockActual,
-                        'sb_stock_minimo' => 5,
-                    ]);
-                    $descripcionAuditoria[] = "Nuevo registro de stock en bodega {$idBodega}, insumo ID {$idInsumo}, cantidad inicial {$stockActual}";
                 }
+                // else {
+                //     DB::table('cpu_stock_bodegas')->insert([
+                //         'sb_id_bodega' => $idBodega,
+                //         'sb_id_insumo' => $idInsumo,
+                //         'sb_cantidad' => $stockActual,
+                //         'sb_stock_minimo' => 5,
+                //     ]);
+                //     $descripcionAuditoria[] = "Nuevo registro de stock en bodega {$idBodega}, insumo ID {$idInsumo}, cantidad inicial {$stockActual}";
+                // }
 
                 // 4. INSERTAR MOVIMIENTO HISTÓRICO
                 DB::table('cpu_movimientos_inventarios')->insert([
@@ -90,7 +91,9 @@ class CpuInventariosController extends Controller
                     'mi_created_at' => now(),
                     'mi_updated_at' => now(),
                 ]);
-                $descripcionAuditoria[] = "Movimiento histórico registrado: Insumo {$idInsumo}, cantidad {$cantidad}, stock de {$stockAnterior} a {$stockActual}";
+
+                $nombre_estado_movimiento = DB::table('cpu_estados')->where('id', $estado_movimiento)->value('estado');
+                $descripcionAuditoria[] = "Movimiento histórico registrado: Insumo {$idInsumo}, cantidad {$cantidad}, stock de {$stockAnterior} a {$stockActual}, Estado Movimiento {$nombre_estado_movimiento}";
             }
 
             DB::commit();
@@ -119,40 +122,96 @@ class CpuInventariosController extends Controller
     public function guardarInventarioInicial(Request $request)
     {
         try {
-            // Parámetros de búsqueda
-            $idBodega = 3;
-            $idSede = 2;
-            $idFacultad = 1;
+            $stockBodega = DB::table('cpu_stock_bodegas')
+                ->where('sb_id_bodega', $request->input('select_bodega'))
+                ->where('sb_id_insumo', $request->input('id_insumo'))
+                ->first();
 
-            $existeInventario = DB::table('cpu_stock_bodegas as sb')
-                ->join('cpu_bodegas as b', 'b.bod_id', '=', 'sb.sb_id_bodega')
-                ->where('b.bod_id', $request->input('select_bodega'))
-                ->where('b.bod_id_sede', $request->input('select_sede'))
-                ->where('b.bod_id_facultad', $request->input('select_facultad'))
-                ->exists(); 
+            if (!$stockBodega) {
+                $existeInventario = DB::table('cpu_stock_bodegas as sb')
+                    ->join('cpu_bodegas as b', 'b.bod_id', '=', 'sb.sb_id_bodega')
+                    ->where('b.bod_id', $request->input('select_bodega'))
+                    ->where('b.bod_id_sede', $request->input('select_sede'))
+                    ->where('b.bod_id_facultad', $request->input('select_facultad'))
+                    ->where('sb.sb_id_insumo', $request->input('id_insumo'))
+                    ->exists();
 
-            if ($existeInventario) {
-                return response()->json(
-                    [
+                if ($existeInventario) {
+                    return response()->json(
+                        [
+                            'success' => false,
+                            'message' => 'El inventario inicial ya ha sido registrado en la sede, facultad y bodega seleccionadas para este insumo.',
+                        ],
+                        400
+                    );
+                }
+                $sb_id = DB::table('cpu_stock_bodegas')
+                    ->insertGetId([
+                        'sb_id_bodega'    => $request->input('select_bodega'),
+                        'sb_id_insumo'    => $request->input('id_insumo'),
+                        'sb_cantidad'     => 0,
+                        'sb_stock_minimo' => $request->input('txt-stock-minimo'),
+                        'sb_created_at'   => now(),
+                        'sb_updated_at'   => now(),
+                        'sb_id_user'      => auth()->user()->id,
+                    ], 'sb_id');
+            } else {
+
+                $movimientos = DB::table('cpu_movimientos_inventarios')
+                    ->where('mi_id_insumo', $request->input('id_insumo'))
+                    ->where('mi_id_bodega', $request->input('select_bodega'))
+                    ->count();
+
+                if ($movimientos > 1) {
+                    return response()->json([
                         'success' => false,
-                        'message' => 'El inventario inicial ya ha sido registrado un movimiento anteriormente.'
-                    ],
-                    400
-                );
+                        'message' => 'No se puede editar el inventario inicial porque ya existen movimientos posteriores.'
+                    ], 400);
+                }
+
+                if ($movimientos === 1) {
+                    DB::table('cpu_movimientos_inventarios')
+                        ->where('mi_id_insumo', $request->input('id_insumo'))
+                        ->where('mi_id_bodega', $request->input('select_bodega'))
+                        ->delete();
+                }
+
+                DB::table('cpu_stock_bodegas')
+                    ->where('sb_id', $stockBodega->sb_id)
+                    ->update([
+                        'sb_cantidad' => 0,
+                        'sb_stock_minimo' => $request->input('txt-stock-minimo'),
+                        'sb_updated_at' => now(),
+                    ]);
+
+                $sb_id = $stockBodega->sb_id;
             }
 
-            $sb_id = DB::table('cpu_stock_bodegas')
-                ->insertGetId([
-                    'sb_id_bodega'    => $request->input('select_bodega'),
-                    'sb_id_insumo'    => $request->input('id_insumo'),
-                    'sb_cantidad'     => $request->input('txt-stock-inicial'),
-                    'sb_stock_minimo' => $request->input('txt-stock-minimo'),
-                    'sb_created_at'   => now(),
-                    'sb_updated_at'   => now(),
-                    'sb_id_user'      => Session::get('user_id'),
-                ], 'sb_id');
+            $this->guardarMovimientoInventario(
+                [
+                    [
+                        'idInsumo' => $request->input('id_insumo'),
+                        'cantidad' => $request->input('txt-stock-inicial'),
+                    ]
+                ],
+                $request->input('select_bodega'),
+                'INGRESO',
+                23, 
+                auth()->user()->id,
+                null
+            );
 
-            $descripcionAuditoria = "Inventario inicial: Id{$$sb_id} Insumo ID {$request->input('id_insumo')}, Cantidad {$request->input('txt-stock-inicial')}, Bodega ID {$request->input('select_bodega')}";
+            $bodega = DB::table('cpu_bodegas')->where('bod_id', $request->input('select_bodega'))->first();
+            $insumo = DB::table('cpu_insumo')->where('id', $request->input('id_insumo'))->first();
+
+            $descripcionAuditoria = (
+                "Inventario inicial registrado | " .
+                "StockBodegaID: {$sb_id} | " .
+                "Insumo: [ID: {$request->input('id_insumo')}, Nombre: {$insumo->ins_descripcion}] | " .
+                "Cantidad inicial: {$request->input('txt-stock-inicial')} | " .
+                "Bodega: [ID: {$request->input('select_bodega')}, Nombre: {$bodega->bod_nombre}]"
+            );
+
             $this->auditoriaController->auditar(
                 'cpu_stock_bodegas',
                 'guardarInventarioInicial()',
@@ -169,12 +228,18 @@ class CpuInventariosController extends Controller
             ], 201);
         } catch (\Exception $e) {
             Log::error('Error al guardar inventario inicial: ' . $e->getMessage());
-            $this->logController->saveLog('Controlador: CpuInventariosController, Función: guardarInventarioInicial()', 'Error al guardar inventario inicial: ' . $e->getMessage());
-            return response()->json(['success' => false, 'message' => 'Error al guardar inventario inicial'], 500);
+            $this->logController->saveLog(
+                'Controlador: CpuInventariosController, Función: guardarInventarioInicial()',
+                'Error al guardar inventario inicial: ' . $e->getMessage()
+            );
+            return response()->json(
+                ['success' => false, 'message' => 'Error al guardar inventario inicial: ' . $e->getMessage()],
+                500
+            );
         }
     }
 
-    public function getStockBodegaInsumoId($id)
+    public function getStockBodegaInsumo($id)
     {
         try {
             $data = DB::select("
@@ -208,6 +273,52 @@ class CpuInventariosController extends Controller
                 ", [
                 'estado' => 8,
                 'id_insumo' => $id
+            ]);
+            return response()->json($data);
+        } catch (\Exception $e) {
+            Log::error('Error al obtener insumo por ID: ' . $e->getMessage());
+            $this->logController->saveLog(
+                'Controlador: InsumosController, Función:  getStockBodegaInsumo($id)',
+                'Error de validación: ' . json_encode($e->getMessage())
+            );
+            return response()->json(['error' => 'Error al obtener insumo'], 500);
+        }
+    }
+
+    public function getStockBodegaInsumoId($id)
+    {
+        try {
+            $data = DB::select("
+                SELECT 
+                    sb.sb_id,
+                    sb.sb_cantidad AS stock_bodega,
+                    sb.sb_stock_minimo,
+                    sb.sb_id_bodega,
+                    b.bod_nombre AS nombre_bodega,
+                    b.bod_id_sede,
+                    s.nombre_sede,
+                    b.bod_id_facultad,
+                    f.fac_nombre,
+                        
+                    i.codigo,
+                    i.id,
+                    i.ins_descripcion,
+                    i.id_tipo_insumo,
+                    i.estado_insumo,
+                    i.id_estado,
+                    e.estado
+                FROM cpu_stock_bodegas sb
+                JOIN cpu_bodegas b ON b.bod_id = sb.sb_id_bodega
+                LEFT JOIN cpu_sede s ON s.id = b.bod_id_sede
+                LEFT JOIN cpu_facultad f ON f.id = b.bod_id_facultad
+                JOIN cpu_insumo i ON i.id = sb.sb_id_insumo
+                JOIN cpu_estados e ON e.id = i.id_estado
+                WHERE i.id_estado = :estado
+                AND sb.sb_id = :sb_id
+                ORDER BY i.id DESC
+                ", [
+                'estado' => 8,
+                'sb_id' => $id
             ]);
             return response()->json($data);
         } catch (\Exception $e) {

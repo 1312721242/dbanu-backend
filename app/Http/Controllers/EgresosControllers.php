@@ -61,23 +61,26 @@ class EgresosControllers extends Controller
     public function getConsultarEgresosId($id)
     {
         try {
-            $data = DB::table('cpu_encabezados_egresos')
+            $data = DB::table('cpu_encabezados_egresos as e')
+                ->join('users as u', 'u.id', '=', 'e.ee_id_user')
                 ->select(
-                    'ee_id',
-                    'ee_id_funcionario',
-                    // 'ee_cedula_funcionario',
-                    'ee_id_paciente',
-                    // 'ee_cedula_paciente',
-                    'ee_detalle',
-                    'ee_id_estado',
-                    'ee_id_user',
-                    'ee_created_at',
-                    'ee_updated_at',
-                    'ee_observacion',
-                    'ee_id_atencion_medicina_general'
+                    'e.ee_id',
+                    'e.ee_id_funcionario',
+                    'e.ee_id_paciente',
+                    'e.ee_detalle',
+                    'e.ee_id_estado',
+                    'e.ee_id_user',
+                    'e.ee_created_at',
+                    'e.ee_updated_at',
+                    'e.ee_observacion',
+                    'e.ee_id_atencion_medicina_general',
+                    'u.usr_sede',
+                    'u.usr_facultad',
+                    'u.usr_carrera'
                 )
-                ->where('ee_id', '=', $id)
+                ->where('e.ee_id', '=', $id)
                 ->get();
+
             return response()->json($data, 200);
         } catch (\Exception $e) {
             $this->logController->saveLog('Nombre de Controlador: IngresosControllers, Nombre de Funcion:consultarIngresosId($id)', 'Error al consultar ingresos: ' . $e->getMessage());
@@ -386,13 +389,16 @@ class EgresosControllers extends Controller
 
                 $detalleEgreso = json_decode($detalleEgreso, true);
 
-                $this->inventariosController->guardarMovimientoInventario(
-                    $detalleEgreso,
-                    $request->select_bodega,
-                    'INGRESO',
-                    $request->user()->id,
-                    $request->idEgreso
-                );
+                if (in_array($estadoEgreso, [5])) {
+                    $this->inventariosController->guardarMovimientoInventario(
+                        $detalleEgreso,
+                        $request->select_bodega,
+                        'INGRESO',
+                        $request->estado == 5 ? 27 : 26,
+                        $request->user()->id,
+                        $request->idEgreso
+                    );
+                }
 
                 $update = DB::table('cpu_encabezados_egresos')
                     ->where('ee_id', $request->idEgreso)
@@ -401,6 +407,7 @@ class EgresosControllers extends Controller
                         'ee_observacion' => $request->observacion ?? null,
                         'ee_id_user' => $request->user()->id,
                         'ee_id_bodega' => $request->select_bodega,
+                        'ee_updated_at' => now(),
                     ]);
 
                 $auditoriaConsolidada[] = [

@@ -151,24 +151,26 @@ class CpuInsumoController extends Controller
         $data = DB::select("
            SELECT 
             i.id, 
-            i.id_tipo_insumo, 
-            i.ins_descripcion, 
-            i.ins_cantidad, 
-            i.estado_insumo, 
-            i.modo_adquirido, 
-            i.codigo, 
-            i.unidad_medida, 
-            i.serie, 
-            i.modelo, 
-            i.marca, 
+            i.id_tipo_insumo,
+            COALESCE(NULLIF(i.ins_descripcion, ''), 'S/I') AS ins_descripcion,
+            COALESCE(NULLIF(i.ins_cantidad::text, ''), 'S/I') AS ins_cantidad,
+            COALESCE(NULLIF(i.estado_insumo, ''), 'S/I') AS estado_insumo,
+            COALESCE(NULLIF(i.modo_adquirido, ''), 'S/I') AS modo_adquirido,
+            COALESCE(NULLIF(i.codigo, ''), 'S/I') AS codigo,
+            COALESCE(NULLIF(i.unidad_medida, ''), 'S/I') AS unidad_medida,
+            COALESCE(NULLIF(i.serie, ''), 'S/I') AS serie,
+            COALESCE(NULLIF(i.modelo, ''), 'S/I') AS modelo,
+            COALESCE(NULLIF(i.marca, ''), 'S/I') AS marca,
             i.id_estado, 
-            e.estado AS nombre_estado,
+            COALESCE(NULLIF(e.estado, ''), 'S/I') AS nombre_estado,
+            COALESCE(NULLIF(ca.ca_descripcion, ''), 'S/I') AS tipo_insumo, 
             i.created_at, 
             i.updated_at, 
             i.id_usuario
         FROM public.cpu_insumo i
         LEFT JOIN cpu_estados e ON e.id = i.id_estado
-        ORDER BY i.id DESC;;
+        LEFT JOIN cpu_categorias_activos ca ON ca.ca_id = i.id_tipo_insumo
+        ORDER BY i.id DESC;
         ");
         return response()->json($data);
     }
@@ -249,7 +251,6 @@ class CpuInsumoController extends Controller
             'select-tipo' => 'required|integer',
             'select-estado' => 'required|integer',
             'select-unidad-medida' => 'required|string',
-            'txt-stock-inicial' => 'required|numeric|min:0',
         ]);
 
         if ($validator->fails()) {
@@ -283,8 +284,9 @@ class CpuInsumoController extends Controller
             $id_in = DB::table('cpu_insumo')->insertGetId([
                 'id_tipo_insumo' => $data['select-tipo'],
                 'ins_descripcion' => $data['txt-descripcion'],
-                'cantidad_unidades' => $data['txt-stock-inicial'],
-                //'ins_cantidad' => $data['txt-stock-inicial'],
+                'marca' => $data['txt-marca'] ?? null,
+                'modelo' => $data['txt-modelo'] ?? null,
+                'serie' => $data['txt-serie'] ?? null,
                 'codigo' => $data['txt-codigo'],
                 'id_estado' => $data['select-estado'],
                 'unidad_medida' => $data['select-unidad-medida'],

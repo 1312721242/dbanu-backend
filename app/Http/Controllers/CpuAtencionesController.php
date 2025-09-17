@@ -1212,6 +1212,9 @@ class CpuAtencionesController extends Controller
             try {
                 DB::beginTransaction();
 
+                //$id = $request && !is_string($request) ? $request->user()->id : auth()->user()->id
+                //$id_sede = DB::table('users')->where('id', $id)->value('id_sede');
+
                 if (count($listaInsumos) > 0) {
                     // Guardar en cpu_encabezados_egresos
                     $ee_id = DB::table('cpu_encabezados_egresos')->insertGetId([
@@ -1223,6 +1226,7 @@ class CpuAtencionesController extends Controller
                         'ee_id_estado' => 21,
                         'ee_created_at' => Carbon::now(),
                         'ee_updated_at' => Carbon::now(),
+                        'ee_id_user' => $request->user()->id,
                     ], 'ee_id');
 
                     $id_bodega = 1;
@@ -1231,6 +1235,7 @@ class CpuAtencionesController extends Controller
                         $listaInsumos,
                         $id_bodega,
                         'EGRESO',
+                        29,
                         $request->user()->id,
                         $ee_id
                     );

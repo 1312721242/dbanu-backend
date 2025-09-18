@@ -396,7 +396,7 @@ class EgresosControllers extends Controller
                         'INGRESO',
                         $request->estado == 5 ? 27 : 26,
                         $request->user()->id,
-                        $request->idEgreso
+                        $request->idEgresoº
                     );
                 }
 

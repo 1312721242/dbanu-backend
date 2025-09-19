@@ -590,6 +590,8 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
     //ATENCIONES EXTERNAS 
     Route::get('/get-atencion-externa', [AtencionesExternasControllers::class, 'getAtencionesExternas']);
+    Route::post('/guardar-atencio-externa', [AtencionesExternasControllers::class, 'guardarAtencionExterna']);
+    
 
     //API
     Route::get('/api-tipo-analisis', [ApiControllers::class, 'ApiConsultarTiposAnalisis']);

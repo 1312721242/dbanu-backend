@@ -7,6 +7,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
 use Session;
+use Carbon;
 
 class AtencionesExternasControllers extends Controller
 {
@@ -53,6 +54,76 @@ class AtencionesExternasControllers extends Controller
                 'Error al consultar Atenciones Externas: ' . $e->getMessage()
             );
             return response()->json(['message' => 'Error al consultar atenciones externas'], 500);
+        }
+    }
+
+    public function guardarAtencionExterna(Request $request)
+    {
+        // $validator = Validator::make($request->all(), [
+        //     'id_funcionario' => 'required|integer',
+        //     'id_persona' => 'required|integer',
+        //     'via_atencion' => 'required|string|max:100',
+        //     'motivo_atencion' => 'required|string|max:500',
+        //     'fecha_hora_atencion' => 'required|date',
+        //     'anio_atencion' => 'required|integer',
+        //     'detalle_atencion' => 'nullable|string',
+        //     'id_caso' => 'nullable|integer',
+        //     'id_tipo_usuario' => 'required|integer',
+        //     'evolucion_enfermedad' => 'nullable|string',
+        //     'diagnostico' => 'nullable|string|max:500',
+        //     'prescripcion' => 'nullable|string|max:500',
+        //     'recomendacion' => 'nullable|string|max:500',
+        //     'tipo_atencion' => 'required|string|max:50',
+        //     'id_cie10' => 'nullable|integer',
+        //     'id_estado' => 'required|integer'
+        // ]);
+
+        // if ($validator->fails()) {
+        //     return response()->json(['errors' => $validator->errors()], 422);
+        // }
+
+        try {
+            $rutaArchivo = null;
+            if ($request->hasFile('archivo_comprobante')) {
+                $archivo = $request->file('archivo_comprobante');
+                $nombreArchivo = time() . '_' . $archivo->getClientOriginalName();
+                $rutaArchivo = $archivo->storeAs('evidencias_atenciones_externas', $nombreArchivo, 'public');
+
+
+                
+            }
+
+            $idEncabezado = DB::table('cpu_atenciones')->insertGetId([
+                'id_funcionario' => $request->id_funcionario,
+                'id_persona' => $request->id_persona,
+                'via_atencion' => 'PRESENCIAL',
+                'motivo_atencion' => $request->descripcion_atencion,
+                'fecha_hora_atencion' => now(),
+                'anio_atencion' => now()->year,
+                'detalle_atencion' => $request->descripcion_atencion,
+                'tipo_atencion' => 'EXTERNA',
+                'id_estado' => 1,
+                'ruta_evidencia_externa' => $rutaArchivo, 
+                'created_at' => now(),
+                'updated_at' => now()
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Ingreso guardado correctamente',
+                'id' => $idEncabezado
+            ], 201);
+        } catch (\Exception $e) {
+            $this->logController->saveLog(
+                'Controlador: AtencionesExternasControllers, Función: guardarAtencionExterna',
+                'Error al guardar atención externa: ' . $e->getMessage()
+            );
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al guardar atención externa',
+                'error' => $e->getMessage()
+            ], 500);
         }
     }
 

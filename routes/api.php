@@ -86,6 +86,7 @@ use App\Http\Controllers\AtencionesDiversidadController;
 use App\Http\Controllers\CpuCasosMedicosController;
 use App\Http\Controllers\CpuBodegasController;
 use App\Http\Controllers\CpuInventariosController;
+use App\Http\Controllers\CpuHorarioGymControllers;
 
 // Autenticación
 Route::get('credencial-pdf/{identificacion}/{periodo}', [CpuBecadoController::class, 'generarCredencialPDF']);
@@ -584,14 +585,14 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('/get-egreso', [EgresosControllers::class, 'consultarEgresos']);
     Route::get('/get-egreso-id/{id}', [EgresosControllers::class, 'getConsultarEgresosId']);
     Route::post('/guardar-atencion-egreso', [EgresosControllers::class, 'guardarAtencionEgreso']);
-    
+
     //PROFESIONES
     Route::post('/consultar-profesiones ', [CpuProfesionController::class, 'consultarProfesiones']);
 
     //ATENCIONES EXTERNAS 
     Route::get('/get-atencion-externa', [AtencionesExternasControllers::class, 'getAtencionesExternas']);
     Route::post('/guardar-atencio-externa', [AtencionesExternasControllers::class, 'guardarAtencionExterna']);
-    
+
 
     //API
     Route::get('/api-tipo-analisis', [ApiControllers::class, 'ApiConsultarTiposAnalisis']);
@@ -695,13 +696,18 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('/get-bodega-id/{idSede}/{idFacultad}/{idBodega}', [CpuBodegasController::class, 'getIdBodegas']);
 
     //Inventario
-   // Route::get('/get-inventario', [CpuInventarioController::class, 'consultarInventario']);
+    // Route::get('/get-inventario', [CpuInventarioController::class, 'consultarInventario']);
     Route::post('/guardar-inventario-inicial', [CpuInventariosController::class, 'guardarInventarioInicial']);
     Route::get('/get-stock-bodega-insumo/{id}', [CpuInventariosController::class, 'getStockBodegaInsumo']);
     Route::get('/get-stock-bodega-insumo-id/{id}', [CpuInventariosController::class, 'getStockBodegaInsumoId']);
 
+    //Horario de Gym
+    Route::get('/get-horario-gym', [CpuHorarioGymControllers::class, 'getHorarioGym']);
+    Route::post('/guardar-horario-gym', [CpuHorarioGymControllers::class, 'guardarHorarioGym']);
 
-  
+
+
+
     // Route::put('/modificar-inventario/{id}', [CpuInventarioController::class, 'modificarInventario']);
 });
 

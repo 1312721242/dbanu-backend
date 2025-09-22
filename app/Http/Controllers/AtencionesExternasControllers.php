@@ -21,32 +21,28 @@ class AtencionesExternasControllers extends Controller
     public function getAtencionesExternas()
     {
         try {
-            $data = DB::table('cpu_atenciones')
-                ->select(
-                    'id',
-                    'id_funcionario',
-                    'id_persona',
-                    'via_atencion',
-                    'motivo_atencion',
-                    'fecha_hora_atencion',
-                    'anio_atencion',
-                    'created_at',
-                    'updated_at',
-                    'detalle_atencion',
-                    'id_caso',
-                    'id_tipo_usuario',
-                    'evolucion_enfermedad',
-                    'diagnostico',
-                    'prescripcion',
-                    'recomendacion',
-                    'tipo_atencion',
-                    'id_cie10',
-                    'id_estado'
-                )
-                ->where('id_tipo_atencion', 'EXTERNA')
-                ->get();
-
-            // Retorna 200 siempre, incluso si no hay registros
+            $data = DB::select(
+                'SELECT 
+                    e.ae_id,
+                    e.ae_ruta_evidencia,
+                    e.ae_created_at,
+                    p.cedula AS cedula_paciente,
+                    p.nombres AS nombre_paciente,
+                    a.motivo_atencion,
+                    a.id_estado,
+                    a.detalle_atencion,
+                    a.via_atencion,
+                    a.fecha_hora_atencion,
+                    a.tipo_atencion,
+                    u.name AS nombre_funcionario,
+                    u.email AS email_funcionario
+                FROM cpu_atenciones_enfermeria e
+                JOIN cpu_atenciones a ON e.ae_id_atencion = a.id
+                JOIN cpu_personas p ON e.ae_id_paciente = p.id
+                LEFT JOIN users u ON e.ae_id_user = u.id
+                WHERE a.tipo_atencion = :tipo_atencion',
+                ['tipo_atencion' => 'EXTERNA']
+            );
             return response()->json($data, 200);
         } catch (\Exception $e) {
             $this->logController->saveLog(
@@ -87,31 +83,39 @@ class AtencionesExternasControllers extends Controller
             if ($request->hasFile('archivo_comprobante')) {
                 $archivo = $request->file('archivo_comprobante');
                 $nombreArchivo = time() . '_' . $archivo->getClientOriginalName();
-                $rutaArchivo = $archivo->storeAs('evidencias_atenciones_externas', $nombreArchivo, 'public');
-
-
-                
+                $archivo->move(public_path('Files/evidencias_atenciones_externas'), $nombreArchivo);
+                $rutaArchivo = 'Files/evidencias_atenciones_externas/' . $nombreArchivo;
             }
 
-            $idEncabezado = DB::table('cpu_atenciones')->insertGetId([
-                'id_funcionario' => $request->id_funcionario,
-                'id_persona' => $request->id_persona,
-                'via_atencion' => 'PRESENCIAL',
-                'motivo_atencion' => $request->descripcion_atencion,
-                'fecha_hora_atencion' => now(),
-                'anio_atencion' => now()->year,
-                'detalle_atencion' => $request->descripcion_atencion,
-                'tipo_atencion' => 'EXTERNA',
-                'id_estado' => 1,
-                'ruta_evidencia_externa' => $rutaArchivo, 
-                'created_at' => now(),
-                'updated_at' => now()
+            $idAtencion = DB::table('cpu_atenciones')->insertGetId([
+                'id_funcionario'       => $request->id_funcionario,
+                'id_persona'           => $request->id_persona,
+                'via_atencion'         => 'PRESENCIAL',
+                'motivo_atencion'      => $request->descripcion_atencion,
+                'fecha_hora_atencion'  => now(),
+                'anio_atencion'        => now()->year,
+                'detalle_atencion'     => $request->descripcion_atencion,
+                'tipo_atencion'        => 'EXTERNA',
+                'id_estado'            => 1,
+                'created_at'           => now(),
+                'updated_at'           => now(),
+            ]);
+
+
+            DB::table('cpu_atenciones_enfermeria')->insert([
+                'ae_id_paciente'    => $request->id_persona,
+                'ae_id_atencion'    => $idAtencion,
+                'ae_tipo_servicio'  => $request->tipo_servicio,
+                'ae_ruta_evidencia' => $rutaArchivo,
+                'ae_id_user'        => $request->id_funcionario,
+                'ae_created_at'     => now(),
+                'ae_updated_at'     => now(),
             ]);
 
             return response()->json([
                 'success' => true,
                 'message' => 'Ingreso guardado correctamente',
-                'id' => $idEncabezado
+                'id' => $idAtencion
             ], 201);
         } catch (\Exception $e) {
             $this->logController->saveLog(

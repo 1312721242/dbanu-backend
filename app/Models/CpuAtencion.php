@@ -26,11 +26,24 @@ class CpuAtencion extends Model
         'prescripcion',
         'recomendacion',
         'tipo_atencion',
+        'id_cie10',
+        'id_estado',
         'created_at',
         'updated_at',
-        'id_cie10',
-        'id_estado'
     ];
 
+    protected $casts = [
+        'diagnostico' => 'array', // por si usas JSON
+    ];
 
+    // ⬇️ Relaciones requeridas por tu controlador
+    public function diversidad()
+    {
+        return $this->hasOne(CpuAtencionesDiversidad::class, 'id_atencion');
+    }
+
+    public function beneficios()
+    {
+        return $this->hasOne(CpuAtencionesDivBeneficios::class, 'id_atencion');
+    }
 }

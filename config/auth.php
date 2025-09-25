@@ -40,10 +40,14 @@ return [
             'driver' => 'session',
             'provider' => 'users',
         ],
-        
+
         'api' => [
             'driver' => 'sanctum',
             'provider' => 'users',
+        ],
+        'sbe_api' => [
+            'driver' => 'sanctum',
+            'provider' => 'users_sbe',
         ],
     ],
 
@@ -70,10 +74,10 @@ return [
             'model' => App\Models\User::class,
         ],
 
-        // 'users' => [
-        //     'driver' => 'database',
-        //     'table' => 'users',
-        // ],
+        'users_sbe' => [
+            'driver' => 'eloquent',
+            'model' => App\Models\UserSbe::class,
+        ],
     ],
 
     /*

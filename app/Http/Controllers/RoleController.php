@@ -9,10 +9,10 @@ use App\Models\Role; // Importar el modelo Role
 
 class RoleController extends Controller
 {
-    public function __construct()
-    {
-        $this->middleware('auth:api');
-    }
+    // public function __construct()
+    // {
+    //     $this->middleware('auth:api');
+    // }
     public function agregarRoleUsuario(Request $request)
     {
         $validator = Validator::make($request->all(), [
@@ -136,6 +136,7 @@ class RoleController extends Controller
 
         return response()->json($roles);
     }
+
     public function consultarRol($id)
     {
         $rol = DB::table('cpu_userrole')->where('id_userrole', $id)->first();
@@ -145,6 +146,24 @@ class RoleController extends Controller
         }
 
         return response()->json($rol);
+    }
+
+     // Consultar servicios/áreas por sede
+    public function consultarServiciosPorSede($idSede)
+    {
+        $servicios = DB::table('users as u')
+            ->join('cpu_userrole as r', 'u.usr_tipo', '=', 'r.id_userrole')
+            ->select(
+                'r.id_userrole as id_servicios',
+                'r.role as srv_descripcion'
+            )
+            ->where('u.usr_sede', $idSede)
+            ->whereIn('r.id_userrole', [7, 8, 9, 10, 11, 13, 14, 15, 16, 17]) // aquí aplicas el filtro
+            ->distinct()
+            ->orderBy('r.role', 'asc')
+            ->get();
+
+        return response()->json($servicios);
     }
 
 }

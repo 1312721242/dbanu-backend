@@ -82,7 +82,10 @@ use App\Http\Controllers\NvParalelosController;
 use App\Http\Controllers\NvDocenteAsignaturaController;
 
 use App\Http\Controllers\AtencionesDiversidadController;
+use App\Http\Controllers\CpuAuthSBEController;
 use App\Http\Controllers\CpuCasosMedicosController;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 // Autenticación
 Route::get('credencial-pdf/{identificacion}/{periodo}', [CpuBecadoController::class, 'generarCredencialPDF']);
@@ -90,6 +93,12 @@ Route::post('/login', [AuthController::class, 'login']);
 Route::post('/loginapp', [AuthController::class, 'loginApp']);
 Route::post('/logout', [AuthController::class, 'logout'])->middleware('auth:sanctum');
 Route::get('/me', [AuthController::class, 'me'])->middleware('auth:sanctum');
+
+//SBE
+Route::post('/login-sbe', [AuthController::class, 'loginSbe']);
+Route::post('/estudiantes/bienestar', [CpuAuthSBEController::class, 'consultarBienestar']);
+Route::get('/obtener-registro-usuario/{email}', [CpuAuthSBEController::class, 'obtenerRegistroUsuario']);
+Route::post('/signup', [CpuAuthSBEController::class, 'signup']);
 
 
 
@@ -661,6 +670,12 @@ Route::get('/tramites/no-finalizados', [CpuTramiteController::class, 'noFinaliza
     Route::get('/diversidad/personas/{personaId}/ultima-carrera', [AtencionesDiversidadController::class, 'ultimaCarreraDePersona']);
     Route::get('/diversidad/segmento', [AtencionesDiversidadController::class, 'resolverSegmentoPorCedula']);
     Route::put('/diversidad/personas/{personaId}/segmento', [AtencionesDiversidadController::class, 'actualizarSegmentoPersona']);
+
+    //SBE
+     Route::get('/servicios-por-sede/{idSede}', [RoleController::class, 'consultarServiciosPorSede']);
+     Route::post('/obtener-turnos', [TurnosController::class, 'obtenerTurnos']);
+
+    //  Route::get('/user', [AtencionesDiversidadController::class, 'actualizarSegmentoPersona']);
 });
 
 // Route::put('/cpu-persona-update/{cedula}', [CpuPersonaController::class, 'update']);

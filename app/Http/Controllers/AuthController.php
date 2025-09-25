@@ -11,59 +11,19 @@ use App\Models\CpuMatriculaConfiguracion;
 use App\Models\CpuSede;
 use App\Models\CpuFacultad;
 use App\Models\CpuCarrera;
+use App\Models\CpuPersona;
+use App\Models\UserSbe;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Http;
 
 use Illuminate\Support\Facades\Log;
 
 class AuthController extends Controller
 {
 
-    // public function login(Request $request)
-    // {
-    //     $credentials = $request->validate([
-    //         'email' => 'required|email',
-    //         'password' => 'required',
-    //     ]);
-
-    //     if (!Auth::attempt($credentials)) {
-    //         // Devolver un mensaje de error cuando las credenciales son incorrectas
-    //         return response()->json(['message' => 'Las credenciales proporcionadas son incorrectas.'], 401);
-    //     }
-
-    //     $user = Auth::user();
-
-    //     if ($user->usr_estado != 8) {
-    //         // Devolver un mensaje de error cuando el usuario no está activo
-    //         return response()->json(['message' => 'El usuario no está activo.'], 200);
-    //     }
-
-    //     $token = $user->createToken('auth_token')->plainTextToken;
-    //     $user->load('tipoUsuario', 'sede', 'profesion'); // Cargar las relaciones
-
-    //     $userData = [
-    //         'id' => $user->id,
-    //         'token' => $token,
-    //         'name' => $user->name,
-    //         'usr_tipo' => $user->tipoUsuario->role,
-    //         'foto_perfil' => url('Perfiles/' . $user->foto_perfil), // Generar URL completa
-    //     ];
-
-    //     if ($user->sede) {
-    //         $userData['usr_sede'] = $user->sede->nombre_sede;
-    //     }
-
-    //     if ($user->profesion) {
-    //         $userData['usr_profesion'] = $user->profesion->profesion;
-    //     }
-
-    //     // Auditoría
-    //     $this->auditar('auth', 'login', '', $user->email, 'LOGIN', "LOGIN DE USUARIO: {$user->email}");
-
-    //     return response()->json($userData);
-    // }
     public function login(Request $request)
     {
         $credentials = $request->validate([
@@ -214,6 +174,66 @@ class AuthController extends Controller
         return response()->json($userData);
     }
 
+    // Login con tabla users_sbe
+    public function loginSbe(Request $request)
+    {
+        $request->validate([
+            'email'    => 'required|email',
+            'password' => 'required',
+            'nombres'  => 'required|string|max:255',
+            'cedula'   => 'required|string|max:20',
+        ]);
+
+        // Buscar usuario
+        $user = UserSbe::where('email', $request->email)->first();
+
+        if (!$user) {
+            $user = UserSbe::create([
+                'name'     => $request->nombres,
+                'email'    => $request->email,
+                'password' => Hash::make($request->password),
+            ]);
+        }
+
+        // Buscar o crear persona
+        $persona = CpuPersona::where('cedula', $request->cedula)->first();
+
+        if (!$persona) {
+            $persona = CpuPersona::create([
+                'cedula'       => $request->cedula,
+                'nombres'      => $request->nombres,
+                'nacionalidad' => $request->nacionalidad ?? null,
+                'provincia'    => $request->provincia ?? null,
+                'ciudad'       => $request->ciudad ?? null,
+                'direccion'    => $request->direccion ?? null,
+                'sexo'         => $request->sexo ?? null,
+                'fechanaci'    => $request->fechanaci ?? null,
+                'celular'      => $request->celular ?? null,
+                'tipoetnia'    => $request->tipoetnia ?? null,
+                'discapacidad' => $request->discapacidad ?? null,
+                'estado_civil' => $request->estado_civil ?? null,
+            ]);
+        }
+
+        // Validar contraseña
+        if (!Hash::check($request->password, $user->password)) {
+            return response()->json(['message' => 'El correo electrónico o la contraseña son incorrectos'], 422);
+        }
+
+        // Generar token
+        $token = $user->createToken('auth_token')->plainTextToken;
+
+        // Retornar datos
+        return response()->json([
+            'id'         => $user->id,
+            'id_persona' => $persona->id,
+            'token'      => $token,
+            'email'      => $user->email,
+            'cedula'     => $request->cedula,
+            'name'       => $user->name,
+        ]);
+    }
+
 
     public function logout(Request $request)
     {
@@ -258,7 +278,17 @@ class AuthController extends Controller
         $usuario = $request && !is_string($request) ? $request->user()->name : auth()->user()->name;
         $ip = $request && !is_string($request) ? $request->ip() : request()->ip();
         $ipv4 = gethostbyname(gethostname());
-        $publicIp = file_get_contents('https://ifconfig.me/ip');
+        $context = stream_context_create([
+            "ssl" => [
+                "verify_peer" => false,
+                "verify_peer_name" => false,
+            ]
+        ]);
+
+        $publicIp = @file_get_contents('https://ifconfig.me/ip', false, $context);
+        if ($publicIp === false) {
+            $publicIp = 'No disponible';
+        }
         $ioConcatenadas = 'IP LOCAL: ' . $ip . '  --IPV4: ' . $ipv4 . '  --IP PUBLICA: ' . $publicIp;
         $nombreequipo = gethostbyaddr($ip);
         $userAgent = $request ? $request->header('User-Agent') : request()->header('User-Agent');

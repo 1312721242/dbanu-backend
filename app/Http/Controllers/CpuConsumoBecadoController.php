@@ -519,6 +519,51 @@ class CpuConsumoBecadoController extends Controller
     }
 
 
+    // public function obtenerResumenBecados(Request $request)
+    // {
+    //     $request->validate([
+    //         'periodo'   => 'required|string',
+    //         'page'      => 'nullable|integer|min:1',
+    //         'per_page'  => 'nullable|integer|min:1|max:1000',
+    //     ]);
+
+    //     $perPage = (int) $request->input('per_page', 15);
+
+    //     $query = CpuBecado::query()
+    //         ->select([
+    //             'periodo',
+    //             'identificacion',
+    //             'nombres',
+    //             'apellidos',
+    //             'sexo',
+    //             'beca',
+    //             'monto_otorgado',
+    //             'monto_consumido',
+    //             'matriz_extension',
+    //             'facultad',
+    //             'carrera',
+    //         ])
+    //         ->selectRaw('COALESCE(monto_otorgado,0) - COALESCE(monto_consumido,0) AS por_consumir')
+    //         ->where('periodo', $request->periodo)
+    //         ->orderBy('id', 'asc');
+
+    //     $result = $query->paginate($perPage);
+
+    //     return response()->json([
+    //         'message'    => 'Resumen de becados',
+    //         'filters'    => [
+    //             'periodo' => $request->periodo,
+    //         ],
+    //         'data'       => $result->items(),
+    //         'pagination' => [
+    //             'current_page' => $result->currentPage(),
+    //             'per_page'     => $result->perPage(),
+    //             'total'        => $result->total(),
+    //             'last_page'    => $result->lastPage(),
+    //         ],
+    //     ], 200);
+    // }
+
     public function obtenerResumenBecados(Request $request)
     {
         $request->validate([
@@ -544,6 +589,8 @@ class CpuConsumoBecadoController extends Controller
                 'carrera',
             ])
             ->selectRaw('COALESCE(monto_otorgado,0) - COALESCE(monto_consumido,0) AS por_consumir')
+            ->selectRaw('LEAST(COALESCE(monto_otorgado,0),150) AS monto_otorgado_truncado')
+            ->selectRaw('GREATEST(COALESCE(monto_otorgado,0) - 150,0) AS remanente_anterior')
             ->where('periodo', $request->periodo)
             ->orderBy('id', 'asc');
 

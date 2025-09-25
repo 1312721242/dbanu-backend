@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\Log;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 use Illuminate\Support\Facades\DB;
+
 class CpuClientesTastyController extends Controller
 {
     // Método para exportar la plantilla
@@ -205,7 +206,7 @@ class CpuClientesTastyController extends Controller
                     'telefono' => $row['G'] ?? null,
                     'beca' => $row['H'] ?? null,
                     'tipo_beca_otorgada' => $row['I'] ?? null,
-                    'monto_otorgado' => $row['J'] ?? null,
+                    'monto_otorgado' => $row['J'] ?? 0,
                     'porcentaje_valor_arancel' => $row['K'] ?? null,
                     'estado_postulante' => $row['L'] ?? null,
                     'fecha_aprobacion_denegacion' => $row['M'] ?? null,
@@ -235,28 +236,57 @@ class CpuClientesTastyController extends Controller
                 ];
 
                 if ($data['identificacion'] && $data['email']) {
-                    $existingRecord = CpuBecado::where('identificacion', $data['identificacion'])
+                    // Buscar registro de ese periodo y cédula
+                    $existingSamePeriod = CpuBecado::where('identificacion', $data['identificacion'])
                         ->where('periodo', $data['periodo'])
                         ->first();
 
-                    if (!$existingRecord) {
-                        $model = new CpuBecado();
-                        $model->fill($data);
-                        $model->save();
-                        $insertedCount++;
-                    } else {
-                        if ($existingRecord->fecha_inicio_valido !== $fechaInicio || $existingRecord->fecha_fin_valido !== $fechaFin) {
-                            $existingRecord->fecha_inicio_valido = $fechaInicio;
-                            $existingRecord->fecha_fin_valido = $fechaFin;
-                            $existingRecord->save();
-                            $insertedCount++; // Contar como actualización
+                    if ($existingSamePeriod) {
+                        // 🔹 Lógica anterior (solo actualizar si cambian fechas o estado)
+                        $shouldUpdate = false;
+                        if ($existingSamePeriod->fecha_inicio_valido !== $fechaInicio || $existingSamePeriod->fecha_fin_valido !== $fechaFin) {
+                            $existingSamePeriod->fecha_inicio_valido = $fechaInicio;
+                            $existingSamePeriod->fecha_fin_valido = $fechaFin;
+                            $shouldUpdate = true;
+                        }
+                        if ($existingSamePeriod->id_estado !== 8) {
+                            $existingSamePeriod->id_estado = 8;
+                            $shouldUpdate = true;
+                        }
+                        if ($shouldUpdate) {
+                            $existingSamePeriod->save();
+                            $insertedCount++;
                         } else {
                             $omittedCount++;
                             $omittedReasons[] = [
                                 'row' => $key,
-                                'reason' => 'Registro existente sin cambios en las fechas.'
+                                'reason' => 'Registro existente sin cambios en las fechas (mismo período).'
                             ];
                         }
+                    } else {
+                        // 🔹 Nuevo período → aplicar lógica de saldo y nuevo registro
+                        $existingRecord = CpuBecado::where('identificacion', $data['identificacion'])
+                            ->orderByDesc('id')
+                            ->first();
+
+                        if ($existingRecord) {
+                            $saldo = ($existingRecord->monto_otorgado ?? 0) - ($existingRecord->monto_consumido ?? 0);
+
+                            if ($saldo > 0) {
+                                $data['monto_otorgado'] = ($data['monto_otorgado'] ?? 0) + $saldo;
+                            }
+
+                            if ($existingRecord->id_estado == 8) {
+                                $existingRecord->id_estado = 9;
+                                $existingRecord->updated_at = now();
+                                $existingRecord->save();
+                            }
+                        }
+
+                        $model = new CpuBecado();
+                        $model->fill($data);
+                        $model->save();
+                        $insertedCount++;
                     }
                 } else {
                     $omittedCount++;
@@ -429,70 +459,70 @@ class CpuClientesTastyController extends Controller
         // Devolver los cargos como respuesta JSON
         return response()->json($cargos);
     }
-       //funcion para auditar
-       private function auditar($tabla, $campo, $dataOld, $dataNew, $tipo, $descripcion, $request = null)
-       {
-           $usuario = $request && !is_string($request) ? $request->user()->name : auth()->user()->name;
-           $ip = $request && !is_string($request) ? $request->ip() : request()->ip();
-           $ipv4 = gethostbyname(gethostname());
-           $publicIp = file_get_contents('https://ifconfig.me/ip');
-           $ioConcatenadas = 'IP LOCAL: ' . $ip . '  --IPV4: ' . $ipv4 . '  --IP PUBLICA: ' . $publicIp;
-           $nombreequipo = gethostbyaddr($ip);
-           $userAgent = $request && !is_string($request) ? $request->header('User-Agent') : request()->header('User-Agent');
-           $tipoEquipo = 'Desconocido';
+    //funcion para auditar
+    private function auditar($tabla, $campo, $dataOld, $dataNew, $tipo, $descripcion, $request = null)
+    {
+        $usuario = $request && !is_string($request) ? $request->user()->name : auth()->user()->name;
+        $ip = $request && !is_string($request) ? $request->ip() : request()->ip();
+        $ipv4 = gethostbyname(gethostname());
+        $publicIp = file_get_contents('https://ifconfig.me/ip');
+        $ioConcatenadas = 'IP LOCAL: ' . $ip . '  --IPV4: ' . $ipv4 . '  --IP PUBLICA: ' . $publicIp;
+        $nombreequipo = gethostbyaddr($ip);
+        $userAgent = $request && !is_string($request) ? $request->header('User-Agent') : request()->header('User-Agent');
+        $tipoEquipo = 'Desconocido';
 
-           if (stripos($userAgent, 'Mobile') !== false) {
-               $tipoEquipo = 'Celular';
-           } elseif (stripos($userAgent, 'Tablet') !== false) {
-               $tipoEquipo = 'Tablet';
-           } elseif (stripos($userAgent, 'Laptop') !== false || stripos($userAgent, 'Macintosh') !== false) {
-               $tipoEquipo = 'Laptop';
-           } elseif (stripos($userAgent, 'Windows') !== false || stripos($userAgent, 'Linux') !== false) {
-               $tipoEquipo = 'Computador de Escritorio';
-           }
-           $nombreUsuarioEquipo = get_current_user() . ' en ' . $tipoEquipo;
+        if (stripos($userAgent, 'Mobile') !== false) {
+            $tipoEquipo = 'Celular';
+        } elseif (stripos($userAgent, 'Tablet') !== false) {
+            $tipoEquipo = 'Tablet';
+        } elseif (stripos($userAgent, 'Laptop') !== false || stripos($userAgent, 'Macintosh') !== false) {
+            $tipoEquipo = 'Laptop';
+        } elseif (stripos($userAgent, 'Windows') !== false || stripos($userAgent, 'Linux') !== false) {
+            $tipoEquipo = 'Computador de Escritorio';
+        }
+        $nombreUsuarioEquipo = get_current_user() . ' en ' . $tipoEquipo;
 
-           $fecha = now();
-           $codigo_auditoria = strtoupper($tabla . '_' . $campo . '_' . $tipo );
-           DB::table('cpu_auditoria')->insert([
-               'aud_user' => $usuario,
-               'aud_tabla' => $tabla,
-               'aud_campo' => $campo,
-               'aud_dataold' => $dataOld,
-               'aud_datanew' => $dataNew,
-               'aud_tipo' => $tipo,
-               'aud_fecha' => $fecha,
-               'aud_ip' => $ioConcatenadas,
-               'aud_tipoauditoria' => $this->getTipoAuditoria($tipo),
-               'aud_descripcion' => $descripcion,
-               'aud_nombreequipo' => $nombreequipo,
-               'aud_descrequipo' => $nombreUsuarioEquipo,
-               'aud_codigo' => $codigo_auditoria,
-               'created_at' => now(),
-               'updated_at' => now(),
+        $fecha = now();
+        $codigo_auditoria = strtoupper($tabla . '_' . $campo . '_' . $tipo);
+        DB::table('cpu_auditoria')->insert([
+            'aud_user' => $usuario,
+            'aud_tabla' => $tabla,
+            'aud_campo' => $campo,
+            'aud_dataold' => $dataOld,
+            'aud_datanew' => $dataNew,
+            'aud_tipo' => $tipo,
+            'aud_fecha' => $fecha,
+            'aud_ip' => $ioConcatenadas,
+            'aud_tipoauditoria' => $this->getTipoAuditoria($tipo),
+            'aud_descripcion' => $descripcion,
+            'aud_nombreequipo' => $nombreequipo,
+            'aud_descrequipo' => $nombreUsuarioEquipo,
+            'aud_codigo' => $codigo_auditoria,
+            'created_at' => now(),
+            'updated_at' => now(),
 
-           ]);
-       }
+        ]);
+    }
 
-       private function getTipoAuditoria($tipo)
-       {
-           switch ($tipo) {
-               case 'CONSULTA':
-                   return 1;
-               case 'INSERCION':
-                   return 3;
-               case 'MODIFICACION':
-                   return 2;
-               case 'ELIMINACION':
-                   return 4;
-               case 'LOGIN':
-                   return 5;
-               case 'LOGOUT':
-                   return 6;
-               case 'DESACTIVACION':
-                   return 7;
-               default:
-                   return 0;
-           }
-       }
+    private function getTipoAuditoria($tipo)
+    {
+        switch ($tipo) {
+            case 'CONSULTA':
+                return 1;
+            case 'INSERCION':
+                return 3;
+            case 'MODIFICACION':
+                return 2;
+            case 'ELIMINACION':
+                return 4;
+            case 'LOGIN':
+                return 5;
+            case 'LOGOUT':
+                return 6;
+            case 'DESACTIVACION':
+                return 7;
+            default:
+                return 0;
+        }
+    }
 }

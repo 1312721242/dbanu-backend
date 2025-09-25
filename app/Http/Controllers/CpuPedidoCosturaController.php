@@ -77,9 +77,18 @@ class CpuPedidoCosturaController extends Controller
         // Ejecutar la consulta
         $pedidos = $query->orderBy('pc.created_at', 'desc')->get();
 
-        // Decodificar JSONB de prendas
+        // Decodificar JSONB de prendas y normalizar campos
         foreach ($pedidos as $pedido) {
             $pedido->prendas = json_decode($pedido->prendas, true);
+
+            // Normalización de campos importantes
+            $pedido->ciudad = $pedido->ciudad ? strtoupper(trim($pedido->ciudad)) : null;
+            $pedido->sexo = $pedido->sexo ? strtoupper(trim($pedido->sexo)) : null;
+            $pedido->tipoetnia = $pedido->tipoetnia ? strtoupper(trim($pedido->tipoetnia)) : null;
+            $pedido->estado_civil = $pedido->estado_civil ? strtoupper(trim($pedido->estado_civil)) : null;
+            $pedido->ocupacion = $pedido->ocupacion ? strtoupper(trim($pedido->ocupacion)) : null;
+            $pedido->discapacidad = $pedido->discapacidad ? strtoupper(trim($pedido->discapacidad)) : null;
+            $pedido->tipo_usuario = $pedido->tipo_usuario ? strtoupper(trim($pedido->tipo_usuario)) : null;
         }
 
         // Extraer valores únicos para filtros
@@ -110,13 +119,14 @@ class CpuPedidoCosturaController extends Controller
                 'ciudad' => $ciudad,
                 'tipo_usuario' => $tipo_usuario,
                 'discapacidad' => $discapacidad,
-                'etnia' => $etnia,
+                'tipoetnia' => $etnia,
                 'estado_civil' => $estado_civil,
                 'ocupacion' => $ocupacion,
                 'tallas' => $tallas
             ]
         ]);
     }
+
 
     public function update(Request $request, $id)
     {

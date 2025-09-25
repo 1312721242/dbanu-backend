@@ -345,10 +345,94 @@ class CpuDerivacionController extends Controller
         return response()->json(['success' => true, 'derivacion' => $derivacion]);
     }
 
+    // public function reagendar(Request $request)
+    // {
+    //     $validatedData = $request->validate([
+    //         // Validación de los campos que se enviarán
+    //         'id_turno_asignado' => 'required|integer',
+    //         'ate_id' => 'required|integer',
+    //         'id_doctor_al_que_derivan' => 'required|integer',
+    //         'id_paciente' => 'required|integer',
+    //         'fecha_derivacion' => 'required|date',
+    //         'motivo_derivacion' => 'required|string',
+    //         'detalle_derivacion' => 'nullable|string',
+    //         'id_area' => 'required|integer',
+    //         'fecha_para_atencion' => 'required|date',
+    //         'hora_para_atencion' => 'required',
+    //         'id_funcionario_que_derivo' => 'required|integer',
+    //         'id_estado_derivacion' => 'required|integer',
+    //         'id' => 'required|integer',
+    //         'id_turnos' => 'required|integer',
+    //         'email_paciente' => 'required|string',
+    //         'funcionario_email' => 'required|string',
+    //         'nombres_paciente' => 'required|string',
+    //         'nombres_funcionario' => 'required|string',
+    //         'area_atencion' => 'required|string',
+
+    //     ]);
+
+    //     Log::info('Datos recibidos en reagendar:', $validatedData);
+
+    //     DB::beginTransaction();
+
+    //     try {
+    //         // Crear un nuevo registro en cpu_derivaciones
+    //         $derivacion = CpuDerivacion::create([
+    //             'id_turno_asignado' => $validatedData['id_turno_asignado'],
+    //             'ate_id' => $validatedData['ate_id'],
+    //             'id_doctor_al_que_derivan' => $validatedData['id_doctor_al_que_derivan'],
+    //             'id_paciente' => $validatedData['id_paciente'],
+    //             'fecha_derivacion' => $validatedData['fecha_derivacion'],
+    //             'motivo_derivacion' => $validatedData['motivo_derivacion'],
+    //             'detalle_derivacion' => $validatedData['detalle_derivacion'],
+    //             'id_area' => $validatedData['id_area'],
+    //             'fecha_para_atencion' => $validatedData['fecha_para_atencion'],
+    //             'hora_para_atencion' => $validatedData['hora_para_atencion'],
+    //             'id_funcionario_que_derivo' => $validatedData['id_funcionario_que_derivo'],
+    //             'id_estado_derivacion' => $validatedData['id_estado_derivacion']
+    //         ]);
+
+    //         // Marcar derivación anterior como reagendada (4)
+    //         CpuDerivacion::where('id', $validatedData['id'])
+    //             ->update(['id_estado_derivacion' => 4]);
+
+    //         // Actualizar el campo estado en cpu_turnos
+    //         CpuTurno::where('id_turnos', $validatedData['id_turnos'])
+    //             ->where('fehca_turno', '>=', $validatedData['fecha_derivacion'])
+    //             ->update(['estado' => 1]);
+
+    //         // Actualizar el estado a 7 en cpu_turnos si id_turno_asignado coincide con id_turnos
+    //         CpuTurno::where('id_turnos', $validatedData['id_turno_asignado'])
+    //             ->update(['estado' => 7]);
+
+    //         // ✅ Actualizar el estado de la atención como "reagendada" (id_estado = 4)
+    //         CpuAtencion::where('id', $validatedData['ate_id'])->update(['id_estado' => 4]);
+
+    //         // Llamar a la función enviarCorreo con los datos necesarios después de que la transacción se haya realizado correctamente
+    //         // $this->enviarCorreoPaciente($validatedData, 'reagendamiento');
+    //         // $this->enviarCorreoFuncionario($validatedData, 'reagendamiento');
+    //         $this->auditar('cpu_derivacion', 'Reagendar', '', $derivacion, 'INSERCION', 'Creación de derivación');
+
+    //         // Si todo va bien, confirmar la transacción
+    //         DB::commit();
+
+    //         // Enviar correos después de confirmar la transacción
+    //         $correoController = new CpuCorreoEnviadoController();
+    //         $correoController->enviarCorreoPaciente($validatedData, 'reagendamiento');
+    //         $correoController->enviarCorreoFuncionario($validatedData, 'reagendamiento');
+
+    //         return response()->json(['message' => 'Registro creado y actualizado correctamente.'], 201);
+    //     } catch (\Exception $e) {
+
+    //         // Si algo falla, revertir todas las operaciones
+    //         DB::rollBack();
+    //         return response()->json(['error' => 'Error en la operación: ' . $e->getMessage()], 500);
+    //     }
+    // }
+
     public function reagendar(Request $request)
     {
         $validatedData = $request->validate([
-            // Validación de los campos que se enviarán
             'id_turno_asignado' => 'required|integer',
             'ate_id' => 'required|integer',
             'id_doctor_al_que_derivan' => 'required|integer',
@@ -361,22 +445,28 @@ class CpuDerivacionController extends Controller
             'hora_para_atencion' => 'required',
             'id_funcionario_que_derivo' => 'required|integer',
             'id_estado_derivacion' => 'required|integer',
-            'id' => 'required|integer',
-            'id_turnos' => 'required|integer',
+            'id' => 'required|integer', // derivación anterior
+            'id_turnos' => 'required|integer', // turno anterior
             'email_paciente' => 'required|string',
             'funcionario_email' => 'required|string',
             'nombres_paciente' => 'required|string',
             'nombres_funcionario' => 'required|string',
             'area_atencion' => 'required|string',
-
         ]);
 
         Log::info('Datos recibidos en reagendar:', $validatedData);
 
+        // 🚨 Validación extra: turno viejo y nuevo no deben ser iguales
+        if ($validatedData['id_turnos'] == $validatedData['id_turno_asignado']) {
+            return response()->json([
+                'error' => 'El turno anterior y el turno nuevo no pueden ser el mismo.'
+            ], 422);
+        }
+
         DB::beginTransaction();
 
         try {
-            // Crear un nuevo registro en cpu_derivaciones
+            // Crear nueva derivación
             $derivacion = CpuDerivacion::create([
                 'id_turno_asignado' => $validatedData['id_turno_asignado'],
                 'ate_id' => $validatedData['ate_id'],
@@ -392,43 +482,78 @@ class CpuDerivacionController extends Controller
                 'id_estado_derivacion' => $validatedData['id_estado_derivacion']
             ]);
 
-            // Actualizar el campo id_estado_derivacion en cpu_derivaciones
+            // Derivación anterior -> reagendada
             CpuDerivacion::where('id', $validatedData['id'])
                 ->update(['id_estado_derivacion' => 4]);
 
-            // Actualizar el campo estado en cpu_turnos
-            CpuTurno::where('id_turnos', $validatedData['id_turnos'])
-                ->where('fehca_turno', '>=', $validatedData['fecha_derivacion'])
-                ->update(['estado' => 1]);
+            // Turno anterior -> reagendado (4) + clonado como disponible
+            Log::info('Marcando turno anterior', ['id_turnos' => $validatedData['id_turnos']]);
 
-            // Actualizar el estado a 7 en cpu_turnos si id_turno_asignado coincide con id_turnos
+            $turnoAnterior = CpuTurno::where('id_turnos', $validatedData['id_turnos'])->first();
+
+            if ($turnoAnterior) {
+                // 1. Marcar el turno anterior como reagendado (4)
+                $turnoAnterior->estado = 4;
+                $turnoAnterior->save();
+
+                // 2. Verificar si ya existe un turno libre con mismo médico, fecha, hora
+                $existeLibre = CpuTurno::where('id_medico', $turnoAnterior->id_medico)
+                    ->where('fehca_turno', $turnoAnterior->fehca_turno)
+                    ->where('hora', $turnoAnterior->hora)
+                    ->where('estado', 1)
+                    ->exists();
+
+                if (!$existeLibre) {
+                    $nuevoTurno = CpuTurno::create([
+                        'id_paciente'   => null,
+                        'id_medico'     => $turnoAnterior->id_medico,
+                        'fehca_turno'   => $turnoAnterior->fehca_turno,
+                        'hora'          => $turnoAnterior->hora,
+                        'estado'        => 1, // disponible
+                        'area'          => $turnoAnterior->area,
+                        'via_atencion'  => $turnoAnterior->via_atencion,
+                        'usr_date_creacion' => now(),
+                        'tipo_atencion' => $turnoAnterior->tipo_atencion,
+                    ]);
+
+                    Log::info('Turno clonado como disponible', ['id_turnos' => $nuevoTurno->id_turnos]);
+                } else {
+                    Log::warning('No se clonó: ya existía un turno libre en esa fecha/hora', [
+                        'id_medico' => $turnoAnterior->id_medico,
+                        'fecha'     => $turnoAnterior->fehca_turno,
+                        'hora'      => $turnoAnterior->hora,
+                    ]);
+                }
+            }
+
+            // Turno nuevo -> ocupado (7)
+            Log::info('Marcando turno asignado', ['id_turno_asignado' => $validatedData['id_turno_asignado']]);
+
             CpuTurno::where('id_turnos', $validatedData['id_turno_asignado'])
                 ->update(['estado' => 7]);
 
-            // ✅ Actualizar el estado de la atención como "reagendada" (id_estado = 4)
-            CpuAtencion::where('id', $validatedData['ate_id'])->update(['id_estado' => 4]);
+            // Atención -> reagendada
+            CpuAtencion::where('id', $validatedData['ate_id'])
+                ->update(['id_estado' => 4]);
 
-            // Llamar a la función enviarCorreo con los datos necesarios después de que la transacción se haya realizado correctamente
-            // $this->enviarCorreoPaciente($validatedData, 'reagendamiento');
-            // $this->enviarCorreoFuncionario($validatedData, 'reagendamiento');
+            // Auditoría
             $this->auditar('cpu_derivacion', 'Reagendar', '', $derivacion, 'INSERCION', 'Creación de derivación');
 
-            // Si todo va bien, confirmar la transacción
             DB::commit();
 
-            // Enviar correos después de confirmar la transacción
+            // Correos
             $correoController = new CpuCorreoEnviadoController();
             $correoController->enviarCorreoPaciente($validatedData, 'reagendamiento');
             $correoController->enviarCorreoFuncionario($validatedData, 'reagendamiento');
 
             return response()->json(['message' => 'Registro creado y actualizado correctamente.'], 201);
         } catch (\Exception $e) {
-
-            // Si algo falla, revertir todas las operaciones
             DB::rollBack();
             return response()->json(['error' => 'Error en la operación: ' . $e->getMessage()], 500);
         }
     }
+
+
 
     // Función para actualizar el estado de derivación a 5 (No asistió a la cita)
     // public function noAsistioCita(Request $request, $id)

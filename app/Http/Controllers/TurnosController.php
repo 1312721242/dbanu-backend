@@ -15,7 +15,7 @@ class TurnosController extends Controller
 {
     public function __construct()
     {
-        $this->middleware('auth:api');
+        // $this->middleware('auth:api');
         $this->auditoriaController = new AuditoriaControllers();
         $this->logController = new LogController();
     }
@@ -199,7 +199,7 @@ class TurnosController extends Controller
                 // Caso 1: Solo hoy, después de la hora actual
                 Log::info("Consulta para el mismo día a partir de la hora actual");
                 // $turnosQuery->where('fehca_turno', $ini)->where('hora', '>', $horaActual);
-                $turnosQuery->whereDate('fecha_turno', $ini)->where('hora', '>', $horaActual);
+                $turnosQuery->whereDate('fehca_turno', $ini)->where('hora', '>', $horaActual);
             } elseif ($ini == $fechaActual && $hasta > $fechaActual) {
                 // Caso 2: Hoy desde la hora actual y días futuros desde cualquier hora
                 Log::info("Consulta para hoy a partir de la hora actual y días futuros desde cualquier hora");
@@ -506,5 +506,34 @@ class TurnosController extends Controller
                 'detalle' => $e->getMessage()
             ], 500);
         }
+    }
+
+    public function obtenerTurnos(Request $request)
+    {
+        Log::info('📥 Solicitud de turnos', $request->all());
+
+        $sede = $request->input('sede');
+        $area = $request->input('area');
+        $fecha = $request->input('fecha'); // formato: YYYY-MM-DD
+
+        $turnos = DB::select("SELECT * FROM obtener_turnos_disponibles(?, ?, ?)", [
+            $sede,
+            $area,
+            $fecha
+        ]);
+
+        // Fecha actual (solo parte de fecha)
+        $hoy = Carbon::today()->format('Y-m-d');
+
+        if ($fecha === $hoy) {
+            // ⏰ Filtrar solo los turnos cuya hora sea mayor a la actual
+            $horaActual = Carbon::now()->format('H:i:s');
+
+            $turnos = collect($turnos)->filter(function ($turno) use ($horaActual) {
+                return $turno->hora > $horaActual;
+            })->values(); // Reindexar
+        }
+
+        return response()->json($turnos);
     }
 }

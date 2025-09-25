@@ -62,17 +62,32 @@ class CpuAtencionesFisioterapiaContoller extends Controller
         $puedeAgendar = filter_var($request->input('puede_agendar', false), FILTER_VALIDATE_BOOLEAN);
 
         // SUBSECUENTE: si **puede_agendar = true**, exigir estructura mínima de turnos e id_area
+        // if ($tipo === 'SUBSECUENTE' && $puedeAgendar) {
+        //     if (!$request->filled('id_area')) {
+        //         return response()->json(['error' => 'En SUBSECUENTE con agendamiento debes enviar id_area.'], 422);
+        //     }
+        //     $turnosDecod = json_decode($request->input('turnos'), true);
+        //     if (empty($turnosDecod) || !is_array($turnosDecod)) {
+        //         return response()->json(['error' => 'En SUBSECUENTE con agendamiento debes enviar al menos un turno.'], 422);
+        //     }
+        //     foreach ($turnosDecod as $i => $t) {
+        //         if (empty($t['id_turno']) || empty($t['fecha']) || empty($t['hora'])) {
+        //             return response()->json(['error' => "Turno #" . ($i + 1) . " incompleto (id_turno, fecha, hora son requeridos)."], 422);
+        //         }
+        //     }
+        // }
+
         if ($tipo === 'SUBSECUENTE' && $puedeAgendar) {
-            if (!$request->filled('id_area')) {
-                return response()->json(['error' => 'En SUBSECUENTE con agendamiento debes enviar id_area.'], 422);
-            }
-            $turnosDecod = json_decode($request->input('turnos'), true);
-            if (empty($turnosDecod) || !is_array($turnosDecod)) {
-                return response()->json(['error' => 'En SUBSECUENTE con agendamiento debes enviar al menos un turno.'], 422);
-            }
-            foreach ($turnosDecod as $i => $t) {
-                if (empty($t['id_turno']) || empty($t['fecha']) || empty($t['hora'])) {
-                    return response()->json(['error' => "Turno #" . ($i + 1) . " incompleto (id_turno, fecha, hora son requeridos)."], 422);
+            if ($request->filled('turnos')) {
+                $turnosDecod = json_decode($request->input('turnos'), true);
+                if (!is_array($turnosDecod)) {
+                    return response()->json(['error' => 'Formato inválido en turnos (debe ser JSON array).'], 422);
+                }
+
+                foreach ($turnosDecod as $i => $t) {
+                    if (empty($t['id_turno']) || empty($t['fecha']) || empty($t['hora'])) {
+                        return response()->json(['error' => "Turno #" . ($i + 1) . " incompleto (id_turno, fecha, hora son requeridos)."], 422);
+                    }
                 }
             }
         }

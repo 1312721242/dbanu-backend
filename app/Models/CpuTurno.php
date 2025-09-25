@@ -23,6 +23,7 @@ class CpuTurno extends Model
         'via_atencion',
         'usr_date_baja',
         'usr_date_creacion',
+        'tipo_atencion',
     ];
 
     protected $casts = [

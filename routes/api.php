@@ -80,10 +80,14 @@ use App\Http\Controllers\NvDocentesController;
 use App\Http\Controllers\NvAsignaturasController;
 use App\Http\Controllers\NvParalelosController;
 use App\Http\Controllers\NvDocenteAsignaturaController;
+use App\Http\Controllers\AtencionesExternasControllers;
 
 use App\Http\Controllers\AtencionesDiversidadController;
 use App\Http\Controllers\CpuAuthSBEController;
 use App\Http\Controllers\CpuCasosMedicosController;
+use App\Http\Controllers\CpuBodegasController;
+use App\Http\Controllers\CpuInventariosController;
+use App\Http\Controllers\CpuHorarioGymControllers;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
@@ -447,12 +451,13 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::delete('/cpu-tipos-usuario/{id}', [CpuTipoUsuarioController::class, 'destroy']);
 
     //INSUMOS
-
     Route::get('/cpu-insumos', [CpuInsumoController::class, 'getInsumos']);
     Route::get('/get-insumo', [CpuInsumoController::class, 'consultarInsumos']);
     Route::get('/get-tipo-insumo', [CpuInsumoController::class, 'consultarTiposInsumos']);
     Route::post('/guardar-insumo', [CpuInsumoController::class, 'saveInsumos']);
     Route::put('/modificar-insumo/{id}', [CpuInsumoController::class, 'modificarInsumo']);
+    Route::get('/get-insumo-id/{id}', [CpuInsumoController::class, 'getInsumoById']);
+
 
     //apis para busqueda de cie11
     Route::post('/get-token', [ICDController::class, 'getToken']);
@@ -522,9 +527,9 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::put('/tramites/{id}', [CpuTramiteController::class, 'update']);
     Route::delete('/tramites/{id}', [CpuTramiteController::class, 'destroy']);
     Route::get('/tramites', [CpuTramiteController::class, 'show']);
-// NUEVOS endpoints optimizados:
-Route::get('/tramites/hoy', [CpuTramiteController::class, 'hoy']);
-Route::get('/tramites/no-finalizados', [CpuTramiteController::class, 'noFinalizados']);
+    // NUEVOS endpoints optimizados:
+    Route::get('/tramites/hoy', [CpuTramiteController::class, 'hoy']);
+    Route::get('/tramites/no-finalizados', [CpuTramiteController::class, 'noFinalizados']);
     // API para obtener tipos de becas filtrados
     Route::get('/tipos-beca/filtrados', [CpuTipoBecaController::class, 'show']);
 
@@ -589,9 +594,14 @@ Route::get('/tramites/no-finalizados', [CpuTramiteController::class, 'noFinaliza
     Route::get('/get-egreso', [EgresosControllers::class, 'consultarEgresos']);
     Route::get('/get-egreso-id/{id}', [EgresosControllers::class, 'getConsultarEgresosId']);
     Route::post('/guardar-atencion-egreso', [EgresosControllers::class, 'guardarAtencionEgreso']);
-    //PROFESIONES
 
+    //PROFESIONES
     Route::post('/consultar-profesiones ', [CpuProfesionController::class, 'consultarProfesiones']);
+
+    //ATENCIONES EXTERNAS
+    Route::get('/get-atencion-externa', [AtencionesExternasControllers::class, 'getAtencionesExternas']);
+    Route::post('/guardar-atencio-externa', [AtencionesExternasControllers::class, 'guardarAtencionExterna']);
+
 
     //API
     Route::get('/api-tipo-analisis', [ApiControllers::class, 'ApiConsultarTiposAnalisis']);
@@ -676,21 +686,44 @@ Route::get('/tramites/no-finalizados', [CpuTramiteController::class, 'noFinaliza
      Route::post('/obtener-turnos', [TurnosController::class, 'obtenerTurnos']);
 
     //  Route::get('/user', [AtencionesDiversidadController::class, 'actualizarSegmentoPersona']);
+    //RUTAS PARA BUSCAR LOS NO ASISTIDOS
+
+    Route::get('/derivaciones/doctor/{doctorId}/rango-fechas', [CpuDerivacionController::class, 'getDerivacionesNoAsistidasPorMedico']);
+
+    //MODULO DE TERAPIA DE LENGUAJE
+    Route::get('/terapia-lenguaje', [CpuTerapiaLenguajeController::class, 'guardarConsultaTerapia']);
+
+    Route::get('/datos-medicos', [CpuDatosMedicosController::class, 'index']);
+    Route::get('/roles/{id}', [RoleController::class, 'consultarRol']);
+
+
+    // Carrera
+    Route::post('/agregar-carrera', [CpuCarreraController::class, 'agregarCarrera']);
+    Route::put('/modificar-carrera/{id}', [CpuCarreraController::class, 'modificarCarrera']);
+    Route::delete('/eliminar-carrera/{id}', [CpuCarreraController::class, 'eliminarCarrera']);
+
+    Route::get('/consultar-carreras', [CpuCarreraController::class, 'consultarCarreras']);
+    Route::get('/get-carrera', [CpuCarreraController::class, 'getCarreras']);
+
+
+    // Bodegas
+    Route::get('/consultar-bodega/{idSede}/{idFacultad}', [CpuBodegasController::class, 'getBodegas']);
+    Route::get('/get-bodega-id/{idSede}/{idFacultad}/{idBodega}', [CpuBodegasController::class, 'getIdBodegas']);
+
+    //Inventario
+    // Route::get('/get-inventario', [CpuInventarioController::class, 'consultarInventario']);
+    Route::post('/guardar-inventario-inicial', [CpuInventariosController::class, 'guardarInventarioInicial']);
+    Route::get('/get-stock-bodega-insumo/{id}', [CpuInventariosController::class, 'getStockBodegaInsumo']);
+    Route::get('/get-stock-bodega-insumo-id/{id}', [CpuInventariosController::class, 'getStockBodegaInsumoId']);
+
+    //Horario de Gym
+    Route::get('/get-horario-gym', [CpuHorarioGymControllers::class, 'getHorarioGym']);
+    Route::post('/guardar-horario-gym', [CpuHorarioGymControllers::class, 'guardarHorarioGym']);
+
+
+
+
+    // Route::put('/modificar-inventario/{id}', [CpuInventarioController::class, 'modificarInventario']);
 });
 
 // Route::put('/cpu-persona-update/{cedula}', [CpuPersonaController::class, 'update']);
-
-//MODULO DE TERAPIA DE LENGUAJE
-Route::get('/terapia-lenguaje', [CpuTerapiaLenguajeController::class, 'guardarConsultaTerapia']);
-
-Route::get('/datos-medicos', [CpuDatosMedicosController::class, 'index']);
-Route::get('/roles/{id}', [RoleController::class, 'consultarRol']);
-
-
-// Carrera
-Route::post('/agregar-carrera', [CpuCarreraController::class, 'agregarCarrera']);
-Route::put('/modificar-carrera/{id}', [CpuCarreraController::class, 'modificarCarrera']);
-Route::delete('/eliminar-carrera/{id}', [CpuCarreraController::class, 'eliminarCarrera']);
-
-Route::get('/consultar-carreras', [CpuCarreraController::class, 'consultarCarreras']);
-Route::get('/get-carrera', [CpuCarreraController::class, 'getCarreras']);

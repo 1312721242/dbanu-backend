@@ -215,6 +215,49 @@ class CpuDerivacionController extends Controller
         Log::info("Sede del usuario autenticado: $usrSede");
 
         // Consulta base
+        // $query = CpuDerivacion::with(['paciente', 'funcionarioQueDerivo'])
+        //     ->whereBetween('fecha_para_atencion', [$fechaInicio, $fechaFin])
+        //     ->whereNotIn('id_estado_derivacion', [4, 5])
+        //     ->select(
+        //         'cpu_personas.id as id_paciente',
+        //         'cpu_personas.cedula',
+        //         'cpu_personas.nombres',
+        //         'cpu_personas.sexo',
+        //         'cpu_personas.id_clasificacion_tipo_usuario',
+        //         'cpu_derivaciones.id_turno_asignado',
+        //         'cpu_derivaciones.ate_id',
+        //         'cpu_derivaciones.id as id_derivacion',
+        //         'cpu_derivaciones.fecha_para_atencion',
+        //         'cpu_derivaciones.motivo_derivacion',
+        //         'cpu_atenciones.diagnostico',
+        //         'cpu_derivaciones.id_tramite',
+        //         'users.name as funcionario_que_deriva',
+        //         'cpu_derivaciones.id_funcionario_que_derivo',
+        //         'users.name as funcionario_al_que_deriva',
+        //         'cpu_derivaciones.id_doctor_al_que_derivan',
+        //         'cpu_userrole.role as area_atencion',
+        //         'cpu_derivaciones.hora_para_atencion',
+        //         'cpu_derivaciones.id_estado_derivacion',
+        //         'users.email as funcionario_email',
+        //         'users.usr_sede as id_sede',
+        //         DB::raw('COALESCE(cpu_datos_estudiantes.email_institucional, cpu_datos_empleados.emailinstitucional, cpu_datos_usuarios_externos.email) as email_paciente'),
+        //         // ── Campos de la tabla de turnos ──
+        //         'cpu_turnos.tipo_atencion as turno_tipo_atencion',
+        //         'cpu_turnos.fehca_turno as turno_fecha',
+        //         'cpu_turnos.hora as turno_hora'
+        //     )
+        //     ->join('cpu_personas', 'cpu_personas.id', '=', 'cpu_derivaciones.id_paciente')
+        //     ->join('users', 'users.id', '=', 'cpu_derivaciones.id_funcionario_que_derivo')
+        //     ->leftJoin('users as deriva_usuario', 'deriva_usuario.id', '=', 'cpu_derivaciones.id_doctor_al_que_derivan')
+        //     ->leftJoin('cpu_userrole', 'cpu_derivaciones.id_area', '=', 'cpu_userrole.id_userrole')
+        //     ->leftJoin('cpu_datos_estudiantes', 'cpu_personas.id', '=', 'cpu_datos_estudiantes.id_persona')
+        //     ->leftJoin('cpu_datos_empleados', 'cpu_personas.id', '=', 'cpu_datos_empleados.id_persona')
+        //     ->leftJoin('cpu_atenciones', 'cpu_atenciones.id', '=', 'cpu_derivaciones.ate_id')
+        //     ->leftJoin('cpu_datos_usuarios_externos', 'cpu_personas.id', '=', 'cpu_datos_usuarios_externos.id_persona')
+        //     // 🔗 Join con la tabla de turnos por el turno asignado
+        //     ->leftJoin('cpu_turnos', 'cpu_turnos.id_turnos', '=', 'cpu_derivaciones.id_turno_asignado')
+        //     ->distinct();
+
         $query = CpuDerivacion::with(['paciente', 'funcionarioQueDerivo'])
             ->whereBetween('fecha_para_atencion', [$fechaInicio, $fechaFin])
             ->whereNotIn('id_estado_derivacion', [4, 5])
@@ -227,12 +270,15 @@ class CpuDerivacionController extends Controller
                 'cpu_derivaciones.id_turno_asignado',
                 'cpu_derivaciones.ate_id',
                 'cpu_derivaciones.id as id_derivacion',
+
                 'cpu_derivaciones.fecha_para_atencion',
                 'cpu_derivaciones.motivo_derivacion',
                 'cpu_atenciones.diagnostico',
                 'cpu_derivaciones.id_tramite',
+
                 'users.name as funcionario_que_deriva',
-                'users.name as funcionario_al_que_deriva',
+                'destino_user.name as funcionario_al_que_deriva',
+                'cpu_derivaciones.id_doctor_al_que_derivan',
                 'cpu_userrole.role as area_atencion',
                 'cpu_derivaciones.hora_para_atencion',
                 'cpu_derivaciones.id_estado_derivacion',
@@ -247,6 +293,7 @@ class CpuDerivacionController extends Controller
             ->join('cpu_personas', 'cpu_personas.id', '=', 'cpu_derivaciones.id_paciente')
             ->join('users', 'users.id', '=', 'cpu_derivaciones.id_funcionario_que_derivo')
             ->leftJoin('users as deriva_usuario', 'deriva_usuario.id', '=', 'cpu_derivaciones.id_doctor_al_que_derivan')
+            ->leftJoin('users as destino_user', 'destino_user.id', '=', 'cpu_derivaciones.id_doctor_al_que_derivan')
             ->leftJoin('cpu_userrole', 'cpu_derivaciones.id_area', '=', 'cpu_userrole.id_userrole')
             ->leftJoin('cpu_datos_estudiantes', 'cpu_personas.id', '=', 'cpu_datos_estudiantes.id_persona')
             ->leftJoin('cpu_datos_empleados', 'cpu_personas.id', '=', 'cpu_datos_empleados.id_persona')
@@ -897,6 +944,73 @@ class CpuDerivacionController extends Controller
             return response()->json(['error' => 'Error interno al enviar el correo'], 500);
         }
     }
+
+    public function getDerivacionesNoAsistidasPorMedico(Request $request, $doctorId)
+    {
+        // Validar solo fechas (el doctor viene por parámetro de ruta)
+        $request->validate([
+            'fecha_inicio' => 'required|date',
+            'fecha_fin'    => 'required|date',
+        ]);
+
+        // Si quieres validar que ese doctor exista:
+        // \Illuminate\Support\Facades\Validator::make(['doctor_id' => $doctorId], [
+        //     'doctor_id' => 'required|integer|exists:users,id',
+        // ])->validate();
+
+        $fechaInicio = \Carbon\Carbon::parse($request->input('fecha_inicio'))->startOfDay();
+        $fechaFin    = \Carbon\Carbon::parse($request->input('fecha_fin'))->endOfDay();
+
+        $ini = $fechaInicio->format('Y-m-d H:i:s');
+        $fin = $fechaFin->format('Y-m-d H:i:s');
+
+        try {
+            $rows = DB::select(
+                'SELECT * FROM public.f_obtener_derivaciones_por_medico_y_fecha(?, ?, ?)',
+                [(int)$doctorId, $ini, $fin]
+            );
+
+            if (!empty($rows)) {
+                $tramites = DB::table('cpu_tramites')
+                    ->select('id_tramite', 'tra_link_receptado', 'tra_link_enviado')
+                    ->whereIn('id_tramite', collect($rows)->pluck('id_tramite')->filter()->unique()->values())
+                    ->get()
+                    ->keyBy('id_tramite');
+
+                foreach ($rows as $r) {
+                    if (!empty($r->id_tramite) && isset($tramites[$r->id_tramite])) {
+                        $r->tra_link_receptado = $tramites[$r->id_tramite]->tra_link_receptado ?? null;
+                        $r->tra_link_enviado   = $tramites[$r->id_tramite]->tra_link_enviado ?? null;
+                    }
+                }
+            }
+
+            $this->auditar(
+                'cpu_derivacion',
+                'getDerivacionesNoAsistidasPorMedico',
+                '',
+                json_encode($rows),
+                'CONSULTA',
+                'Consulta derivaciones no asistidas por médico y fechas'
+            );
+
+            return response()->json($rows, 200);
+        } catch (\Throwable $e) {
+            Log::error('[getDerivacionesNoAsistidasPorMedico] Error al consultar función PG', [
+                'error' => $e->getMessage(),
+                'doctor_id' => (int)$doctorId,
+                'fecha_inicio' => $ini,
+                'fecha_fin' => $fin,
+            ]);
+
+            return response()->json([
+                'error' => 'Error al obtener derivaciones: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+
+
 
 
     //funcion para auditar

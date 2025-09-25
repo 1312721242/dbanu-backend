@@ -28,6 +28,7 @@ class CpuAtencionesController extends Controller
     {
         $this->middleware('auth:api');
         $this->auditoriaController = new AuditoriaControllers();
+        $this->inventariosController = new CpuInventariosController();
         $this->logController = new LogController();
     }
 
@@ -1208,47 +1209,11 @@ class CpuAtencionesController extends Controller
                 }
             }
 
-            // // Guardar en cpu_encabezados_egresos
-            // $ee_id = DB::table('cpu_encabezados_egresos')->insertGetId([
-            //     'ee_id_funcionario' => $request->input('id_funcionario'),
-            //     'ee_numero_egreso' => 'ULEAM-DBU-E-' . str_pad(DB::table('cpu_encabezados_egresos')->max('ee_id') + 1, 6, '0', STR_PAD_LEFT),
-            //     'ee_id_paciente' => $request->input('id_persona'),
-            //     'ee_id_atencion_medicina_general' => $medicinaGeneral->id,
-            //     'ee_detalle' => $listaInsumos ? json_encode($listaInsumos) : null,
-            //     'ee_id_estado' => 21,
-            //     'ee_created_at' => Carbon::now(),
-            //     'ee_updated_at' => Carbon::now(),
-            // ], 'ee_id');
-
-            // $descripcion = "Se registró un egreso con ID {$ee_id} para la atención {$medicinaGeneral->id} con los siguientes insumos: " . json_encode($listaInsumos);
-            // $this->auditoriaController->auditar('cpu_encabezados_egresos', 'guardarAtencionMedicinaGeneral(Request $request)', '', $ee_id, 'INSERT', $descripcion);
-
-            // foreach ($listaInsumos as $value) {
-
-            //     $idInsumo = $value->idInsumo ?? $value['idInsumo'];
-            //     $cantidad = (int) $value->cantidad  ?? (int)$value['cantidad'];
-            //     $stockAnterior = DB::table('cpu_movimientos_inventarios')
-            //         ->where('mi_id_insumo', $idInsumo)
-            //         ->orderBy('mi_created_at', 'desc')
-            //         ->value('mi_stock_actual') ?? 0;
-
-            //     $stockNuevo = $stockAnterior + $cantidad;
-
-            //     $insertId = DB::table('cpu_movimientos_inventarios')->insertGetId([
-            //         'mi_id_insumo'        => $idInsumo,
-            //         'mi_cantidad'         => $cantidad,
-            //         'mi_stock_anterior'   => $stockAnterior,
-            //         'mi_stock_actual'     => $stockNuevo,
-            //         'mi_tipo_transaccion' => 2,
-            //         'mi_fecha'            => Carbon::now()->toDateTimeString(),
-            //         'mi_created_at'       => Carbon::now()->toDateTimeString(),
-            //         'mi_updated_at'       => Carbon::now()->toDateTimeString(),
-            //         'mi_user_id'          => $request->user()->id,
-            //         'mi_id_encabezado'    => $ee_id,
-            //     ]);
-            // }
             try {
                 DB::beginTransaction();
+
+                //$id = $request && !is_string($request) ? $request->user()->id : auth()->user()->id
+                //$id_sede = DB::table('users')->where('id', $id)->value('id_sede');
 
                 if (count($listaInsumos) > 0) {
                     // Guardar en cpu_encabezados_egresos
@@ -1261,34 +1226,19 @@ class CpuAtencionesController extends Controller
                         'ee_id_estado' => 21,
                         'ee_created_at' => Carbon::now(),
                         'ee_updated_at' => Carbon::now(),
+                        'ee_id_user' => $request->user()->id,
                     ], 'ee_id');
 
-                    foreach ($listaInsumos as $value) {
-                        $idInsumo = $value['idInsumo'];
-                        $cantidad = (int) $value['cantidad'];
-                        $stockAnterior = DB::table('cpu_movimientos_inventarios')
-                            ->where('mi_id_insumo', $idInsumo)
-                            ->orderBy('mi_created_at', 'desc')
-                            ->value('mi_stock_actual') ?? 0;
+                    $id_bodega = 1;
 
-                        $stockNuevo = $stockAnterior + $cantidad;
-
-                        $insertId = DB::table('cpu_movimientos_inventarios')->insertGetId([
-                            'mi_id_insumo'        => $idInsumo,
-                            'mi_cantidad'         => $cantidad,
-                            'mi_stock_anterior'   => $stockAnterior,
-                            'mi_stock_actual'     => $stockNuevo,
-                            'mi_tipo_transaccion' => 2,
-                            'mi_fecha'            => Carbon::now()->toDateTimeString(),
-                            'mi_created_at'       => Carbon::now()->toDateTimeString(),
-                            'mi_updated_at'       => Carbon::now()->toDateTimeString(),
-                            'mi_user_id'          => $request->user()->id,
-                            'mi_id_encabezado'    => $ee_id,
-                        ], 'mi_id');
-                    }
-
-                    $descripcion = "Se registró un egreso con ID {$ee_id} para la atención {$medicinaGeneral->id} con los siguientes insumos: " . json_encode($listaInsumos);
-                    $this->auditoriaController->auditar('cpu_encabezados_egresos', 'guardarAtencionMedicinaGeneral(Request $request)', '', $ee_id, 'INSERT', $descripcion);
+                    $this->inventariosController->guardarMovimientoInventario(
+                        $listaInsumos,
+                        $id_bodega,
+                        'EGRESO',
+                        29,
+                        $request->user()->id,
+                        $ee_id
+                    );
                 }
 
                 DB::commit();

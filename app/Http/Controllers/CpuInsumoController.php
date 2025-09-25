@@ -39,7 +39,7 @@ class CpuInsumoController extends Controller
             ->orderBy('ins_descripcion', 'asc')
             ->select('id', 'id_tipo_insumo', 'ins_descripcion', 'cantidad_unidades', 'ins_cantidad')
             ->get();
-            
+
         $this->auditar('cpu_insumo', 'getInsumos', '', $insumosMedicos, 'CONSULTA', 'Consulta de insumos médicos');
         return response()->json([
             'insumosMedicos' => $insumosMedicos,
@@ -114,32 +114,63 @@ class CpuInsumoController extends Controller
         }
     }
 
+    // public function consultarInsumos()
+    // {
+    //     $data = DB::select("
+    //        SELECT 
+    //         sb.sb_id,
+    //         sb.sb_cantidad AS stock_bodega,
+    //         sb.sb_stock_minimo,
+    //         sb.sb_id_bodega,
+    //         b.bod_nombre AS nombre_bodega,
+    //         b.bod_id_sede,
+    //         s.nombre_sede,
+    //         b.bod_id_facultad,
+    //         f.fac_nombre,
+    //         i.id AS id_insumo,
+    //         i.codigo,
+    //         i.ins_descripcion,
+    //         i.id_tipo_insumo,
+    //         i.estado_insumo,
+    //         i.id_estado,
+    //         e.estado,
+    //         i.modo_adquirido
+    //     FROM cpu_stock_bodegas sb
+    //     JOIN cpu_bodegas b ON b.bod_id = sb.sb_id_bodega
+    //     LEFT JOIN cpu_sede s ON s.id = b.bod_id_sede
+    //     LEFT JOIN cpu_facultad f ON f.id = b.bod_id_facultad
+    //     JOIN cpu_insumo i ON i.id = sb.sb_id_insumo
+    //     JOIN cpu_estados e ON e.id = i.id_estado
+    //     WHERE i.id_estado = 8 order by i.id desc
+    //     ");
+    //     return response()->json($data);
+    // }
+
     public function consultarInsumos()
     {
         $data = DB::select("
-            SELECT i.id,
+           SELECT 
+            i.id, 
             i.id_tipo_insumo,
-            i.ins_descripcion,
-            i.ins_cantidad,
-            i.estado_insumo,
-            i.id_estado,
-            e.estado,
-            i.modo_adquirido,
-            i.num_documento,
-            i.nombre_proveedor,
-            i.fecha_recibido,
-            i.fecha_ingreso_sistema,
-            i.fecha_update,
-            i.codigo,
-            i.unidad_medida,
-            i.serie,
-            i.modelo,
-            i.marca,
-            i.cantidad_unidades
-        FROM cpu_insumo i
-            JOIN cpu_estados e ON e.id = i.id_estado
-        WHERE i.id_estado = 8
-        ORDER BY i.id DESC
+            COALESCE(NULLIF(i.ins_descripcion, ''), 'S/I') AS ins_descripcion,
+            COALESCE(NULLIF(i.ins_cantidad::text, ''), 'S/I') AS ins_cantidad,
+            COALESCE(NULLIF(i.estado_insumo, ''), 'S/I') AS estado_insumo,
+            COALESCE(NULLIF(i.modo_adquirido, ''), 'S/I') AS modo_adquirido,
+            COALESCE(NULLIF(i.codigo, ''), 'S/I') AS codigo,
+            COALESCE(NULLIF(i.unidad_medida, ''), 'S/I') AS unidad_medida,
+            COALESCE(NULLIF(i.serie, ''), 'S/I') AS serie,
+            COALESCE(NULLIF(i.modelo, ''), 'S/I') AS modelo,
+            COALESCE(NULLIF(i.marca, ''), 'S/I') AS marca,
+            i.id_estado, 
+            COALESCE(NULLIF(e.estado, ''), 'S/I') AS nombre_estado,
+            COALESCE(NULLIF(ca.ca_descripcion, ''), 'S/I') AS tipo_insumo, 
+            i.created_at, 
+            i.updated_at, 
+            i.id_usuario
+        FROM public.cpu_insumo i
+        LEFT JOIN cpu_estados e ON e.id = i.id_estado
+        LEFT JOIN cpu_categorias_activos ca ON ca.ca_id = i.id_tipo_insumo
+        ORDER BY i.id DESC;
         ");
         return response()->json($data);
     }
@@ -220,7 +251,6 @@ class CpuInsumoController extends Controller
             'select-tipo' => 'required|integer',
             'select-estado' => 'required|integer',
             'select-unidad-medida' => 'required|string',
-            'txt-stock-inicial' => 'required|numeric|min:0',
         ]);
 
         if ($validator->fails()) {
@@ -254,8 +284,9 @@ class CpuInsumoController extends Controller
             $id_in = DB::table('cpu_insumo')->insertGetId([
                 'id_tipo_insumo' => $data['select-tipo'],
                 'ins_descripcion' => $data['txt-descripcion'],
-                'cantidad_unidades' => $data['txt-stock-inicial'],
-                'ins_cantidad' => $data['txt-stock-inicial'],
+                'marca' => $data['txt-marca'] ?? null,
+                'modelo' => $data['txt-modelo'] ?? null,
+                'serie' => $data['txt-serie'] ?? null,
                 'codigo' => $data['txt-codigo'],
                 'id_estado' => $data['select-estado'],
                 'unidad_medida' => $data['select-unidad-medida'],
@@ -266,31 +297,39 @@ class CpuInsumoController extends Controller
 
             $descripcionAuditoria[] = 'Se guardó el insumo: "' . $data['txt-descripcion'] .
                 '" con código: "' . $data['txt-codigo'] . '" (ID Insumo: ' . $id_in . ')';
-
-            $id_m = DB::table('cpu_movimientos_inventarios')->insertGetId([
-                'mi_id_insumo' => $id_in,
-                'mi_cantidad' => $data['txt-stock-inicial'],
-                'mi_stock_anterior' => 0,
-                'mi_stock_actual' => $data['txt-stock-inicial'],
-                'mi_tipo_transaccion' => 1,
-                'mi_fecha' => now(),
-                'mi_created_at' => now(),
-                'mi_updated_at' => now(),
-                'mi_user_id' => $userId,
-                'mi_id_encabezado' => 0
-            ], 'mi_id');
-
-            $descripcionAuditoria[] = 'Se creó movimiento de inventario inicial (ID Movimiento: ' . $id_m . ')';
-
-            // Auditoría unificada
             $this->auditoriaController->auditar(
-                'cpu_insumo & cpu_movimientos_inventarios',
+                'cpu_insumo',
                 'saveInsumos',
                 '',
                 json_encode($data),
                 'INSERT',
                 implode(' | ', $descripcionAuditoria)
             );
+
+            // $id_m = DB::table('cpu_movimientos_inventarios')->insertGetId([
+            //     'mi_id_insumo' => $id_in,
+            //     'mi_cantidad' => $data['txt-stock-inicial'],
+            //     'mi_stock_anterior' => 0,
+            //     'mi_stock_actual' => $data['txt-stock-inicial'],
+            //     'mi_tipo_transaccion' => 1,
+            //     'mi_fecha' => now(),
+            //     'mi_created_at' => now(),
+            //     'mi_updated_at' => now(),
+            //     'mi_user_id' => $userId,
+            //     'mi_id_encabezado' => 0
+            // ], 'mi_id');
+
+            // $descripcionAuditoria[] = 'Se creó movimiento de inventario inicial (ID Movimiento: ' . $id_m . ')';
+
+            // // Auditoría unificada
+            // $this->auditoriaController->auditar(
+            //     'cpu_insumo & cpu_movimientos_inventarios',
+            //     'saveInsumos',
+            //     '',
+            //     json_encode($data),
+            //     'INSERT',
+            //     implode(' | ', $descripcionAuditoria)
+            // );
 
             return response()->json([
                 'success' => true,
@@ -387,4 +426,19 @@ class CpuInsumoController extends Controller
             ], 500);
         }
     }
+
+    // public function getInsumoById($id)
+    // {
+    //     try {
+    //         $data = DB::table('cpu_insumo')->where('id', $id)->first();
+    //         return response()->json($data);
+    //     } catch (\Exception $e) {
+    //         Log::error('Error al obtener insumo por ID: ' . $e->getMessage());
+    //         $this->logController->saveLog(
+    //             'Controlador: InsumosController, Función: getInsumoById($id)',
+    //             'Error de validación: ' . json_encode($e->getMessage())
+    //         );
+    //         return response()->json(['error' => 'Error al obtener insumo'], 500);
+    //     }
+    // }
 }

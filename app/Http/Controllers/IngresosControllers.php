@@ -4,8 +4,9 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Validator;
+use Symfony\Component\HttpFoundation\Session\Session;
 
 class IngresosControllers extends Controller
 {
@@ -13,6 +14,7 @@ class IngresosControllers extends Controller
     {
         $this->middleware('auth:api');
         $this->auditoriaController = new AuditoriaControllers();
+        $this->inventariosController = new CpuInventariosController();
         $this->logController = new LogController();
     }
 
@@ -101,7 +103,6 @@ class IngresosControllers extends Controller
                 'encabezado.n_ingreso' => 'required|string|max:100',
                 'encabezado.fecha_emision' => 'required|date',
                 'encabezado.fecha_vencimiento' => 'required|date|after_or_equal:encabezado.fecha_emision',
-
                 'detalleProductos' => 'required|array|min:1',
                 'detalleProductos.*.idInsumo' => 'required|integer',
                 'detalleProductos.*.nombre' => 'required|string|max:255',
@@ -122,16 +123,16 @@ class IngresosControllers extends Controller
 
                 $id = DB::table('cpu_encabezados_ingresos')->insert([
                     'ei_numero_comprobante' => $data['encabezado']['n_comprobante'],
-                    'ei_numero_ingreso' => $data['encabezado']["n_ingreso"],
-                    //'ei_id_funcionario' => 1311718181,
+                    'ei_numero_ingreso' => $data['encabezado']['n_ingreso'],
+                    // 'ei_id_funcionario' => 1311718181,
                     'ei_id_estado' => 8,
-                    'ei_tipo_adquisicion' => $data['encabezado']["tipo_adquisicion"],
-                    'ei_id_proveedor' => $data['encabezado']["id_proveedor"],
-                    'ei_fecha_emision' => $data['encabezado']["fecha_emision"],
-                    'ei_fecha_vencimiento' => $data['encabezado']["fecha_vencimiento"],
+                    'ei_tipo_adquisicion' => $data['encabezado']['tipo_adquisicion'],
+                    'ei_id_proveedor' => $data['encabezado']['id_proveedor'],
+                    'ei_fecha_emision' => $data['encabezado']['fecha_emision'],
+                    'ei_fecha_vencimiento' => $data['encabezado']['fecha_vencimiento'],
                     'ei_created_at' => now(),
                     'ei_updated_at' => now(),
-                    'ei_id_user' => $data['encabezado']["id_usuario"],
+                    'ei_id_user' => $data['encabezado']['id_usuario'],
                     'ei_ruta_comprobante' => $nombreArchivo ?? null,
                     'ei_detalle_producto' => json_encode($data['detalleProductos'])
                 ]);
@@ -156,13 +157,13 @@ class IngresosControllers extends Controller
                         'mi_stock_anterior' => $stock_anterior,
                         'mi_stock_actual' => $stock_actual,
                         'mi_tipo_transaccion' => 1,
-                        'mi_fecha' => $data['encabezado']["fecha_emision"],
+                        'mi_fecha' => $data['encabezado']['fecha_emision'],
                         'mi_created_at' => now(),
                         'mi_updated_at' => now(),
-                        'mi_user_id' => $data['encabezado']["id_usuario"],
+                        'mi_user_id' => $data['encabezado']['id_usuario'],
                         'mi_id_encabezado' => $id
                     ]);
-                    echo "Total de filas: " . count($data_detalle_producto);
+                    echo 'Total de filas: ' . count($data_detalle_producto);
                 }
                 return response()->json(['success' => true, 'message' => 'Activos agregados correctamente', 'id' => $id, 'data_detalle_producto' => $data_detalle_producto], 200);
             }
@@ -173,90 +174,7 @@ class IngresosControllers extends Controller
         }
     }
 
-    // public function guardarIngresos(Request $request)
-    // {
-    //     try {
-    //         $request->validate([
-    //             'encabezado' => 'required|string',
-    //             'detalleProductos' => 'required|string',
-    //             'archivo_comprobante' => 'nullable|file|mimes:pdf|max:2048',
-    //         ]);
-
-    //         $encabezado = json_decode($request->input('encabezado'), true);
-    //         $detalleProductos = json_decode($request->input('detalleProductos'), true);
-
-    //         if (!$encabezado || !$detalleProductos) {
-    //             return response()->json(['error' => 'Datos JSON inválidos.'], 422);
-    //         }
-
-    //         $nombreArchivo = null;
-    //         if ($request->hasFile('archivo_comprobante')) {
-    //             $archivo = $request->file('archivo_comprobante');
-    //             $nombreArchivo = time() . '_' . $archivo->getClientOriginalName();
-    //             $ruta = public_path('Files/comprobantes_ingresos');
-
-    //             if (!file_exists($ruta)) {
-    //                 mkdir($ruta, 0755, true);
-    //             }
-
-    //             $archivo->move($ruta, $nombreArchivo);
-    //         }
-
-    //         $id = DB::table('cpu_encabezados_ingresos')->insertGetId([
-    //             'ei_numero_comprobante' => $encabezado['n_comprobante'],
-    //             'ei_numero_ingreso' => $encabezado['n_ingreso'],
-    //             'ei_id_funcionario' => 1,
-    //             'ei_tipo_adquisicion' => $encabezado['tipo_adquisicion'],
-    //             'ei_id_proveedor' => $encabezado['id_proveedor'],
-    //             'ei_fecha_emision' => $encabezado['fecha_emision'],
-    //             'ei_fecha_vencimiento' => $encabezado['fecha_vencimiento'],
-    //             'ei_created_at' => now(),
-    //             'ei_updated_at' => now(),
-    //             'ei_id_user' => $encabezado['id_usuario'],
-    //             'ei_ruta_comprobante' => $nombreArchivo,
-    //             'ei_detalle_producto' => json_encode($detalleProductos)
-    //         ], 'ei_id');
-
-    //         foreach ($detalleProductos as $value) {
-    //             $idInsumo = $value['idInsumo'];
-    //             $cantidad = (int) $value['cantidad'];
-
-    //             $stockAnterior = DB::table('view_movimientos_inventarios')
-    //                 ->where('mi_id_insumo', $idInsumo)
-    //                 ->orderBy('mi_created_at', 'desc')
-    //                 ->value('mi_stock_actual') ?? 0;
-
-    //             $stockNuevo = $stockAnterior + $cantidad;
-
-    //             DB::table('cpu_movimientos_inventarios')->insert([
-    //                 'mi_id_insumo' => $idInsumo,
-    //                 'mi_cantidad' => $cantidad,
-    //                 'mi_stock_anterior' => $stockAnterior,
-    //                 'mi_stock_actual' => $stockNuevo,
-    //                 'mi_tipo_transaccion' => 1,
-    //                 'mi_fecha' => $encabezado['fecha_emision'],
-    //                 'mi_created_at' => now(),
-    //                 'mi_updated_at' => now(),
-    //                 'mi_user_id' => $encabezado['id_usuario'],
-    //                 'mi_id_encabezado' => $id,
-    //             ]);
-    //         }
-
-    //         return response()->json([
-    //             'success' => true,
-    //             'message' => 'Ingreso guardado correctamente.',
-    //             'id' => $id
-    //         ], 200);
-    //     } catch (\Exception $e) {
-    //         Log::error('Error al guardar ingreso: ' . $e->getMessage());
-    //         $this->logController->saveLog('Nombre de Controlador: IngresosControllers, Nombre de Funcion: guardarIngresos(Request $request)', 'Error al guardar: ' . $e->getMessage());
-    //         return response()->json([
-    //             'error' => 'Error al guardar: ' . $e->getMessage()
-    //         ], 500);
-    //     }
-    // }
-
-    public function guardarIngresos(Request $request)
+    public function guardarIngresos_07_09_2025_2300(Request $request)
     {
         try {
             $request->validate([
@@ -310,6 +228,12 @@ class IngresosControllers extends Controller
                 // ACTUALIZAR ENCABEZADO EXISTENTE
                 $id = $encabezado['id_ingreso'];
 
+                $dataOld = DB::select('
+                SELECT *
+                FROM cpu_encabezados_ingresos
+                WHERE ei_id = ?
+                ', [$id]);
+
                 // 1. ELIMINAR MOVIMIENTOS ANTERIORES de ese ingreso
                 DB::table('cpu_movimientos_inventarios')
                     ->where('mi_id_encabezado', $id)
@@ -331,6 +255,9 @@ class IngresosControllers extends Controller
                         'ei_ruta_comprobante' => $nombreArchivo,
                         'ei_detalle_producto' => json_encode($detalleProductos)
                     ]);
+
+                $description = "Se guardó el ingreso con ID: {$id}";
+                $this->auditoriaController->auditar('cpu_encabezados_ingresos', 'guardarIngresos(Request $request)', json_encode($dataOld), json_encode($request->all()), 'UPDATE', $description);
             }
 
             // 3. REINSERTAR MOVIMIENTOS y RECALCULAR STOCK
@@ -361,10 +288,12 @@ class IngresosControllers extends Controller
 
                 DB::table('cpu_insumo')
                     ->where('id', $idInsumo)
-                    ->update(['cantidad_unidades' => $stockNuevo]);
+                    ->update([
+                        'cantidad_unidades' => $stockNuevo,
+                        'updated_at' => now()
+                    ]);
             }
-            $description = "Se guardó el ingreso con ID: {$id}";
-            $this->auditoriaController->registrarAuditoria('cpu_encabezados_ingresos', 'guardarIngresos', json_encode($request->all()), $description, 'INSERT');
+
             // $this->auditar('turnos', 'listarTurnosPorFuncionario', "", "", 'CONSULTA', 'Consulta de turnos por funcionario');
 
             return response()->json([
@@ -380,6 +309,102 @@ class IngresosControllers extends Controller
             ], 500);
         }
     }
+
+    public function guardarIngresos(Request $request)
+    {
+        DB::beginTransaction();
+        $descripcionAuditoria = [];
+        try {
+            $encabezadoReq = json_decode($request->input('encabezado'), true);
+            $detalleProductos = json_decode($request->input('detalleProductos'), true);
+
+            $encabezado = [
+                'ei_numero_comprobante' => $encabezadoReq['n_comprobante'],
+                'ei_numero_ingreso'     => $encabezadoReq['n_ingreso'],
+                'ei_tipo_adquisicion'   => $encabezadoReq['tipo_adquisicion'],
+                'ei_id_proveedor'       => $encabezadoReq['id_proveedor'] ?: null,
+                'ei_fecha_emision'      => $encabezadoReq['fecha_emision'],
+                'ei_fecha_vencimiento'  => $encabezadoReq['fecha_vencimiento'],
+                'ei_created_at'         => now(),
+                'ei_updated_at'         => now(),
+                'ei_id_bodega'          => $encabezadoReq['select_bodega'],
+                'ei_id_user'            => $request->user()->id,
+                'ei_id_estado'          => 8,
+                'ei_detalle_producto'   => json_encode($detalleProductos),
+            ];
+
+            $idEncabezado = DB::table('cpu_encabezados_ingresos')->insertGetId($encabezado, 'ei_id');
+            $descripcionAuditoria[] = "Se creó encabezado de ingreso con ID: {$idEncabezado}";
+
+            $descripcionAuditoria[] =  $encabezadoReq['tipo_adquisicion'] == 2 ? "Tipo de adquisición: Donación" : "Tipo de adquisición: Factura";
+            $estado_movimiento = $encabezadoReq['tipo_adquisicion'] == 2 ? 25 : 24;
+
+            $this->inventariosController->guardarMovimientoInventario(
+                $detalleProductos,
+                $encabezadoReq['select_bodega'],
+                'INGRESO',
+                $estado_movimiento,
+                $request->user()->id,
+                $idEncabezado
+            );
+
+            $nombreArchivo = null;
+
+            if ($request->hasFile('archivo_comprobante')) {
+                $archivo = $request->file('archivo_comprobante');
+                $nombreArchivo = time() . '_' . $archivo->getClientOriginalName();
+                $ruta = public_path('Files/comprobantes_ingresos');
+                if (!file_exists($ruta)) {
+                    mkdir($ruta, 0755, true);
+                }
+                $archivo->move($ruta, $nombreArchivo);
+
+                DB::table('cpu_encabezados_ingresos')
+                    ->where('ei_id', $idEncabezado)
+                    ->update(['ei_ruta_comprobante' => $nombreArchivo]);
+
+                $descripcionAuditoria[] = "Se subió archivo para ingreso ID {$idEncabezado} en la ruta {$ruta}/{$nombreArchivo}";
+            }
+            DB::commit();
+
+            // Auditoría
+            $this->auditoriaController->auditar(
+                'cpu_encabezados_ingresos',
+                'guardarIngresos(Request $request)',
+                json_encode([]),
+                json_encode($request->all()),
+                'INSERT',
+                implode(' | ', $descripcionAuditoria)
+            );
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Ingreso guardado correctamente',
+                'id' => $idEncabezado,
+            ]);
+        } catch (\Exception $e) {
+            DB::rollBack();
+
+            $this->auditoriaController->auditar(
+                'cpu_encabezados_ingresos',
+                'guardarIngresos(Request $request)',
+                json_encode([]),
+                json_encode($request->all()),
+                'ERROR',
+                'Error al guardar ingreso: ' . $e->getMessage()
+            );
+
+            $this->logController->saveLog(
+                'Controlador: IngresosController, Función: guardarIngresos(Request $request)',
+                'Error al guardar: ' . $e->getMessage()
+            );
+
+            return response()->json([
+                'error' => 'Error al guardar: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
 
     public function guardarIngresosPrueba(Request $request)
     {
@@ -415,77 +440,118 @@ class IngresosControllers extends Controller
         return $id_numero_ingreso;
     }
 
-
     public function getKardexMovimiento()
     {
         try {
             $data = DB::select("
-                 SELECT 
-                    m.mi_id,
-                    m.mi_id_insumo,
-                    ins.ins_descripcion AS nombre_insumo,
-                    ins.codigo,
-                    m.mi_cantidad,
-                    m.mi_stock_anterior,
-                    m.mi_stock_actual,
-                    m.mi_tipo_transaccion,
-                    -- Número de comprobante según tipo de transacción
-                    CASE 
-                        WHEN m.mi_tipo_transaccion = 1 THEN i.ei_numero_comprobante
-                        ELSE 'N/A'
-                    END AS numero_comprobante,
-                    -- Tipo de movimiento
-                    CASE 
-                        WHEN m.mi_tipo_transaccion = 1 THEN 'Ingreso'
-                        WHEN m.mi_tipo_transaccion = 2 THEN 'Egreso'
-                        ELSE 'Otro'
-                    END AS tipo_movimiento,
-                    CASE 
-                        WHEN m.mi_tipo_transaccion = 1 THEN i.ei_numero_ingreso
-                        WHEN m.mi_tipo_transaccion = 2 THEN e.ee_numero_egreso
-                        ELSE 'N/A'
-                    END AS numero_ingreso,
-                    m.mi_fecha,
-                    m.mi_created_at,
-                    m.mi_updated_at,
-                    m.mi_user_id,
-                    u.name AS nombre_usuario,
-                    u.email AS email_usuario,
-                    -- Otros datos de ingresos y egresos opcionales
-                    i.ei_numero_ingreso,
-                    i.ei_id_proveedor,
-                    i.ei_fecha_emision,
-                    e.ee_id,
-                    e.ee_id_funcionario,
-                    e.ee_cedula_funcionario,
-                    e.ee_id_paciente,
-                    e.ee_cedula_paciente,
-                    e.ee_observacion,
-                    -- Stock acumulado
-                    SUM(
-                        CASE 
-                            WHEN m.mi_tipo_transaccion = 1 THEN m.mi_cantidad
-                            WHEN m.mi_tipo_transaccion = 2 THEN -m.mi_cantidad
-                            ELSE 0
-                        END
-                    ) OVER (
-                        PARTITION BY m.mi_id_insumo
-                        ORDER BY m.mi_fecha, m.mi_created_at
-                        ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
-                    ) AS stock_actual_acumulado
-                FROM cpu_movimientos_inventarios m
-                LEFT JOIN cpu_encabezados_ingresos i 
-                    ON m.mi_id_encabezado = i.ei_id 
-                    AND m.mi_tipo_transaccion = 1
-                LEFT JOIN cpu_encabezados_egresos e 
-                    ON m.mi_id_encabezado = e.ee_id 
-                    AND m.mi_tipo_transaccion = 2
-                LEFT JOIN cpu_insumo ins
-                    ON ins.id = m.mi_id_insumo
-                LEFT JOIN users u
-                    ON u.id = m.mi_user_id
-                ORDER BY m.mi_id desc;
-                ");
+                    SELECT 
+    -- Identificadores
+    m.mi_id,
+    m.mi_id_insumo,
+    m.mi_id_bodega,
+    m.mi_id_encabezado,
+	m.mi_id_estado,
+	est.estado,
+    
+    -- Datos del insumo
+    ins.ins_descripcion AS nombre_insumo,
+    ins.codigo AS codigo_insumo,
+    
+    -- Cantidades y stocks
+    m.mi_cantidad,
+    m.mi_stock_anterior,
+    m.mi_stock_actual,
+    sb.sb_stock_minimo,
+    
+    -- Estado de stock comparado con el mínimo
+    CASE 
+        WHEN (
+            SUM(
+                CASE 
+                    WHEN m.mi_tipo_transaccion = 1 THEN m.mi_cantidad
+                    WHEN m.mi_tipo_transaccion = 2 THEN -m.mi_cantidad
+                    ELSE 0
+                END
+            ) OVER (
+                PARTITION BY m.mi_id_insumo, m.mi_id_bodega
+                ORDER BY m.mi_fecha, m.mi_created_at
+                ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
+            )
+        ) < sb.sb_stock_minimo 
+        THEN 'BAJO MINIMO'
+        ELSE 'OK'
+    END AS estado_stock,
+    
+    -- Tipo de movimiento y número
+    CASE 
+        WHEN m.mi_tipo_transaccion = 1 THEN 'Ingreso'
+        WHEN m.mi_tipo_transaccion = 2 THEN 'Egreso'
+        ELSE 'Otro'
+    END AS tipo_movimiento,
+    
+    CASE 
+        WHEN m.mi_tipo_transaccion = 1 THEN COALESCE(i.ei_numero_comprobante, 'N/A')
+        WHEN m.mi_tipo_transaccion = 2 THEN COALESCE(e.ee_numero_egreso, 'N/A')
+        ELSE 'N/A'
+    END AS numero_comprobante,
+    
+    CASE 
+        WHEN m.mi_tipo_transaccion = 1 THEN COALESCE(i.ei_numero_ingreso, 'N/A')
+        WHEN m.mi_tipo_transaccion = 2 THEN COALESCE(e.ee_numero_egreso, 'N/A')
+        ELSE 'N/A'
+    END AS numero_movimiento,
+    
+    -- Datos del usuario
+    u.name AS nombre_usuario,
+    u.email AS email_usuario,
+    
+    -- Datos de la bodega
+    b.bod_nombre AS nombre_bodega,
+    b.bod_id_sede,
+    f.fac_nombre AS nombre_facultad,
+    s.nombre_sede,
+    
+    -- Fechas
+    m.mi_fecha,
+    m.mi_created_at,
+    m.mi_updated_at,
+    -- Datos extra de ingresos
+    i.ei_id AS id_ingreso,
+    i.ei_id_proveedor,
+    i.ei_fecha_emision,
+    
+    -- Datos extra de egresos
+    e.ee_id AS id_egreso,
+    e.ee_id_funcionario,
+    e.ee_cedula_funcionario,
+    e.ee_id_paciente,
+    e.ee_cedula_paciente,
+    e.ee_observacion
+
+FROM cpu_movimientos_inventarios m
+LEFT JOIN cpu_encabezados_ingresos i 
+    ON m.mi_id_encabezado = i.ei_id 
+    AND m.mi_tipo_transaccion = 1
+LEFT JOIN cpu_encabezados_egresos e 
+    ON m.mi_id_encabezado = e.ee_id 
+    AND m.mi_tipo_transaccion = 2
+LEFT JOIN cpu_insumo ins
+    ON ins.id = m.mi_id_insumo
+LEFT JOIN users u
+    ON u.id = m.mi_user_id
+LEFT JOIN cpu_bodegas b
+    ON b.bod_id = m.mi_id_bodega
+LEFT JOIN cpu_facultad f
+    ON b.bod_id_facultad = f.id
+LEFT JOIN cpu_estados est
+    ON est.id = m.mi_id_estado
+LEFT JOIN cpu_sede s
+    ON b.bod_id_sede = s.id
+LEFT JOIN cpu_stock_bodegas sb
+    ON sb.sb_id_insumo = m.mi_id_insumo
+   AND sb.sb_id_bodega = m.mi_id_bodega
+ORDER BY m.mi_id DESC;
+            ");
             return response()->json($data);
         } catch (\Exception $e) {
             $this->logController->saveLog('Nombre de Controlador: IngresosControllers, Nombre de Funcion: getKardexMovimiento()', 'Error al guardar: ' . $e->getMessage());

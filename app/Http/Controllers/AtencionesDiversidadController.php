@@ -8,11 +8,207 @@ use App\Models\CpuAtencionesDivBeneficios;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
-use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Schema;
 
 class AtencionesDiversidadController extends Controller
 {
+    /* ======================= Helpers ======================= */
+
+    /** Convierte varias formas ("SI", "sí", true, "1") a bool o null */
+    private function toBoolOrNull($v)
+    {
+        if ($v === null) return null;
+        $s = is_string($v) ? mb_strtolower(trim($v)) : $v;
+
+        if ($s === true || $s === 1 || $s === '1') return true;
+        if ($s === false || $s === 0 || $s === '0') return false;
+
+        if (is_string($s)) {
+            if (in_array($s, ['si', 'sí', 'true', 'on', 'yes', 'y'], true)) return true;
+            if (in_array($s, ['no', 'false', 'off', 'not', 'n'], true)) return false;
+        }
+        return null;
+    }
+
+    /** Entero o null */
+    private function toIntOrNull($v)
+    {
+        if ($v === null || $v === '') return null;
+        $n = filter_var($v, FILTER_VALIDATE_INT);
+        return $n === false ? null : $n;
+    }
+
+    /** Devuelve fecha 'Y-m-d' o null, aceptando 'd/m/Y' o parse genérico */
+    private function toDateYmdOrNull($v)
+    {
+        if (!$v) return null;
+        if (is_string($v) && preg_match('#^\d{2}/\d{2}/\d{4}$#', $v)) {
+            try {
+                return Carbon::createFromFormat('d/m/Y', $v)->format('Y-m-d');
+            } catch (\Throwable $e) {
+                return null;
+            }
+        }
+        // ISO u otros formatos aceptados por Carbon
+        try {
+            return Carbon::parse($v)->format('Y-m-d');
+        } catch (\Throwable $e) {
+            return null;
+        }
+    }
+
+    /** Devuelve timestamp o now() si viene vacío; acepta ISO */
+    private function toTimestampOrNow($v)
+    {
+        if (!$v) return now();
+        try {
+            return Carbon::parse($v);
+        } catch (\Throwable $e) {
+            return now();
+        }
+    }
+
+    /** Toma $beneficios['detalle'] o $beneficios['items'] indistinto y lo retorna listo para jsonb */
+    private function normalizeDetalleBeneficios($ben)
+    {
+        $detalle = $ben['detalle'] ?? ($ben['items'] ?? null);
+        // Acepta array/obj; si viene array lo codificamos a JSON para jsonb
+        if (is_array($detalle)) {
+            return json_encode($detalle);
+        }
+        // Si ya viene como string JSON, lo dejamos tal cual; si viene null retorna null
+        return $detalle;
+    }
+
+    /** "SI"/"NO"/true/false/1/0 -> "SI"|"NO"|null */
+    private function toSiNoOrNull($v)
+    {
+        if ($v === null || $v === '') return null;
+        if (is_bool($v)) return $v ? 'SI' : 'NO';
+        $s = mb_strtolower(trim((string)$v));
+        if (in_array($s, ['si', 'sí', '1', 'true', 'on', 'y', 'yes'], true)) return 'SI';
+        if (in_array($s, ['no', '0', 'false', 'off', 'n'], true)) return 'NO';
+        return null;
+    }
+
+    /** "SI"/"NO"/true/false/1/0 -> bool|null */
+    private function toBoolOrNullFromSiNo($v)
+    {
+        if ($v === null || $v === '') return null;
+        if (is_bool($v)) return $v;
+        $s = mb_strtolower(trim((string)$v));
+        if (in_array($s, ['si', 'sí', '1', 'true', 'on', 'y', 'yes'], true)) return true;
+        if (in_array($s, ['no', '0', 'false', 'off', 'n'], true)) return false;
+        return null;
+    }
+
+    /** Mapea datos_personales (del front) -> columnas de cpu_personas */
+    private function mapDatosPersonalesToPersona(array $dp): array
+    {
+        return [
+            // OJO: aquí usamos "genero" (texto). No tocamos "sexo" (char(1)) porque tu UI no lo maneja.
+            'genero'                  => $dp['genero']                ?? null,
+            'discapacidad'            => $this->toSiNoOrNull($dp['discapacidad'] ?? null), // guarda "SI"/"NO"
+            'tipo_discapacidad'       => $this->toIntOrNull($dp['tipo_discapacidad'] ?? null),
+            'porcentaje_discapacidad' => isset($dp['porcentaje_discapacidad']) && $dp['porcentaje_discapacidad'] !== ''
+                ? (float)$dp['porcentaje_discapacidad']
+                : null,
+            'provincia'               => $dp['provincia']             ?? null,
+            'ciudad'                  => $dp['ciudad']                ?? null,
+            'parroquia'               => $dp['parroquia']             ?? null,
+            'direccion'               => $dp['direccion']             ?? null,
+            'celular'                 => $dp['celular']               ?? null,
+            'ocupacion'               => $dp['ocupacion']             ?? null,
+            'bono_desarrollo'         => $this->toSiNoOrNull($dp['bono_desarrollo'] ?? null), // "SI"/"NO"
+            'carnet_conadis'          => $this->toBoolOrNullFromSiNo($dp['carnet_conadis'] ?? null), // bool
+            'estado_civil'            => $dp['estado_civil']          ?? null,
+            'nacionalidad'            => $dp['nacionalidad']          ?? null,
+            'tipoetnia'               => $dp['tipoetnia']             ?? null,
+            'updated_at'              => now(),
+        ];
+    }
+
+    /** bool/si-no a bool|null */
+    private function toBoolOrNullLoose($v)
+    {
+        if ($v === null || $v === '') return null;
+        if (is_bool($v)) return $v;
+        $s = mb_strtolower(trim((string)$v));
+        if (in_array($s, ['si', 'sí', '1', 'true', 'on', 'y', 'yes'], true)) return true;
+        if (in_array($s, ['no', '0', 'false', 'off', 'n'], true)) return false;
+        return null;
+    }
+
+    /** numero o null (admite coma) */
+    private function toNumOrNull($v)
+    {
+        if ($v === null || $v === '') return null;
+        $s = str_replace(',', '.', (string)$v);
+        return is_numeric($s) ? (float)$s : null;
+    }
+
+    /** jsonb: si llega array -> json_encode; si string JSON -> tal cual; null si vacío */
+    private function toJsonbOrNull($v)
+    {
+        if ($v === null) return null;
+        if (is_array($v)) return json_encode($v);
+        $s = trim((string)$v);
+        if ($s === '') return null;
+        return $s; // asumimos que ya es JSON válido
+    }
+
+    /** Calcula IMC si no viene, con peso (kg) y talla (m) */
+    private function calcImcOrNull($peso, $talla, $imc)
+    {
+        $p = $this->toNumOrNull($peso);
+        $t = $this->toNumOrNull($talla);
+        $i = $this->toNumOrNull($imc);
+        if ($i !== null) return $i;
+        if ($p !== null && $t !== null && $t > 0) {
+            return round($p / ($t * $t), 2);
+        }
+        return null;
+    }
+
+    /** Mapea arreglo medico -> columnas de cpu_datos_medicos */
+    private function mapMedicoToSaludRow(int $personaId, array $m): array
+    {
+        $peso  = $this->toNumOrNull($m['peso']  ?? null);
+        $talla = $this->toNumOrNull($m['talla'] ?? null);
+        $imc   = $this->calcImcOrNull($peso, $talla, $m['imc'] ?? null);
+
+        return [
+            'id_persona'                 => $personaId,
+            'enfermedades_catastroficas' => $this->toBoolOrNullLoose($m['enfermedades_catastroficas'] ?? null) ?? false,
+            'detalle_enfermedades'       => $this->toJsonbOrNull($m['detalle_enfermedades'] ?? null),
+            'tipo_sangre'                => $this->toIntOrNull($m['tipo_sangre'] ?? null),
+            'peso'                       => $peso,
+            'talla'                      => $talla,
+            'imc'                        => $imc,
+            'alergias'                   => $m['alergias'] ?? null,
+            'embarazada'                 => $this->toBoolOrNullLoose($m['embarazada'] ?? null) ?? false,
+            'ultima_fecha_mestruacion'   => $this->toDateYmdOrNull($m['ultima_fecha_mestruacion'] ?? null),
+            'semanas_embarazo'           => $this->toNumOrNull($m['semanas_embarazo'] ?? null),
+            'fecha_estimada_parto'       => $this->toDateYmdOrNull($m['fecha_estimada_parto'] ?? null),
+            'partos'                     => $this->toBoolOrNullLoose($m['partos'] ?? null) ?? false,
+            'partos_data'                => $this->toJsonbOrNull($m['partos_data'] ?? null),
+            'observacion_embarazo'       => $m['observacion_embarazo'] ?? null,
+            'dependiente_medicamento'    => $this->toBoolOrNullLoose($m['dependiente_medicamento'] ?? null) ?? false,
+            'medicamentos_dependiente'   => $this->toJsonbOrNull($m['medicamentos_dependiente'] ?? null),
+            'tiene_seguro_medico'        => $this->toBoolOrNullLoose($m['tiene_seguro_medico'] ?? null) ?? false,
+            'detalles_alergias'          => $this->toJsonbOrNull($m['detalles_alergias'] ?? null),
+            'lactancia_inicio'           => $this->toDateYmdOrNull($m['lactancia_inicio'] ?? null),
+            'lactancia_fin'              => $this->toDateYmdOrNull($m['lactancia_fin'] ?? null),
+            'created_at'                 => now(),
+            'updated_at'                 => now(),
+        ];
+    }
+
+
+
+    /* ======================= End Helpers ======================= */
+
+
     /** GET /diversidad/entrevistas?persona_id= */
     public function index(Request $request)
     {
@@ -39,89 +235,175 @@ class AtencionesDiversidadController extends Controller
     /** POST /diversidad/entrevistas */
     public function store(Request $request)
     {
+        // Validación principal (permite snapshot de diversidad + beneficios)
         $data = $request->validate([
-            'id_funcionario' => 'required|integer',
-            'id_persona'     => 'required|integer',
-            'via_atencion'   => 'nullable|string',
-            'motivo_atencion' => 'nullable|string',
-            'fecha_hora_atencion' => 'nullable|date', // o string
-            'detalle_atencion' => 'nullable|string',
+            'id_funcionario'       => 'required|integer',
+            'id_persona'           => 'required|integer',
+            'via_atencion'         => 'nullable|string',
+            'motivo_atencion'      => 'nullable|string',
+            'fecha_hora_atencion'  => 'nullable|date',
+            'detalle_atencion'     => 'nullable|string',
 
-            // snapshot diversidad
-            'diversidad.carrera'                  => 'nullable|string',
-            'diversidad.status_academico'         => 'nullable|string',
-            'diversidad.nivel_academico'          => 'nullable|string',
-            'diversidad.fecha_inicio_primer_nivel' => 'nullable|string',
-            'diversidad.fecha_ingreso_convalidacion' => 'nullable|string',
-            'diversidad.fecha_inicio_periodo'     => 'nullable|string',
-            'diversidad.fecha_fin_periodo'        => 'nullable|string',
-            'diversidad.segmentacion'             => 'nullable|string',
-            'diversidad.atencion_en_salud'        => 'nullable|boolean',
-            'diversidad.lactancia'                => 'nullable|boolean',
-            'diversidad.numero_hijos'             => 'nullable|integer',
-            'diversidad.hijos_con_discapacidad'   => 'nullable|integer',
-            'diversidad.enfermedad_catastrofica'  => 'nullable|boolean',
-            'diversidad.adaptacion_curricular'    => 'nullable|string',
-            'diversidad.acompanamiento_academico' => 'nullable|boolean',
-            'diversidad.tutor_asignado'           => 'nullable|string',
-            'diversidad.observacion'              => 'nullable|string',
+            // diversidad (snapshot)
+            'diversidad'                                 => 'nullable|array',
+            'diversidad.carrera'                         => 'nullable|string',
+            'diversidad.status_academico'                => 'nullable|string',
+            'diversidad.nivel_academico'                 => 'nullable|string',
+            'diversidad.fecha_inicio_primer_nivel'       => 'nullable|string',
+            'diversidad.fecha_ingreso_convalidacion'     => 'nullable|string',
+            'diversidad.fecha_inicio_periodo'            => 'nullable|string',
+            'diversidad.fecha_fin_periodo'               => 'nullable|string',
+            'diversidad.segmentacion'                    => 'nullable|string',
+            'diversidad.atencion_en_salud'               => 'nullable',
+            'diversidad.lactancia'                       => 'nullable',
+            'diversidad.numero_hijos'                    => 'nullable',
+            'diversidad.hijos_con_discapacidad'          => 'nullable',
+            'diversidad.enfermedad_catastrofica'         => 'nullable',
+            'diversidad.adaptacion_curricular'           => 'nullable|string',
+            'diversidad.acompanamiento_academico'        => 'nullable',
+            'diversidad.tutor_asignado'                  => 'nullable|string',
+            'diversidad.observacion'                     => 'nullable|string',
 
             // beneficios
-            'beneficios.recibe_incentivo' => 'nullable|boolean',
-            'beneficios.recibe_credito'   => 'nullable|boolean',
-            'beneficios.recibe_beca'      => 'nullable|boolean',
-            'beneficios.anio_beca'        => 'nullable|integer',
-            'beneficios.detalle'          => 'nullable|array',
+            'beneficios'                 => 'nullable|array',
+            'beneficios.recibe_incentivo' => 'nullable',
+            'beneficios.recibe_credito'  => 'nullable',
+            'beneficios.recibe_beca'     => 'nullable',
+            'beneficios.anio_beca'       => 'nullable',
+            'beneficios.detalle'         => 'nullable|array',
+            // datos personales (opcionales)
+            'datos_personales'                       => 'nullable|array',
+            'datos_personales.genero'                => 'nullable|string',
+            'datos_personales.discapacidad'          => 'nullable|string', // "SI"/"NO"/""
+            'datos_personales.tipo_discapacidad'     => 'nullable|integer',
+            'datos_personales.porcentaje_discapacidad' => 'nullable|numeric',
+            'datos_personales.provincia'             => 'nullable|string',
+            'datos_personales.ciudad'                => 'nullable|string',
+            'datos_personales.parroquia'             => 'nullable|string',
+            'datos_personales.direccion'             => 'nullable|string',
+            'datos_personales.celular'               => 'nullable|string',
+            'datos_personales.ocupacion'             => 'nullable|string',
+            'datos_personales.bono_desarrollo'       => 'nullable|string', // "SI"/"NO"/""
+            'datos_personales.carnet_conadis'        => 'nullable|string', // "SI"/"NO"/""
+            'datos_personales.estado_civil'          => 'nullable|string',
+            'datos_personales.nacionalidad'          => 'nullable|string',
+            'datos_personales.tipoetnia'             => 'nullable|string',
+            // bloque médico (opcional)
+            'medico'                           => 'nullable|array',
+            'medico.enfermedades_catastroficas' => 'nullable',
+            'medico.detalle_enfermedades'      => 'nullable|array',
+            'medico.tipo_sangre'               => 'nullable|integer',
+            'medico.peso'                      => 'nullable|numeric',
+            'medico.talla'                     => 'nullable|numeric',
+            'medico.imc'                       => 'nullable|numeric',
+            'medico.alergias'                  => 'nullable|string',
+            'medico.embarazada'                => 'nullable',
+            'medico.ultima_fecha_mestruacion'  => 'nullable|date',
+            'medico.semanas_embarazo'          => 'nullable|numeric',
+            'medico.fecha_estimada_parto'      => 'nullable|date',
+            'medico.partos'                    => 'nullable',
+            'medico.partos_data'               => 'nullable|array',
+            'medico.observacion_embarazo'      => 'nullable|string',
+            'medico.dependiente_medicamento'   => 'nullable',
+            'medico.medicamentos_dependiente'  => 'nullable|array',
+            'medico.tiene_seguro_medico'       => 'nullable',
+            'medico.detalles_alergias'         => 'nullable|array',
+            'medico.lactancia_inicio'          => 'nullable|date',
+            'medico.lactancia_fin'             => 'nullable|date',
+            'diversidad.dificultades_aprendizaje' => 'nullable|array', // múltiples
+            'diversidad.dificultades_aprendizaje.*' => 'nullable|string', // items de texto
+
         ]);
 
-        return DB::transaction(function () use ($data) {
-            $fh = $data['fecha_hora_atencion'] ?? now();
+        // También podemos leer 'medico' del request (aunque no esté en $data) para poblar flags relacionados
+        $medico = $request->input('medico', []);
+
+        return DB::transaction(function () use ($data, $medico) {
+            $fh       = $this->toTimestampOrNow($data['fecha_hora_atencion'] ?? null);
+            $anio     = (int)$fh->format('Y');
+
             $atencion = CpuAtencion::create([
                 'id_funcionario'      => $data['id_funcionario'],
                 'id_persona'          => $data['id_persona'],
                 'via_atencion'        => $data['via_atencion'] ?? 'Presencial',
                 'motivo_atencion'     => $data['motivo_atencion'] ?? 'Entrevista Atención a la Diversidad',
                 'fecha_hora_atencion' => $fh,
-                'anio_atencion'       => (int) Carbon::parse($fh)->format('Y'),
+                'anio_atencion'       => $anio,
                 'detalle_atencion'    => $data['detalle_atencion'] ?? 'Corte histórico',
                 'tipo_atencion'       => 'DIVERSIDAD',
                 'id_estado'           => 1,
             ]);
 
             $div = $data['diversidad'] ?? [];
-            // Parsear fechas DD/MM/YYYY si vienen así
-            $date = fn($s) => $s ? Carbon::createFromFormat('d/m/Y', $s)->format('Y-m-d') : null;
 
-            CpuAtencionesDiversidad::create([
+            $payloadDiv = [
                 'id_atencion'                 => $atencion->id,
                 'carrera'                     => $div['carrera'] ?? null,
                 'status_academico'            => $div['status_academico'] ?? null,
                 'nivel_academico'             => $div['nivel_academico'] ?? null,
-                'fecha_inicio_primer_nivel'   => isset($div['fecha_inicio_primer_nivel']) ? $date($div['fecha_inicio_primer_nivel']) : null,
-                'fecha_ingreso_convalidacion' => isset($div['fecha_ingreso_convalidacion']) ? $date($div['fecha_ingreso_convalidacion']) : null,
-                'fecha_inicio_periodo'        => isset($div['fecha_inicio_periodo']) ? $date($div['fecha_inicio_periodo']) : null,
-                'fecha_fin_periodo'           => isset($div['fecha_fin_periodo']) ? $date($div['fecha_fin_periodo']) : null,
+                'fecha_inicio_primer_nivel'   => $this->toDateYmdOrNull($div['fecha_inicio_primer_nivel'] ?? null),
+                'fecha_ingreso_convalidacion' => $this->toDateYmdOrNull($div['fecha_ingreso_convalidacion'] ?? null),
+                'fecha_inicio_periodo'        => $this->toDateYmdOrNull($div['fecha_inicio_periodo'] ?? null),
+                'fecha_fin_periodo'           => $this->toDateYmdOrNull($div['fecha_fin_periodo'] ?? null),
                 'segmentacion'                => $div['segmentacion'] ?? null,
-                'atencion_en_salud'           => $div['atencion_en_salud'] ?? null,
-                'lactancia'                   => $div['lactancia'] ?? null,
-                'numero_hijos'                => $div['numero_hijos'] ?? null,
-                'hijos_con_discapacidad'      => $div['hijos_con_discapacidad'] ?? null,
-                'enfermedad_catastrofica'     => $div['enfermedad_catastrofica'] ?? null,
+                'dificultades_aprendizaje' => $this->toJsonbOrNull($div['dificultades_aprendizaje'] ?? null),
+
+                // booleans: aceptar SI/NO/true/false/1/0
+                'atencion_en_salud'           => $this->toBoolOrNull($div['atencion_en_salud'] ?? null),
+                'lactancia'                   => $this->toBoolOrNull(($div['lactancia'] ?? null) ?? ($medico['lactancia'] ?? null)),
+                'enfermedad_catastrofica'     => $this->toBoolOrNull(($div['enfermedad_catastrofica'] ?? null) ?? ($medico['enfermedades_catastroficas'] ?? null)),
+                'acompanamiento_academico'    => $this->toBoolOrNull($div['acompanamiento_academico'] ?? null),
+
+                // ints
+                'numero_hijos'                => $this->toIntOrNull($div['numero_hijos'] ?? null),
+                'hijos_con_discapacidad'      => $this->toIntOrNull($div['hijos_con_discapacidad'] ?? null),
+
                 'adaptacion_curricular'       => $div['adaptacion_curricular'] ?? null,
-                'acompanamiento_academico'    => $div['acompanamiento_academico'] ?? null,
                 'tutor_asignado'              => $div['tutor_asignado'] ?? null,
                 'observacion'                 => $div['observacion'] ?? null,
-            ]);
+            ];
+
+            CpuAtencionesDiversidad::create($payloadDiv);
 
             $ben = $data['beneficios'] ?? [];
-            CpuAtencionesDivBeneficios::create([
-                'id_atencion'     => $atencion->id,
-                'recibe_incentivo' => $ben['recibe_incentivo'] ?? null,
-                'recibe_credito'  => $ben['recibe_credito'] ?? null,
-                'recibe_beca'     => $ben['recibe_beca'] ?? null,
-                'anio_beca'       => $ben['anio_beca'] ?? null,
-                'detalle'         => $ben['detalle'] ?? null,
-            ]);
+            $payloadBen = [
+                'id_atencion'      => $atencion->id,
+                'recibe_incentivo' => $this->toBoolOrNull($ben['recibe_incentivo'] ?? null),
+                'recibe_credito'   => $this->toBoolOrNull($ben['recibe_credito'] ?? null),
+                'recibe_beca'      => $this->toBoolOrNull($ben['recibe_beca'] ?? null),
+                'anio_beca'        => $this->toIntOrNull($ben['anio_beca'] ?? null),
+                'detalle'          => $this->normalizeDetalleBeneficios($ben),
+            ];
+            CpuAtencionesDivBeneficios::create($payloadBen);
+
+            // === Actualizar cpu_personas si llegan datos_personales ===
+            if (!empty($data['datos_personales']) && !empty($data['id_persona'])) {
+                $personSet = $this->mapDatosPersonalesToPersona($data['datos_personales']);
+                // Limpia nulls "no significativos" si lo prefieres (opcional)
+                // $personSet = array_filter($personSet, fn($v) => $v !== null, ARRAY_FILTER_USE_BOTH);
+
+                DB::table('cpu_personas')
+                    ->where('id', (int)$data['id_persona'])
+                    ->update($personSet);
+            }
+
+            if (!empty($medico)) {
+                $row = $this->mapMedicoToSaludRow((int)$data['id_persona'] ?? (int)$atencion->id_persona, $medico);
+
+                $last = DB::table('cpu_datos_medicos')
+                    ->where('id_persona', (int)($data['id_persona'] ?? $atencion->id_persona))
+                    ->orderByDesc('created_at')
+                    ->first();
+
+                if ($last) {
+                    unset($row['created_at']); // preserva created_at del primero
+                    DB::table('cpu_datos_medicos')->where('id', $last->id)->update($row);
+                } else {
+                    DB::table('cpu_datos_medicos')->insert($row);
+                }
+            }
+
+
 
             return response()->json(
                 CpuAtencion::with(['diversidad', 'beneficios'])->find($atencion->id),
@@ -136,45 +418,50 @@ class AtencionesDiversidadController extends Controller
         $atencion = CpuAtencion::with(['diversidad', 'beneficios'])->findOrFail($atencionId);
 
         $data = $request->validate([
-            'via_atencion'   => 'nullable|string',
-            'motivo_atencion' => 'nullable|string',
+            'via_atencion'        => 'nullable|string',
+            'motivo_atencion'     => 'nullable|string',
             'fecha_hora_atencion' => 'nullable|date',
-            'detalle_atencion' => 'nullable|string',
+            'detalle_atencion'    => 'nullable|string',
 
-            'diversidad' => 'nullable|array',
-            'beneficios' => 'nullable|array',
+            'diversidad'          => 'nullable|array',
+            'beneficios'          => 'nullable|array',
         ]);
 
-        return DB::transaction(function () use ($data, $atencion) {
+        // por si llegan datos de 'medico' que alimenten flags
+        $medico = $request->input('medico', []);
+
+        return DB::transaction(function () use ($data, $atencion, $medico) {
             if (isset($data['via_atencion']))       $atencion->via_atencion = $data['via_atencion'];
             if (isset($data['motivo_atencion']))    $atencion->motivo_atencion = $data['motivo_atencion'];
             if (isset($data['fecha_hora_atencion'])) {
-                $atencion->fecha_hora_atencion = $data['fecha_hora_atencion'];
-                $atencion->anio_atencion = (int) Carbon::parse($data['fecha_hora_atencion'])->format('Y');
+                $fh = $this->toTimestampOrNow($data['fecha_hora_atencion']);
+                $atencion->fecha_hora_atencion = $fh;
+                $atencion->anio_atencion = (int)$fh->format('Y');
             }
             if (isset($data['detalle_atencion']))   $atencion->detalle_atencion = $data['detalle_atencion'];
             $atencion->save();
 
             if (isset($data['diversidad'])) {
                 $div = $data['diversidad'];
-                $date = fn($s) => $s ? Carbon::createFromFormat('d/m/Y', $s)->format('Y-m-d') : null;
 
                 $payload = [
                     'carrera'                     => $div['carrera'] ?? null,
                     'status_academico'            => $div['status_academico'] ?? null,
                     'nivel_academico'             => $div['nivel_academico'] ?? null,
                     'segmentacion'                => $div['segmentacion'] ?? null,
-                    'atencion_en_salud'           => $div['atencion_en_salud'] ?? null,
-                    'lactancia'                   => $div['lactancia'] ?? null,
-                    'numero_hijos'                => $div['numero_hijos'] ?? null,
-                    'hijos_con_discapacidad'      => $div['hijos_con_discapacidad'] ?? null,
-                    'enfermedad_catastrofica'     => $div['enfermedad_catastrofica'] ?? null,
+
+                    'atencion_en_salud'           => $this->toBoolOrNull($div['atencion_en_salud'] ?? null),
+                    'lactancia'                   => $this->toBoolOrNull(($div['lactancia'] ?? null) ?? ($medico['lactancia'] ?? null)),
+                    'numero_hijos'                => $this->toIntOrNull($div['numero_hijos'] ?? null),
+                    'hijos_con_discapacidad'      => $this->toIntOrNull($div['hijos_con_discapacidad'] ?? null),
+                    'enfermedad_catastrofica'     => $this->toBoolOrNull(($div['enfermedad_catastrofica'] ?? null) ?? ($medico['enfermedades_catastroficas'] ?? null)),
                     'adaptacion_curricular'       => $div['adaptacion_curricular'] ?? null,
-                    'acompanamiento_academico'    => $div['acompanamiento_academico'] ?? null,
+                    'acompanamiento_academico'    => $this->toBoolOrNull($div['acompanamiento_academico'] ?? null),
                     'tutor_asignado'              => $div['tutor_asignado'] ?? null,
                     'observacion'                 => $div['observacion'] ?? null,
                 ];
 
+                // Fechas flexibles
                 foreach (
                     [
                         'fecha_inicio_primer_nivel'   => 'fecha_inicio_primer_nivel',
@@ -184,7 +471,7 @@ class AtencionesDiversidadController extends Controller
                     ] as $in => $col
                 ) {
                     if (array_key_exists($in, $div)) {
-                        $payload[$col] = $div[$in] ? $date($div[$in]) : null;
+                        $payload[$col] = $this->toDateYmdOrNull($div[$in]);
                     }
                 }
 
@@ -196,12 +483,13 @@ class AtencionesDiversidadController extends Controller
             if (isset($data['beneficios'])) {
                 $ben = $data['beneficios'];
                 $payload = [
-                    'recibe_incentivo' => $ben['recibe_incentivo'] ?? null,
-                    'recibe_credito'   => $ben['recibe_credito'] ?? null,
-                    'recibe_beca'      => $ben['recibe_beca'] ?? null,
-                    'anio_beca'        => $ben['anio_beca'] ?? null,
-                    'detalle'          => $ben['detalle'] ?? null,
+                    'recibe_incentivo' => $this->toBoolOrNull($ben['recibe_incentivo'] ?? null),
+                    'recibe_credito'   => $this->toBoolOrNull($ben['recibe_credito'] ?? null),
+                    'recibe_beca'      => $this->toBoolOrNull($ben['recibe_beca'] ?? null),
+                    'anio_beca'        => $this->toIntOrNull($ben['anio_beca'] ?? null),
+                    'detalle'          => $this->normalizeDetalleBeneficios($ben),
                 ];
+
                 $atencion->beneficios
                     ? $atencion->beneficios->update($payload)
                     : CpuAtencionesDivBeneficios::create(array_merge($payload, ['id_atencion' => $atencion->id]));
@@ -213,6 +501,7 @@ class AtencionesDiversidadController extends Controller
         });
     }
 
+    /** GET /diversidad/prefetch?persona_id= */
     public function prefetch(Request $request)
     {
         $personaId = (int) $request->query('persona_id');
@@ -223,6 +512,7 @@ class AtencionesDiversidadController extends Controller
         return response()->json($payload);
     }
 
+    /** POST /diversidad/salud (histórico) */
     public function actualizarSalud(Request $request)
     {
         $data = $request->validate([
@@ -234,13 +524,13 @@ class AtencionesDiversidadController extends Controller
 
             // Embarazo
             'embarazada'               => 'nullable|boolean',
-            'ultima_fecha_mestruacion' => 'nullable|date',    // YYYY-MM-DD (tu columna es DATE)
+            'ultima_fecha_mestruacion' => 'nullable|date',    // YYYY-MM-DD
             'semanas_embarazo'         => 'nullable|numeric',
             'fecha_estimada_parto'     => 'nullable|date',
             'observacion_embarazo'     => 'nullable|string',
 
             // Lactancia
-            'lactancia'         => 'nullable|boolean', // (si lo necesitas para front; no se guarda)
+            'lactancia'         => 'nullable|boolean',
             'lactancia_inicio'  => 'nullable|date',
             'lactancia_fin'     => 'nullable|date',
 
@@ -251,24 +541,24 @@ class AtencionesDiversidadController extends Controller
         $personaId = (int) $data['persona_id'];
 
         $payload = [
-            'id_persona'                => $personaId,
+            'id_persona'                 => $personaId,
             'enfermedades_catastroficas' => $data['enfermedades_catastroficas'],
-            'detalle_enfermedades'      => isset($data['detalle_enfermedades']) ? json_encode($data['detalle_enfermedades']) : null,
+            'detalle_enfermedades'       => isset($data['detalle_enfermedades']) ? json_encode($data['detalle_enfermedades']) : null,
 
-            'embarazada'                => $data['embarazada'] ?? false,
-            'ultima_fecha_mestruacion'  => $data['ultima_fecha_mestruacion'] ?? null, // DATE
-            'semanas_embarazo'          => $data['semanas_embarazo'] ?? null,
-            'fecha_estimada_parto'      => $data['fecha_estimada_parto'] ?? null,
-            'observacion_embarazo'      => $data['observacion_embarazo'] ?? null,
+            'embarazada'                 => $data['embarazada'] ?? false,
+            'ultima_fecha_mestruacion'   => $data['ultima_fecha_mestruacion'] ?? null,
+            'semanas_embarazo'           => $data['semanas_embarazo'] ?? null,
+            'fecha_estimada_parto'       => $data['fecha_estimada_parto'] ?? null,
+            'observacion_embarazo'       => $data['observacion_embarazo'] ?? null,
 
-            'lactancia_inicio'          => $data['lactancia_inicio'] ?? null,
-            'lactancia_fin'             => $data['lactancia_fin'] ?? null,
+            'lactancia_inicio'           => $data['lactancia_inicio'] ?? null,
+            'lactancia_fin'              => $data['lactancia_fin'] ?? null,
 
-            'partos'                    => $data['partos'] ?? false,
-            'partos_data'               => isset($data['partos_data']) ? json_encode($data['partos_data']) : null,
+            'partos'                     => $data['partos'] ?? false,
+            'partos_data'                => isset($data['partos_data']) ? json_encode($data['partos_data']) : null,
 
-            'created_at'                => now(),
-            'updated_at'                => now(),
+            'created_at'                 => now(),
+            'updated_at'                 => now(),
         ];
 
         // SIEMPRE INSERTA (historial)
@@ -276,7 +566,6 @@ class AtencionesDiversidadController extends Controller
 
         return response()->json(['ok' => true]);
     }
-
 
     /** GET /diversidad/carreras
      * Retorna string[] con valores únicos de cpu_datos_estudiantes.carrera
@@ -299,13 +588,12 @@ class AtencionesDiversidadController extends Controller
     }
 
     /** GET /diversidad/personas/{personaId}/ultima-carrera
-     * Devuelve { carrera: string|null } tomando el último registro (created_at/updated_at/id)
+     * Devuelve { carrera: string|null } tomando el último registro
      */
     public function ultimaCarreraDePersona($personaId)
     {
         $personaId = (int)$personaId;
 
-        // Heurística: prioriza updated_at, luego created_at, luego id desc
         $row = DB::table('cpu_datos_estudiantes')
             ->where('id_persona', $personaId)
             ->whereNotNull('carrera')
@@ -318,12 +606,7 @@ class AtencionesDiversidadController extends Controller
         return response()->json(['carrera' => $row->carrera ?? null]);
     }
 
-    /** GET /diversidad/segmento?cedula=
-     * Busca el segmento poblacional en:
-     * 1) cpu_personas.pro_segmentacion_persona  (source='persona')
-     * 2) cpu_legalizacion_matricula (ajusta nombre de columna si difiere) (source='legalizacion')
-     * 3) (opcional) tabla MTN si existe, p.ej. cpu_mtn_personas.segmento (source='mtn')
-     */
+    /** GET /diversidad/segmento?cedula= */
     public function resolverSegmentoPorCedula(Request $request)
     {
         $cedula = trim((string)$request->query('cedula', ''));
@@ -333,7 +616,7 @@ class AtencionesDiversidadController extends Controller
 
         // 1) PERSONA -> ID por cedula
         $personaId = DB::table('cpu_personas')
-            ->where('cedula', $cedula)   // tu tabla tiene 'cedula'
+            ->where('cedula', $cedula)
             ->value('id');
 
         // 2) Datos de estudiante (maestro que quieres usar)
@@ -347,11 +630,9 @@ class AtencionesDiversidadController extends Controller
                 ->value('segmentacion_persona');
 
             if ($segEst && trim($segEst) !== '') {
-                // mantenemos 'persona' como source para que el front no vuelva a intentar actualizar
                 return response()->json(['segmento' => trim($segEst), 'source' => 'persona']);
             }
         } else {
-            // Join inverso por si no se encontró la persona por cualquier motivo
             $segJoin = DB::table('cpu_datos_estudiantes as de')
                 ->join('cpu_personas as p', 'p.id', '=', 'de.id_persona')
                 ->where('p.cedula', $cedula)
@@ -366,15 +647,9 @@ class AtencionesDiversidadController extends Controller
             }
         }
 
-        // 3) LEGALIZACIÓN: tu columna es 'segmento_persona'
+        // 3) LEGALIZACIÓN
         if (Schema::hasTable('cpu_legalizacion_matricula')) {
-            // Evita columnas inexistentes en el WHERE
-            $q = DB::table('cpu_legalizacion_matricula');
-            $q->where(function ($w) use ($cedula) {
-                $w->where('cedula', $cedula);
-                // si en el futuro agregas otras, añádelas con hasColumn
-            });
-
+            $q = DB::table('cpu_legalizacion_matricula')->where('cedula', $cedula);
             $segLegal = Schema::hasColumn('cpu_legalizacion_matricula', 'segmento_persona')
                 ? $q->orderByDesc(DB::raw('COALESCE(updated_at, created_at, now())'))
                 ->orderByDesc('id')
@@ -386,7 +661,7 @@ class AtencionesDiversidadController extends Controller
             }
         }
 
-        // 4) MTN (tu tabla es cpu_mtn_2018_2022 con columnas 'cedula' y 'segmento')
+        // 4) MTN
         if (Schema::hasTable('cpu_mtn_2018_2022')) {
             $segMtn = DB::table('cpu_mtn_2018_2022')
                 ->where('cedula', $cedula)
@@ -402,7 +677,6 @@ class AtencionesDiversidadController extends Controller
     }
 
     /** PUT /diversidad/personas/{personaId}/segmento
-     * Actualiza cpu_personas.pro_segmentacion_persona
      * body: { segmento: string }
      */
     public function actualizarSegmentoPersona(Request $request, $personaId)
@@ -413,7 +687,6 @@ class AtencionesDiversidadController extends Controller
         ]);
         $segmento = isset($data['segmento']) ? trim((string)$data['segmento']) : null;
 
-        // Buscar el registro más reciente en cpu_datos_estudiantes
         $row = DB::table('cpu_datos_estudiantes')
             ->where('id_persona', $personaId)
             ->orderByDesc(DB::raw('COALESCE(updated_at, created_at, now())'))
@@ -421,7 +694,6 @@ class AtencionesDiversidadController extends Controller
             ->first();
 
         if ($row) {
-            // Actualiza el registro más reciente
             $updated = DB::table('cpu_datos_estudiantes')
                 ->where('id', $row->id)
                 ->update([
@@ -430,7 +702,6 @@ class AtencionesDiversidadController extends Controller
                 ]);
             return response()->json(['ok' => (bool)$updated]);
         } else {
-            // Si no hay fila para ese id_persona, crea una mínima
             DB::table('cpu_datos_estudiantes')->insert([
                 'id_persona' => $personaId,
                 'segmentacion_persona' => $segmento ?: null,

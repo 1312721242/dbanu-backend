@@ -47,6 +47,7 @@ class CpuAuthSBEController extends Controller
                 return response()->json(['error' => 'Error al enviar la solicitud a Azure Logic Apps'], 500);
             }
 
+            Log::info('Respuesta de Azure Logic Apps', $response->json());
             return response()->json($response->json());
         } catch (\Exception $e) {
             Log::error('Error al obtener el token de acceso: ' . $e->getMessage());

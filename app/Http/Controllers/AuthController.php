@@ -175,55 +175,136 @@ class AuthController extends Controller
     }
 
     // Login con tabla users_sbe
+    // public function loginSbe(Request $request)
+    // {
+    //     $request->validate([
+    //         'email'    => 'required|email',
+    //         'password' => 'required',
+    //         'nombres'  => 'required|string|max:255',
+    //         'cedula'   => 'required|string|max:20',
+    //     ]);
+
+    //     // Buscar usuario
+    //     $user = UserSbe::where('email', $request->email)->first();
+
+    //     if (!$user) {
+    //         $user = UserSbe::create([
+    //             'name'     => $request->nombres,
+    //             'email'    => $request->email,
+    //             'password' => Hash::make($request->password),
+    //         ]);
+    //     }
+
+    //     // Buscar o crear persona
+    //     $persona = CpuPersona::where('cedula', $request->cedula)->first();
+
+    //     if (!$persona) {
+    //         $persona = CpuPersona::create([
+    //             'cedula'       => $request->cedula,
+    //             'nombres'      => $request->nombres,
+    //             'nacionalidad' => $request->nacionalidad ?? null,
+    //             'provincia'    => $request->provincia ?? null,
+    //             'ciudad'       => $request->ciudad ?? null,
+    //             'direccion'    => $request->direccion ?? null,
+    //             'sexo'         => $request->sexo ?? null,
+    //             'fechanaci'    => $request->fechanaci ?? null,
+    //             'celular'      => $request->celular ?? null,
+    //             'tipoetnia'    => $request->tipoetnia ?? null,
+    //             'discapacidad' => $request->discapacidad ?? null,
+    //             'estado_civil' => $request->estado_civil ?? null,
+    //         ]);
+    //     }
+
+    //     // Validar contraseña
+    //     if (!Hash::check($request->password, $user->password)) {
+    //         return response()->json(['message' => 'El correo electrónico o la contraseña son incorrectos'], 422);
+    //     }
+
+    //     // Generar token
+    //     $token = $user->createToken('auth_token')->plainTextToken;
+
+    //     // Retornar datos
+    //     return response()->json([
+    //         'id'         => $user->id,
+    //         'id_persona' => $persona->id,
+    //         'token'      => $token,
+    //         'email'      => $user->email,
+    //         'cedula'     => $request->cedula,
+    //         'name'       => $user->name,
+    //     ]);
+    // }
+
+
     public function loginSbe(Request $request)
     {
         $request->validate([
-            'email'    => 'required|email',
-            'password' => 'required',
-            'nombres'  => 'required|string|max:255',
-            'cedula'   => 'required|string|max:20',
+            'email'   => 'required|email',
+            'nombres' => 'required|string|max:255',
+            'cedula'  => 'required|string|max:20',
         ]);
 
-        // Buscar usuario
-        $user = UserSbe::where('email', $request->email)->first();
+        // 🔹 Llamar directamente al controlador
+        $controller = new CpuAuthSBEController();
+        $response = $controller->consultarBienestar(new Request([
+            'identificacion' => $request->cedula
+        ]));
 
-        if (!$user) {
-            $user = UserSbe::create([
+        $datos = $response->getData(true);
+
+        if (!isset($datos['estadoMatricula']) || $datos['estadoMatricula'] !== "ESTÁ MATRICULADO") {
+            return response()->json(['message' => 'Solo estudiantes matriculados pueden acceder'], 401);
+        }
+
+        // 🔹 Crear/actualizar usuario
+        $user = UserSbe::firstOrCreate(
+            ['email' => $request->email],
+            [
                 'name'     => $request->nombres,
-                'email'    => $request->email,
-                'password' => Hash::make($request->password),
-            ]);
-        }
+                'password' => Hash::make($request->cedula),
+            ]
+        );
 
-        // Buscar o crear persona
-        $persona = CpuPersona::where('cedula', $request->cedula)->first();
-
-        if (!$persona) {
-            $persona = CpuPersona::create([
-                'cedula'       => $request->cedula,
+        // 🔹 Crear/actualizar persona
+        $persona = CpuPersona::updateOrCreate(
+            ['cedula' => $request->cedula],
+            [
                 'nombres'      => $request->nombres,
-                'nacionalidad' => $request->nacionalidad ?? null,
-                'provincia'    => $request->provincia ?? null,
-                'ciudad'       => $request->ciudad ?? null,
-                'direccion'    => $request->direccion ?? null,
-                'sexo'         => $request->sexo ?? null,
-                'fechanaci'    => $request->fechanaci ?? null,
-                'celular'      => $request->celular ?? null,
-                'tipoetnia'    => $request->tipoetnia ?? null,
-                'discapacidad' => $request->discapacidad ?? null,
-                'estado_civil' => $request->estado_civil ?? null,
-            ]);
-        }
+                'direccion'    => $datos['direccionDomicilio'] ?? null,
+                'celular'      => $datos['celular'] ?? null,
+                'fechanaci'    => $datos['fechaNacimiento'] ?? null,
+                'sexo'         => $datos['sexo'] ?? null,
+                'estado_civil' => $datos['estadoCivil'] ?? null,
+                'nacionalidad' => $datos['nacionalidad'] ?? null,
+                'provincia'    => $datos['provincia'] ?? null,
+                'ciudad'       => $datos['ciudad'] ?? null,
+                'tipoetnia'    => $datos['etnia'] ?? null,
+                'discapacidad' => $datos['discapacidad'] ?? null,
+                'id_tipo_usuario' => 1,
+            ]
+        );
 
-        // Validar contraseña
-        if (!Hash::check($request->password, $user->password)) {
-            return response()->json(['message' => 'El correo electrónico o la contraseña son incorrectos'], 422);
-        }
+        // 🔹 Crear/actualizar datos académicos
+        DB::table('cpu_datos_estudiantes')->updateOrInsert(
+            ['id_persona' => $persona->id],
+            [
+                'campus'            => $datos['campus'] ?? null,
+                'facultad'          => $datos['facultad'] ?? null,
+                'carrera'           => $datos['carrera'] ?? null,
+                'semestre_actual'   => $datos['semestreActual'] ?? null,
+                'estado_estudiante' => $datos['estadoEstudiante'] ?? null,
+                'estado_civil'      => $datos['estadoCivil'] ?? null,
+                'email_institucional' => $datos['emailInstitucional'] ?? null,
+                'email_personal'    => $datos['emailPersonal'] ?? null,
+                'telefono'          => $datos['celular'] ?? null,
+                'estado_matricula'  => $datos['estadoMatricula'] ?? null,
+                'updated_at'        => now(),
+                'created_at'        => now(),
+            ]
+        );
 
-        // Generar token
+        // 🔹 Generar token
         $token = $user->createToken('auth_token')->plainTextToken;
 
-        // Retornar datos
         return response()->json([
             'id'         => $user->id,
             'id_persona' => $persona->id,
@@ -233,6 +314,8 @@ class AuthController extends Controller
             'name'       => $user->name,
         ]);
     }
+
+
 
 
     public function logout(Request $request)

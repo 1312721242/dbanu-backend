@@ -243,7 +243,7 @@ class AuthController extends Controller
             'cedula'  => 'required|string|max:20',
         ]);
 
-        // 🔹 Llamar directamente al controlador
+        // Llamar directamente al controlador
         $controller = new CpuAuthSBEController();
         $response = $controller->consultarBienestar(new Request([
             'identificacion' => $request->cedula
@@ -255,7 +255,7 @@ class AuthController extends Controller
             return response()->json(['message' => 'Solo estudiantes matriculados pueden acceder'], 401);
         }
 
-        // 🔹 Crear/actualizar usuario
+        // Crear/actualizar usuario
         $user = UserSbe::firstOrCreate(
             ['email' => $request->email],
             [
@@ -264,7 +264,7 @@ class AuthController extends Controller
             ]
         );
 
-        // 🔹 Crear/actualizar persona
+        // Crear/actualizar persona
         $persona = CpuPersona::updateOrCreate(
             ['cedula' => $request->cedula],
             [
@@ -283,7 +283,7 @@ class AuthController extends Controller
             ]
         );
 
-        // 🔹 Crear/actualizar datos académicos
+        // Crear/actualizar datos académicos
         DB::table('cpu_datos_estudiantes')->updateOrInsert(
             ['id_persona' => $persona->id],
             [
@@ -302,7 +302,7 @@ class AuthController extends Controller
             ]
         );
 
-        // 🔹 Generar token
+        // Generar token
         $token = $user->createToken('auth_token')->plainTextToken;
 
         return response()->json([

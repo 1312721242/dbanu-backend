@@ -88,8 +88,12 @@ use App\Http\Controllers\CpuCasosMedicosController;
 use App\Http\Controllers\CpuBodegasController;
 use App\Http\Controllers\CpuInventariosController;
 use App\Http\Controllers\CpuHorarioGymControllers;
+<<<<<<< HEAD
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+=======
+use App\Http\Controllers\TurnosGymControllers;
+>>>>>>> 27a616c (Work on API: temporary local changes)
 
 // Autenticación
 Route::get('credencial-pdf/{identificacion}/{periodo}', [CpuBecadoController::class, 'generarCredencialPDF']);
@@ -697,7 +701,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('/roles/{id}', [RoleController::class, 'consultarRol']);
 
 
-    // Carrera
+    // Carrerausu
     Route::post('/agregar-carrera', [CpuCarreraController::class, 'agregarCarrera']);
     Route::put('/modificar-carrera/{id}', [CpuCarreraController::class, 'modificarCarrera']);
     Route::delete('/eliminar-carrera/{id}', [CpuCarreraController::class, 'eliminarCarrera']);
@@ -720,8 +724,12 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('/get-horario-gym', [CpuHorarioGymControllers::class, 'getHorarioGym']);
     Route::post('/guardar-horario-gym', [CpuHorarioGymControllers::class, 'guardarHorarioGym']);
 
+    // Turnos reservados
+    Route::get('/get-turno-gym', [TurnosGymControllers::class, 'getTurnoGym']);
+    Route::post('/guardar-turno-gym-id', [TurnosGymControllers::class, 'guardarTurnoGymId']);
 
-
+    Route::get('/get-generar-turno', [TurnosGymControllers::class, 'getGenerarTurnoGym']);
+    
 
     // Route::put('/modificar-inventario/{id}', [CpuInventarioController::class, 'modificarInventario']);
 });

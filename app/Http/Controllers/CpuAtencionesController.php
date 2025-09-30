@@ -1121,7 +1121,7 @@ class CpuAtencionesController extends Controller
             $atencion->recomendacion = $request->input('recomendacion');
             $atencion->tipo_atencion = $request->input('tipo_atencion');
             $atencion->id_cie10 = $request->input('id_cie10');
-            $atencion->tipo_atencion = $request->input('tipo_atencion');
+            //$atencion->tipo_atencion = $request->input('tipo_atencion');
             $atencion->id_estado = 1;
             $atencion->save();
 

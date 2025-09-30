@@ -88,12 +88,9 @@ use App\Http\Controllers\CpuCasosMedicosController;
 use App\Http\Controllers\CpuBodegasController;
 use App\Http\Controllers\CpuInventariosController;
 use App\Http\Controllers\CpuHorarioGymControllers;
-<<<<<<< HEAD
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
-=======
 use App\Http\Controllers\TurnosGymControllers;
->>>>>>> 27a616c (Work on API: temporary local changes)
 
 // Autenticación
 Route::get('credencial-pdf/{identificacion}/{periodo}', [CpuBecadoController::class, 'generarCredencialPDF']);

@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
 use App\Models\CpuAtencion;
 use App\Models\CpuAtencionFisioterapia;
 use App\Models\CpuAtencionMedicinaGeneral;
@@ -10,17 +9,17 @@ use App\Models\CpuAtencionNutricion;
 use App\Models\CpuAtencionTriaje;
 use App\Models\CpuCasosMedicos;
 use App\Models\CpuDerivacion;
+use App\Models\CpuEstado;
 use App\Models\CpuInsumo;
 use App\Models\CpuInsumoOcupado;
 use App\Models\CpuTurno;
-use Illuminate\Support\Facades\Validator;
-use Illuminate\Support\Facades\DB; // Asegúrate de importar esta clase
 use Carbon\Carbon;
+use Illuminate\Http\Request; // Asegúrate de importar esta clase
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\URL;
-use App\Models\CpuEstado;
-use Mpdf\Tag\B;
-use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Validator;
 
 class CpuAtencionesController extends Controller
 {
@@ -34,7 +33,6 @@ class CpuAtencionesController extends Controller
 
     public function guardarAtencion(Request $request)
     {
-
         $validator = Validator::make($request->all(), [
             'id_funcionario' => 'required|integer',
             'id_persona' => 'required|integer',
@@ -44,7 +42,6 @@ class CpuAtencionesController extends Controller
             'fecha_hora_atencion' => 'required|date_format:Y-m-d H:i:s',
             'anio_atencion' => 'required|integer',
         ]);
-
 
         if ($validator->fails()) {
             return response()->json(['error' => $validator->errors()], 400);
@@ -84,12 +81,13 @@ class CpuAtencionesController extends Controller
         return response()->json(['success' => true, 'id' => $atencion->id]);
     }
 
-
-    // // Consulta de traer las atenciones de cada usuario en la tabla de la opcion de regitros
     public function obtenerAtencionesPorPaciente($id_persona, $id_funcionario, $usr_tipo = null)
     {
-        // Realiza la consulta filtrando por id_persona, id_funcionario e id_estado = 1 y selecciona todas las columnas necesarias
-        $atenciones = DB::table('cpu_atenciones as at')
+        $rolUsuario = optional(auth()->user())->usr_tipo ?? $usr_tipo;
+        $esPsicologia = ((int) $rolUsuario === 7);
+
+        // ------------------- QUERY PRINCIPAL -------------------
+        $builder = DB::table('cpu_atenciones as at')
             ->select(
                 'at.id',
                 'at.id_funcionario',
@@ -104,12 +102,13 @@ class CpuAtencionesController extends Controller
                 'at.id_caso',
                 'at.id_tipo_usuario',
                 'at.evolucion_enfermedad',
-                DB::raw('at.diagnostico::text as diagnostico'), // Convertir el campo jsonb a texto
+                DB::raw('at.diagnostico::text as diagnostico'),
                 'at.prescripcion',
                 'at.recomendacion',
                 'at.tipo_atencion',
                 'at.id_estado',
-                // Seleccionar columnas adicionales de la tabla cpu_atenciones_psicologia
+
+                // Campos de psicología
                 'ap.tipo_usuario as ap_tipo_usuario',
                 'ap.tipo_atencion as ap_tipo_atencion',
                 'ap.medio_atencion as ap_medio_atencion',
@@ -136,7 +135,8 @@ class CpuAtencionesController extends Controller
                 'ap.abordaje_caso as ap_abordaje_caso',
                 'ap.prescripcion as ap_prescripcion_psicologica',
                 'ap.descripcionfinal as ap_descripcionfinal',
-                // Datos adicionales de otras tablas
+
+                // Trabajo social
                 'ts.tipo_informe as ts_tipo_informe',
                 'ts.requiriente as ts_requiriente',
                 'ts.numero_tramite as ts_numero_tramite',
@@ -144,40 +144,39 @@ class CpuAtencionesController extends Controller
                 'ts.observaciones as ts_observaciones',
                 'ts.url_informe as ts_url_informe',
                 'ts.periodo as ts_periodo'
-            )
-            ->leftJoin('cpu_atenciones_trabajo_social as ts', function ($join) use ($usr_tipo) {
-                $join->on('at.id', '=', 'ts.id_atenciones');
-                if ($usr_tipo !== null && $usr_tipo == 10) {
-                    $join->whereNotNull('ts.id'); // Solo incluye los registros si usr_tipo es 10
-                }
-            })
-            ->leftJoin('cpu_atenciones_psicologia as ap', 'at.id', '=', 'ap.id_cpu_atencion')  // Hacer el join con cpu_atenciones_psicologia
-            ->when($id_persona, function ($query, $id_persona) {
-                return $query->where('at.id_persona', $id_persona);
-            })
-            ->when($id_funcionario, function ($query, $id_funcionario) {
-                return $query->where('at.id_funcionario', $id_funcionario);
-            })
-            ->where('at.id_estado', 1)  // Añadir la condición de que id_estado sea igual a 1
+            );
+
+        $builder->leftJoin('cpu_atenciones_trabajo_social as ts', function ($join) use ($rolUsuario) {
+            $join->on('at.id', '=', 'ts.id_atenciones');
+            if (!is_null($rolUsuario) && (int) $rolUsuario === 10) {
+                $join->whereNotNull('ts.id');
+            }
+        });
+
+        if ($esPsicologia) {
+            $builder->join('cpu_atenciones_psicologia as ap', 'at.id', '=', 'ap.id_cpu_atencion');
+        } else {
+            $builder->leftJoin('cpu_atenciones_psicologia as ap', 'at.id', '=', 'ap.id_cpu_atencion');
+        }
+
+        $builder->when($id_persona, fn ($q, $id_persona) => $q->where('at.id_persona', $id_persona));
+        if (!$esPsicologia && $id_funcionario) {
+            $builder->where('at.id_funcionario', $id_funcionario);
+        }
+
+        $atenciones = $builder
+            ->where('at.id_estado', 1)
             ->orderBy('at.created_at', 'desc')
             ->get();
 
-        // Filtramos las atenciones que tienen id_caso y las que no
-        $atencionesConCaso = $atenciones->filter(function ($atencion) {
-            return !is_null($atencion->id_caso);
-        })->groupBy('id_caso');
+        // ------------------- AGRUPADO POR CASO / SIN CASO -------------------
+        $atencionesConCaso = $atenciones->filter(fn ($a) => !is_null($a->id_caso))->groupBy('id_caso');
+        $atencionesSinCaso = $atenciones->filter(fn ($a) => is_null($a->id_caso));
 
-        // No agrupamos las atenciones que no tienen id_caso
-        $atencionesSinCaso = $atenciones->filter(function ($atencion) {
-            return is_null($atencion->id_caso);
-        });
-
-        // Mapeamos las atenciones con caso
-        $resultadoConCaso = $atencionesConCaso->map(function ($atencionesPorCaso, $id_caso) {
+        $resultadoConCaso = $atencionesConCaso->map(function ($atencionesPorCaso, $id_caso) use ($id_persona, $esPsicologia) {
             $atencionPrincipal = $atencionesPorCaso->first();
-            $atencionPrincipal->tipo = "Caso";
+            $atencionPrincipal->tipo = 'Caso';
 
-            // Obtener los detalles del caso
             $caso = DB::table('cpu_casos as c')
                 ->join('cpu_estados as e', 'c.id_estado', '=', 'e.id')
                 ->select('c.id', 'c.nombre_caso', 'e.id as id_estado', 'e.estado as estado')
@@ -192,10 +191,16 @@ class CpuAtencionesController extends Controller
                     'estado' => $caso->id_estado == 8 ? 'Abierto' : 'Cerrado',
                 ];
 
-                // Obtener todas las atenciones relacionadas con el caso
-                $atencionesRelacionadas = DB::table('cpu_atenciones as at')
-                    ->leftJoin('cpu_atenciones_psicologia as ap', 'at.id', '=', 'ap.id_cpu_atencion')
+                // 🔥 Igualamos la estructura de las relacionadas
+                $rel = DB::table('cpu_atenciones as at')
+                    ->when(
+                        $esPsicologia,
+                        fn ($q) => $q->join('cpu_atenciones_psicologia as ap', 'at.id', '=', 'ap.id_cpu_atencion'),
+                        fn ($q) => $q->leftJoin('cpu_atenciones_psicologia as ap', 'at.id', '=', 'ap.id_cpu_atencion')
+                    )
+                    ->leftJoin('cpu_atenciones_trabajo_social as ts', 'at.id', '=', 'ts.id_atenciones')
                     ->where('at.id_caso', $caso->id)
+                    ->where('at.id_persona', $id_persona)
                     ->where('at.id_estado', 1)
                     ->orderBy('at.created_at', 'desc')
                     ->select(
@@ -206,86 +211,95 @@ class CpuAtencionesController extends Controller
                         'at.motivo_atencion',
                         'at.fecha_hora_atencion',
                         'at.anio_atencion',
-                        'at.created_at as at_created_at',
-                        'at.updated_at as at_updated_at',
+                        'at.created_at',
+                        'at.updated_at',
                         'at.detalle_atencion',
                         'at.id_caso',
                         'at.id_tipo_usuario',
                         'at.evolucion_enfermedad',
-                        DB::raw('at.diagnostico::text as at_diagnostico'), // Convertir el campo jsonb a texto
-                        'at.prescripcion as at_prescripcion',
+                        DB::raw('at.diagnostico::text as diagnostico'),
+                        'at.prescripcion',
                         'at.recomendacion',
                         'at.tipo_atencion',
-                        // Datos de la tabla cpu_atenciones_psicologia
+                        'at.id_estado',
+
+                        // Campos de psicología
+                        'ap.tipo_usuario as ap_tipo_usuario',
+                        'ap.tipo_atencion as ap_tipo_atencion',
+                        'ap.medio_atencion as ap_medio_atencion',
+                        'ap.motivo_consulta as ap_motivo_consulta',
+                        'ap.evolucion as ap_evolucion',
+                        'ap.diagnostico as ap_diagnostico_psicologico',
+                        'ap.referido as ap_referido',
                         'ap.observacion as ap_observacion',
+                        'ap.acciones_afirmativas as ap_acciones_afirmativas',
+                        'ap.consumo_sustancias as ap_consumo_sustancias',
+                        'ap.frecuencia_consumo as ap_frecuencia_consumo',
+                        'ap.detalles_complementarios as ap_detalles_complementarios',
+                        'ap.aspecto_actitud_presentacion as ap_aspecto_actitud_presentacion',
+                        'ap.aspecto_clinico as ap_aspecto_clinico',
+                        'ap.sensopercepcion as ap_sensopercepcion',
+                        'ap.memoria as ap_memoria',
+                        'ap.ideacion as ap_ideacion',
+                        'ap.pensamiento as ap_pensamiento',
+                        'ap.lenguaje as ap_lenguaje',
+                        'ap.juicio as ap_juicio',
+                        'ap.afectividad as ap_afectividad',
+                        'ap.voluntad as ap_voluntad',
                         'ap.evolucion_caso as ap_evolucion_caso',
                         'ap.abordaje_caso as ap_abordaje_caso',
                         'ap.prescripcion as ap_prescripcion_psicologica',
-                        'ap.descripcionfinal as ap_descripcionfinal'
+                        'ap.descripcionfinal as ap_descripcionfinal',
+
+                        // Trabajo social
+                        'ts.tipo_informe as ts_tipo_informe',
+                        'ts.requiriente as ts_requiriente',
+                        'ts.numero_tramite as ts_numero_tramite',
+                        'ts.detalle_general as ts_detalle_general',
+                        'ts.observaciones as ts_observaciones',
+                        'ts.url_informe as ts_url_informe',
+                        'ts.periodo as ts_periodo'
                     )
                     ->get();
 
-                // Formatear las fechas en atenciones relacionadas
-                $atencionesRelacionadas->transform(function ($atRelacionada) {
-                    if (!$atRelacionada->fecha_hora_atencion instanceof Carbon) {
-                        $atRelacionada->fecha_hora_atencion = Carbon::parse($atRelacionada->fecha_hora_atencion);
-                    }
-                    $atRelacionada->fecha_hora_atencion = $atRelacionada->fecha_hora_atencion
-                        ->translatedFormat('l, d F Y');
-                    return $atRelacionada;
+                $rel->transform(function ($r) {
+                    $r->fecha_hora_atencion = Carbon::parse($r->fecha_hora_atencion)->translatedFormat('l, d F Y');
+
+                    return $r;
                 });
 
-                $atencionPrincipal->atenciones_relacionadas = $atencionesRelacionadas;
+                $atencionPrincipal->atenciones_relacionadas = $rel;
             }
 
-            if (!$atencionPrincipal->fecha_hora_atencion instanceof Carbon) {
-                $atencionPrincipal->fecha_hora_atencion = Carbon::parse($atencionPrincipal->fecha_hora_atencion);
-            }
-            $atencionPrincipal->fecha_hora_atencion = $atencionPrincipal->fecha_hora_atencion
-                ->translatedFormat('l, d F Y');
+            $atencionPrincipal->fecha_hora_atencion = Carbon::parse($atencionPrincipal->fecha_hora_atencion)->translatedFormat('l, d F Y');
 
             return $atencionPrincipal;
         });
 
-        // Mapeamos las atenciones sin caso individualmente
-        $resultadoSinCaso = $atencionesSinCaso->map(function ($atencion) {
-            $atencion->tipo = "Atención";
-            $atencion->nombre_principal = $atencion->motivo_atencion;
+        $resultadoSinCaso = $atencionesSinCaso->map(function ($a) {
+            $a->tipo = 'Atención';
+            $a->nombre_principal = $a->motivo_atencion;
+            $a->fecha_hora_atencion = Carbon::parse($a->fecha_hora_atencion)->translatedFormat('l, d F Y');
 
-            if (!$atencion->fecha_hora_atencion instanceof Carbon) {
-                $atencion->fecha_hora_atencion = Carbon::parse($atencion->fecha_hora_atencion);
-            }
-            $atencion->fecha_hora_atencion = $atencion->fecha_hora_atencion
-                ->translatedFormat('l, d F Y');
-
-            return $atencion;
+            return $a;
         });
 
-        // Combina ambos resultados, asegurando que las atenciones sin caso no se pierdan
         $resultado = $resultadoSinCaso->merge($resultadoConCaso)->values();
 
-        // Log de la información
-        Log::info('Atenciones obtenidas:', ['atenciones' => $resultado]);
-
-        // Procesar la URL del informe
-        $resultado->transform(function ($atencion) {
-            if (isset($atencion->ts_url_informe)) {
-                $baseUrl = URL::to('/');
-                $atencion->ts_url_informe = $baseUrl . '/Files/' . $atencion->ts_url_informe;
+        $resultado->transform(function ($a) {
+            if (isset($a->ts_url_informe)) {
+                $a->ts_url_informe = URL::to('/').'/Files/'.$a->ts_url_informe;
             }
-            return $atencion;
+
+            return $a;
         });
 
-        // Verificar si ya se ha registrado una auditoría reciente para evitar duplicados
-        $cacheKey = 'auditoria_cpu_atencion_id_persona_' . $id_persona;
+        $cacheKey = 'auditoria_cpu_atencion_id_persona_'.$id_persona;
         if (!Cache::has($cacheKey)) {
-            // Auditoría
             $this->auditar('cpu_atencion', 'id_persona', '', $id_persona, 'CONSULTA', "CONSULTA DE ATENCIONES POR PACIENTE: {$id_persona}");
-            // Almacenar en caché por un corto periodo de tiempo
             Cache::put($cacheKey, true, now()->addSeconds(10));
         }
 
-        // Retorna la respuesta en formato JSON
         return response()->json($resultado);
     }
 
@@ -301,6 +315,7 @@ class CpuAtencionesController extends Controller
 
             return response()->json(['message' => 'Estado actualizado correctamente'], 200);
         }
+
         return response()->json(['message' => 'Atención no encontrada'], 404);
     }
 
@@ -308,7 +323,7 @@ class CpuAtencionesController extends Controller
     {
         try {
             // Registra el área de atención en el log
-            Log::info('Área de atención: ' . $area_atencion);
+            Log::info('Área de atención: '.$area_atencion);
 
             // Busca la última atención del paciente
             $ultimaConsulta = CpuAtencion::where('id_persona', $id_persona)
@@ -328,7 +343,7 @@ class CpuAtencionesController extends Controller
             $ultimaConsulta->diagnostico = $ultimaConsulta->diagnostico ?? 'Sin diagnóstico';
 
             // Obtener el id_derivacion
-            Log::info('ID de la última consulta: ' . $ultimaConsulta->id);
+            Log::info('ID de la última consulta: '.$ultimaConsulta->id);
             $derivacion = CpuDerivacion::where('ate_id', $ultimaConsulta->id)->first();
             $ultimaConsulta->id_derivacion = $derivacion ? $derivacion->id : null;
 
@@ -345,22 +360,22 @@ class CpuAtencionesController extends Controller
             // }
 
             // Ahora buscar en `cpu_atencion_nutricion` por `id_atencion`, NO por `id_derivacion`
-            if (strtoupper($area_atencion) === "NUTRICIÓN") {
+            if (strtoupper($area_atencion) === 'NUTRICIÓN') {
                 $atencionNutricion = CpuAtencionNutricion::where('id_atencion', $ultimaConsulta->id)->first();
 
                 // 🔍 Agregar LOG para ver lo que devuelve CpuAtencionNutricion
-                Log::info("Datos de CpuAtencionNutricion: ", $atencionNutricion ? $atencionNutricion->toArray() : ['Sin datos']);
+                Log::info('Datos de CpuAtencionNutricion: ', $atencionNutricion ? $atencionNutricion->toArray() : ['Sin datos']);
 
                 if ($atencionNutricion) {
                     $respuesta['datos_nutricion'] = $atencionNutricion->toArray();
                 }
             }
 
-            if (strtoupper($area_atencion) === "FISIOTERAPIA") {
+            if (strtoupper($area_atencion) === 'FISIOTERAPIA') {
                 $atencionFisioterapia = CpuAtencionFisioterapia::where('id_atencion', $ultimaConsulta->id)->first();
 
                 // 🔍 Agregar LOG para ver lo que devuelve CpuAtencionNutricion
-                Log::info("Datos de CpuAtencionFisioterapia: ", $atencionFisioterapia ? $atencionFisioterapia->toArray() : ['Sin datos']);
+                Log::info('Datos de CpuAtencionFisioterapia: ', $atencionFisioterapia ? $atencionFisioterapia->toArray() : ['Sin datos']);
 
                 if ($atencionFisioterapia) {
                     $respuesta['datos_fisioterapia'] = $atencionFisioterapia->toArray();
@@ -368,7 +383,7 @@ class CpuAtencionesController extends Controller
             }
 
             // Verificar si ya se ha registrado una auditoría reciente para evitar duplicados
-            $cacheKey = 'auditoria_cpu_atencion_ultima_consulta_' . $id_persona;
+            $cacheKey = 'auditoria_cpu_atencion_ultima_consulta_'.$id_persona;
             if (!Cache::has($cacheKey)) {
                 // Auditoría
                 $this->auditar('cpu_atencion', 'id_persona', '', $id_persona, 'CONSULTA', "CONSULTA DE ULTIMA CONSULTA: {$id_persona}");
@@ -378,11 +393,11 @@ class CpuAtencionesController extends Controller
 
             return response()->json($respuesta, 200);
         } catch (\Exception $e) {
-            Log::error('Error al obtener la última consulta: ' . $e->getMessage());
-            return response()->json(['error' => 'Error al obtener la última consulta: ' . $e->getMessage()], 500);
+            Log::error('Error al obtener la última consulta: '.$e->getMessage());
+
+            return response()->json(['error' => 'Error al obtener la última consulta: '.$e->getMessage()], 500);
         }
     }
-
 
     public function cambiarEstado(Request $request)
     {
@@ -397,7 +412,6 @@ class CpuAtencionesController extends Controller
 
         return response()->json(['message' => 'Estado actualizado']);
     }
-
 
     public function guardarAtencionConTriaje(Request $request)
     {
@@ -480,6 +494,7 @@ class CpuAtencionesController extends Controller
             // Deshacer la transacción en caso de error
             DB::rollBack();
             Log::error('Error al guardar la atención y el triaje:', ['exception' => $e->getMessage()]);
+
             return response()->json(['error' => 'Error al guardar la atención y el triaje'], 500);
         }
     }
@@ -521,7 +536,7 @@ class CpuAtencionesController extends Controller
 
         if ($request->hasFile('analisis_clinicos')) {
             $archivo = $request->file('analisis_clinicos');
-            $nombreArchivo = 'analisis_' . $request->input('cedula') . '.pdf';
+            $nombreArchivo = 'analisis_'.$request->input('cedula').'.pdf';
             $directorioDestino = public_path('Files/analisis_clinico');
 
             if (!file_exists($directorioDestino)) {
@@ -560,7 +575,7 @@ class CpuAtencionesController extends Controller
                 }
             }
             // Si la atención es SUBSECUENTE, se usa el id_caso del request
-            else if ($request->input('tipo_atencion') === 'SUBSECUENTE') {
+            elseif ($request->input('tipo_atencion') === 'SUBSECUENTE') {
                 $idCaso = $request->input('id_caso'); // Se usa el id_caso enviado en el request
 
                 // Verificar si se envía `informe_final`
@@ -600,7 +615,7 @@ class CpuAtencionesController extends Controller
                 }
             }
             // Si la atención es REAPERTURAR, se actualiza el estado del caso a 8
-            else if ($request->input('tipo_atencion') === 'REAPERTURA') {
+            elseif ($request->input('tipo_atencion') === 'REAPERTURA') {
                 // Asegúrate de obtener el id del caso enviado en la solicitud
                 $idCaso = $request->input('id_caso'); // Se usa el id_caso enviado en el request
 
@@ -632,7 +647,7 @@ class CpuAtencionesController extends Controller
 
             // Extraer ID de la atención
             $idAtencion = $atencion->id;
-            Log::info("📌 ID de la atención guardada: " . $idAtencion);
+            Log::info('📌 ID de la atención guardada: '.$idAtencion);
 
             $triaje = CpuAtencionTriaje::where('id_atencion', $idAtencion)->first();
             $updateData = [
@@ -717,7 +732,7 @@ class CpuAtencionesController extends Controller
                 'jueves' => '🔹 *Jueves*',
                 'viernes' => '🔹 *Viernes*',
                 'sabado' => '🔹 *Sábado*',
-                'domingo' => '🔹 *Domingo*'
+                'domingo' => '🔹 *Domingo*',
             ];
 
             $ordenComidas = ['desayuno', 'entreComida1', 'almuerzo', 'entreComida2', 'merienda'];
@@ -726,7 +741,7 @@ class CpuAtencionesController extends Controller
                 'entreComida1' => '🍏',
                 'almuerzo' => '🍛',
                 'entreComida2' => '🥑',
-                'merienda' => '🍵'
+                'merienda' => '🍵',
             ];
 
             foreach ($diasSemana as $dia => $nombreDia) {
@@ -736,7 +751,7 @@ class CpuAtencionesController extends Controller
                         if (isset($planNutricional[$dia][$comida])) {
                             $descripcion = $planNutricional[$dia][$comida];
                             $emoji = $emojis[$comida] ?? '🍴';
-                            $planTexto .= "  - {$emoji} *" . ucfirst($comida) . ":* {$descripcion}\n";
+                            $planTexto .= "  - {$emoji} *".ucfirst($comida).":* {$descripcion}\n";
                         }
                     }
                     $planTexto .= "-----------------------\n";
@@ -755,7 +770,7 @@ class CpuAtencionesController extends Controller
             $correoAtencionPaciente = $correoController->enviarCorreoAtencionAreaSaludPaciente(new Request([
                 'id_atencion' => $idAtencion,
                 'id_area_atencion' => $request->input('id_area'),
-                'fecha_hora_atencion' => Carbon::now()->format("Y-m-d H:i:s"),
+                'fecha_hora_atencion' => Carbon::now()->format('Y-m-d H:i:s'),
                 'motivo_atencion' => $motivoAtencion,
                 'id_paciente' => $request->input('id_paciente'),
                 'id_funcionario' => $request->input('id_funcionario'),
@@ -767,6 +782,7 @@ class CpuAtencionesController extends Controller
                 $atencion->delete();
                 $nutricion->delete();
                 DB::rollBack();
+
                 return response()->json(['error' => 'Error al enviar el correo de atención, la atención no fue guardada'], 500);
             }
 
@@ -816,6 +832,7 @@ class CpuAtencionesController extends Controller
                             $atencion->delete();
                             $nutricion->delete();
                             DB::rollBack();
+
                             return response()->json(['error' => 'Error al enviar el correo de derivación al paciente, la atención no fue guardada'], 500);
                         }
 
@@ -835,6 +852,7 @@ class CpuAtencionesController extends Controller
                             $atencion->delete();
                             $nutricion->delete();
                             DB::rollBack();
+
                             return response()->json(['error' => 'Error al enviar el correo de derivación al funcionario, la atención no fue guardada'], 500);
                         }
                     }
@@ -861,6 +879,7 @@ class CpuAtencionesController extends Controller
         } catch (\Exception $e) {
             DB::rollBack();
             Log::error('Error al guardar la atención nutricional:', ['exception' => $e->getMessage()]);
+
             return response()->json(['error' => 'Error al guardar la atención nutricional'], 500);
         }
     }
@@ -1069,8 +1088,6 @@ class CpuAtencionesController extends Controller
     //                                                                             FECHA Y HORA DE ATENCION: {$request->input('fecha_hora_atencion')},
     //                                                                             ANIO DE ATENCION: {$request->input('anio_atencion')}");
 
-
-
     //         return response()->json(['success' => true, 'atencion_id' => $atencion->id]);
     //     } catch (\Exception $e) {
     //         DB::rollBack();
@@ -1140,8 +1157,8 @@ class CpuAtencionesController extends Controller
 
             // Auditoría
             $nombre_paciente = DB::table('cpu_personas')->where('id', $request->input('id_persona'))->value('nombres');
-            $descripcionAuditoria = 'Se registro una atención medica al funcionaario: ' . $nombre_paciente . ' el : ' . now() . ' con ID: ' . $request->input('id_persona');
-            $this->auditoriaController->auditar('cpu_atenciones_medicina_general', 'guardarAtencionMedicinaGeneral(Request $request)', '',  json_encode($medicinaGeneral), 'INSERT', $descripcionAuditoria);
+            $descripcionAuditoria = 'Se registro una atención medica al funcionaario: '.$nombre_paciente.' el : '.now().' con ID: '.$request->input('id_persona');
+            $this->auditoriaController->auditar('cpu_atenciones_medicina_general', 'guardarAtencionMedicinaGeneral(Request $request)', '', json_encode($medicinaGeneral), 'INSERT', $descripcionAuditoria);
 
             $listaInsumos = [];
 
@@ -1152,7 +1169,7 @@ class CpuAtencionesController extends Controller
                     $listaInsumos[] = [
                         'idInsumo' => $insumo['id'],
                         'tipoInsumo' => $insumo['id_tipo_insumo'],
-                        'nombre' => (string)$insumo['ins_descripcion'],
+                        'nombre' => (string) $insumo['ins_descripcion'],
                         'cantidad' => $insumo['cantidad'],
                     ];
 
@@ -1168,23 +1185,23 @@ class CpuAtencionesController extends Controller
                     $insumoOcupado->save();
 
                     $descripcion = "Se registro el insumo {$nombre_insumo} con cantidad {$insumo['cantidad']} para la atención {$medicinaGeneral->id}";
-                    $this->auditoriaController->auditar('cpu_insumo_ocupado', 'guardarAtencionMedicinaGeneral(Request $request)', '',  json_encode($insumoOcupado), 'INSERT', $descripcion);
+                    $this->auditoriaController->auditar('cpu_insumo_ocupado', 'guardarAtencionMedicinaGeneral(Request $request)', '', json_encode($insumoOcupado), 'INSERT', $descripcion);
 
                     // Actualizar la cantidad disponible del insumo o medicamento
                     $insumoresul = CpuInsumo::find($insumo['id']);
                     if ($insumoresul) {
-                        $insumoresul->decrement('cantidad_unidades', (int)$insumo['cantidad']);
+                        $insumoresul->decrement('cantidad_unidades', (int) $insumo['cantidad']);
                     }
                 }
             }
             // Guardar medicamentos
             if ($request->has('medicamentos')) {
                 foreach ($request->input('medicamentos') as $medicamento) {
-                    //$nombre_insumo = DB::table('cpu_insumo')->where('id', $insumo['id'])->value('ins_descripcion');
+                    // $nombre_insumo = DB::table('cpu_insumo')->where('id', $insumo['id'])->value('ins_descripcion');
                     $listaInsumos[] = [
                         'idInsumo' => $medicamento['id'],
                         'tipoInsumo' => $medicamento['id_tipo_insumo'],
-                        'nombre' => (string)$medicamento['ins_descripcion'],
+                        'nombre' => (string) $medicamento['ins_descripcion'],
                         'cantidad' => $medicamento['cantidad'],
                     ];
 
@@ -1200,11 +1217,11 @@ class CpuAtencionesController extends Controller
                     $insumoOcupado->save();
 
                     $descripcion = "Se registro el medicamento {$nombre_insumo} con cantidad {$medicamento['cantidad']} para la atención {$medicinaGeneral->id}";
-                    $this->auditoriaController->auditar('cpu_insumo_ocupado', 'guardarAtencionMedicinaGeneral(Request $request)', '',  json_encode($insumoOcupado), 'INSERT', $descripcion);
+                    $this->auditoriaController->auditar('cpu_insumo_ocupado', 'guardarAtencionMedicinaGeneral(Request $request)', '', json_encode($insumoOcupado), 'INSERT', $descripcion);
                     // Actualizar la cantidad disponible del insumo o medicamento
                     $insumo = CpuInsumo::find($medicamento['id']);
                     if ($insumo) {
-                        $insumo->decrement('cantidad_unidades', (int)$medicamento['cantidad']);
+                        $insumo->decrement('cantidad_unidades', (int) $medicamento['cantidad']);
                     }
                 }
             }
@@ -1212,14 +1229,14 @@ class CpuAtencionesController extends Controller
             try {
                 DB::beginTransaction();
 
-                //$id = $request && !is_string($request) ? $request->user()->id : auth()->user()->id
-                //$id_sede = DB::table('users')->where('id', $id)->value('id_sede');
+                // $id = $request && !is_string($request) ? $request->user()->id : auth()->user()->id
+                // $id_sede = DB::table('users')->where('id', $id)->value('id_sede');
 
                 if (count($listaInsumos) > 0) {
                     // Guardar en cpu_encabezados_egresos
                     $ee_id = DB::table('cpu_encabezados_egresos')->insertGetId([
                         'ee_id_funcionario' => $request->input('id_funcionario'),
-                        'ee_numero_egreso' => 'ULEAM-DBU-E-' . str_pad(DB::table('cpu_encabezados_egresos')->max('ee_id') + 1, 6, '0', STR_PAD_LEFT),
+                        'ee_numero_egreso' => 'ULEAM-DBU-E-'.str_pad(DB::table('cpu_encabezados_egresos')->max('ee_id') + 1, 6, '0', STR_PAD_LEFT),
                         'ee_id_paciente' => $request->input('id_persona'),
                         'ee_id_atencion_medicina_general' => $medicinaGeneral->id,
                         'ee_detalle' => $listaInsumos ? json_encode($listaInsumos) : null,
@@ -1255,10 +1272,10 @@ class CpuAtencionesController extends Controller
 
                 $errorData = [
                     'descripcion' => $e->getMessage(),
-                    'detalle'     => $e->getTraceAsString()
+                    'detalle' => $e->getTraceAsString(),
                 ];
 
-                Log::error("Error en guardarAtencionMedicinaGeneral: " . $e->getMessage(), [
+                Log::error('Error en guardarAtencionMedicinaGeneral: '.$e->getMessage(), [
                     'trace' => $e->getTraceAsString(),
                 ]);
 
@@ -1268,7 +1285,6 @@ class CpuAtencionesController extends Controller
                 );
                 throw $e;
             }
-
 
             // Manejar derivación si está marcada
             if ($request->input('derivacion')) {
@@ -1287,7 +1303,7 @@ class CpuAtencionesController extends Controller
                 $derivacion->save();
 
                 $descripcion = "Se registro una derivación para la atención {$medicinaGeneral->id} con motivo: {$derivacion->motivo_derivacion}, doctor al que deriva: {$derivacion->id_doctor_al_que_derivan}, área: {$derivacion->id_area}, fecha para atención: {$derivacion->fecha_para_atencion}, hora para atención: {$derivacion->hora_para_atencion}";
-                $this->auditoriaController->auditar('cpu_derivacion', 'guardarAtencionMedicinaGeneral(Request $request)', '',  json_encode($derivacion), 'INSERT', $descripcion);
+                $this->auditoriaController->auditar('cpu_derivacion', 'guardarAtencionMedicinaGeneral(Request $request)', '', json_encode($derivacion), 'INSERT', $descripcion);
 
                 // Actualizar turno
                 $turno = CpuTurno::find($request->input('derivacion.id_turno_asignado'));
@@ -1295,7 +1311,7 @@ class CpuAtencionesController extends Controller
                 $turno->estado = 7;
                 $turno->save();
                 $descripcion = "Se actualizó el turno {$turno->id} con el paciente {$nombre_paciente} y se cambió su estado a 7 (derivado).";
-                $this->auditoriaController->auditar('cpu_turnos', 'guardarAtencionMedicinaGeneral(Request $request)', '',  $turno, 'UPDATE', $descripcion);
+                $this->auditoriaController->auditar('cpu_turnos', 'guardarAtencionMedicinaGeneral(Request $request)', '', $turno, 'UPDATE', $descripcion);
             }
 
             // Actualizar la derivación original
@@ -1305,11 +1321,9 @@ class CpuAtencionesController extends Controller
                     $derivacionOriginal->id_estado_derivacion = 2;
                     $derivacionOriginal->save();
                     $descripcion = "Se actualizó la derivación original {$derivacionOriginal->id} a estado 2 (atendido) para la atención {$medicinaGeneral->id}.";
-                    $this->auditoriaController->auditar('cpu_derivacion', 'guardarAtencionMedicinaGeneral(Request $request)', '',  json_encode($derivacionOriginal), 'UPDATE', $descripcion);
+                    $this->auditoriaController->auditar('cpu_derivacion', 'guardarAtencionMedicinaGeneral(Request $request)', '', json_encode($derivacionOriginal), 'UPDATE', $descripcion);
                 }
             }
-
-
 
             $correoController = new CpuCorreoEnviadoController();
 
@@ -1317,7 +1331,7 @@ class CpuAtencionesController extends Controller
             $correoAtencion = $correoController->enviarCorreoAtencionAreaSaludPaciente(new Request([
                 'id_atencion' => $atencion->id,
                 'id_area_atencion' => $request->input('id_area_atencion'),
-                'fecha_hora_atencion' => Carbon::now()->format("Y-m-d H:i:s"),
+                'fecha_hora_atencion' => Carbon::now()->format('Y-m-d H:i:s'),
                 'motivo_atencion' => $request->input('motivo_atencion'),
                 'id_paciente' => $request->input('id_persona'),
                 'id_funcionario' => $request->input('id_funcionario'),
@@ -1364,15 +1378,16 @@ class CpuAtencionesController extends Controller
                 'hora_para_atencion' => $request->input('derivacion.hora_para_atencion'),
             ]));
 
-
             DB::commit();
             $descripcion = "Se guardó la atención de medicina general con ID {$atencion->id} para el paciente {$request->input('id_persona')} y funcionario {$request->input('id_funcionario')}. Motivo: {$request->input('motivo_atencion')}, Fecha y hora: {$request->input('fecha_hora_atencion')}, Año de atención: {$request->input('anio_atencion')}";
-            $this->auditoriaController->auditar('cpu_atencion', 'guardarAtencionMedicinaGeneral(Request $request)', '',  json_encode($atencion), 'INSERT', $descripcion);
+            $this->auditoriaController->auditar('cpu_atencion', 'guardarAtencionMedicinaGeneral(Request $request)', '', json_encode($atencion), 'INSERT', $descripcion);
+
             return response()->json(['success' => true, 'atencion_id' => $atencion->id]);
         } catch (\Exception $e) {
             DB::rollBack();
             Log::error('Error al guardar la atención de medicina general:', ['exception' => $e->getMessage()]);
-            $this->logController->saveLog('Nombre de Controlador: CpuAtencionesController, Nombre de Funcion: guardarAtencionMedicinaGeneral(Request $request)', 'Error al guaardar atencion medicina general: ' . $e->getMessage());
+            $this->logController->saveLog('Nombre de Controlador: CpuAtencionesController, Nombre de Funcion: guardarAtencionMedicinaGeneral(Request $request)', 'Error al guaardar atencion medicina general: '.$e->getMessage());
+
             return response()->json(['error' => 'Error al guardar la atención de medicina general', 'details' => $e->getMessage()], 500);
         }
     }
@@ -1424,7 +1439,7 @@ class CpuAtencionesController extends Controller
         $historiaClinica = $historiaClinica->map(function ($item) {
             // Construir la URL completa de la imagen
             if ($item->imagen) {
-                $item->imagen = url('Perfiles/' . $item->imagen);
+                $item->imagen = url('Perfiles/'.$item->imagen);
             }
 
             // Convertir el diagnóstico en una cadena de texto con el formato "CIE10 y descripción"
@@ -1435,7 +1450,7 @@ class CpuAtencionesController extends Controller
                         // Convertir las claves a minúsculas para facilitar el acceso
                         $diagnostico = array_change_key_case($diagnostico, CASE_LOWER);
 
-                        return 'CIE10: ' . $diagnostico['cie10'] . ' - ' . $diagnostico['diagnostico'] . ' (' . $diagnostico['tipo'] . ')';
+                        return 'CIE10: '.$diagnostico['cie10'].' - '.$diagnostico['diagnostico'].' ('.$diagnostico['tipo'].')';
                     }, $diagnosticos);
                     $item->diagnostico = implode(', ', $formattedDiagnosticos);
                 } else {
@@ -1535,23 +1550,25 @@ class CpuAtencionesController extends Controller
             }
 
             DB::commit();
+
             return response()->json(['success' => true, 'atencion_id' => $atencion->id]);
         } catch (\Exception $e) {
             DB::rollBack();
             Log::error('Error al guardar la atención de trámites:', ['exception' => $e->getMessage()]);
+
             return response()->json(['error' => 'Error al guardar la atención de trámites', 'details' => $e->getMessage()], 500);
         }
     }
 
     // Función para auditar
-    //funcion para auditar
+    // funcion para auditar
     private function auditar($tabla, $campo, $dataOld, $dataNew, $tipo, $descripcion, $request = null)
     {
         $usuario = $request && !is_string($request) ? $request->user()->name : auth()->user()->name;
         $ip = $request && !is_string($request) ? $request->ip() : request()->ip();
         $ipv4 = gethostbyname(gethostname());
         $publicIp = file_get_contents('https://ifconfig.me/ip');
-        $ioConcatenadas = 'IP LOCAL: ' . $ip . '  --IPV4: ' . $ipv4 . '  --IP PUBLICA: ' . $publicIp;
+        $ioConcatenadas = 'IP LOCAL: '.$ip.'  --IPV4: '.$ipv4.'  --IP PUBLICA: '.$publicIp;
         $nombreequipo = gethostbyaddr($ip);
         $userAgent = $request && !is_string($request) ? $request->header('User-Agent') : request()->header('User-Agent');
         $tipoEquipo = 'Desconocido';
@@ -1565,10 +1582,10 @@ class CpuAtencionesController extends Controller
         } elseif (stripos($userAgent, 'Windows') !== false || stripos($userAgent, 'Linux') !== false) {
             $tipoEquipo = 'Computador de Escritorio';
         }
-        $nombreUsuarioEquipo = get_current_user() . ' en ' . $tipoEquipo;
+        $nombreUsuarioEquipo = get_current_user().' en '.$tipoEquipo;
 
         $fecha = now();
-        $codigo_auditoria = strtoupper($tabla . '_' . $campo . '_' . $tipo);
+        $codigo_auditoria = strtoupper($tabla.'_'.$campo.'_'.$tipo);
         DB::table('cpu_auditoria')->insert([
             'aud_user' => $usuario,
             'aud_tabla' => $tabla,
@@ -1585,7 +1602,6 @@ class CpuAtencionesController extends Controller
             'aud_codigo' => $codigo_auditoria,
             'created_at' => now(),
             'updated_at' => now(),
-
         ]);
     }
 

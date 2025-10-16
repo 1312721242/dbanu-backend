@@ -81,6 +81,7 @@ use App\Http\Controllers\NvAsignaturasController;
 use App\Http\Controllers\NvParalelosController;
 use App\Http\Controllers\NvDocenteAsignaturaController;
 use App\Http\Controllers\AtencionesExternasControllers;
+use App\Http\Controllers\ServiciosControllers;
 
 use App\Http\Controllers\AtencionesDiversidadController;
 use App\Http\Controllers\CpuAuthSBEController;
@@ -723,10 +724,30 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
     // Turnos reservados
     Route::get('/get-turno-gym', [TurnosGymControllers::class, 'getTurnoGym']);
+    Route::get('/get-turno-gym-user-id/{id}', [TurnosGymControllers::class, 'getTurnoGymUsuarioId']);
     Route::post('/guardar-turno-gym-id', [TurnosGymControllers::class, 'guardarTurnoGymId']);
-
     Route::get('/get-generar-turno', [TurnosGymControllers::class, 'getGenerarTurnoGym']);
+
+    //Servicios GYM
+    Route::get('/get-categoria-servicio', [ServiciosControllers::class, 'getCategoriaServicio']);
+    // Route::get('/get-tipo-servicio', [ServiciosControllers::class, 'getTipoServicio']);
+    Route::get('/get-servicio-categoria-id/{idCategoria}', [ServiciosControllers::class, 'getServicioCategoriaId']);
     
+    Route::post('/reservar-turno-gym', [TurnosGymControllers::class, 'reservarTurno']);
+
+    
+   
+    Route::get('/get-estadistica-home', [TurnosGymControllers::class, 'getEstadisticaHome']);
+
+    //Usuarios 
+    Route::get('/get-usuario', [UsuarioController::class, 'getUsuarios']);
+    
+
+
+    
+    
+
+
 
     // Route::put('/modificar-inventario/{id}', [CpuInventarioController::class, 'modificarInventario']);
 });

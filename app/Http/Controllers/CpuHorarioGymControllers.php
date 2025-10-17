@@ -37,9 +37,9 @@ class CpuHorarioGymControllers extends Controller
                     h.tg_created_at,
                     h.tg_updated_at,
                     h.tg_id_user
-                FROM cpu_horarios_gym h
-                LEFT JOIN cpu_estados e ON h.tg_id_estado = e.id
-                LEFT JOIN cpu_tipos_servicios t ON h.tg_tipo_servicio = t.ts_id'
+                FROM db_train_revive.cpu_horarios_gym h
+                LEFT JOIN public.cpu_estados e ON h.tg_id_estado = e.id
+                LEFT JOIN db_train_revive.cpu_tipos_servicios t ON h.tg_tipo_servicio = t.ts_id'
             );
 
             return $data;
@@ -63,15 +63,15 @@ class CpuHorarioGymControllers extends Controller
                 'select_estado'     => 'required|integer',
                 'capacidad_maxima'  => 'required|integer|min:1',
                 'tiempo_sesion'     => 'required|integer|min:1',
-                'tipo_servicio'     => 'required|integer',
+                'servicio_id'     => 'required|integer',
             ]);
 
             // Inserción en la tabla cpu_horarios_gym
-            $id = DB::table('cpu_horarios_gym')->insertGetId([
+            $id = DB::table('db_train_revive.cpu_horarios_gym')->insertGetId([
                 'tg_hora_apertura'       => $request->hora_apertura,
                 'tg_hora_cierre'         => $request->hora_cierre,
                 'tg_json_dias_laborables' => json_encode($request->dias_semana),
-                'tg_tipo_servicio'       => $request->tipo_servicio,
+                'tg_tipo_servicio'       => $request->servicio_id,
                 'tg_capacidad_maxima'    => $request->capacidad_maxima,
                 'tg_tiempo_turno'        => $request->tiempo_sesion,
                 'tg_id_estado'           => $request->select_estado,
@@ -82,7 +82,7 @@ class CpuHorarioGymControllers extends Controller
 
             // Auditoría
             $descripcionAuditoria = 'Se registró el horario de: '
-                . $request->tipo_servicio
+                . $request->servicio_id
                 . ' el: ' . now()
                 . ' con ID: ' . $id;
 

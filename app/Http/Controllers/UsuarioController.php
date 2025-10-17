@@ -254,7 +254,7 @@ class UsuarioController extends Controller
         return response()->json($users);
     }
 
-    
+
 
     public function obtenerInformacion($id)
     {
@@ -364,7 +364,7 @@ class UsuarioController extends Controller
         $nombreUsuarioEquipo = get_current_user() . ' en ' . $tipoEquipo;
 
         $fecha = now();
-        $codigo_auditoria = strtoupper($tabla . '_' . $campo . '_' . $tipo );
+        $codigo_auditoria = strtoupper($tabla . '_' . $campo . '_' . $tipo);
         DB::table('cpu_auditoria')->insert([
             'aud_user' => $usuario,
             'aud_tabla' => $tabla,
@@ -405,5 +405,51 @@ class UsuarioController extends Controller
             default:
                 return 0;
         }
+    }
+
+    public function getUsuarios()
+    {
+        $data = DB::table('users as u')
+            ->leftJoin('cpu_sede as s', 's.id', '=', 'u.usr_sede')
+            ->leftJoin('cpu_facultad as f', 'f.id', '=', 'u.usr_facultad')
+            ->leftJoin('cpu_profesion as p', 'p.id', '=', 'u.usr_profesion') 
+            ->join('cpu_estados as e', 'e.id', '=', 'u.usr_estado')
+            ->select(
+                'u.id',
+                'u.name as nombre_persona',
+                'u.email',
+                'u.email_verified_at',
+                'u.usr_tipo',
+                'u.usr_estado',
+                'e.estado',
+                'u.usr_date_baja',
+                'u.usr_sede',
+                's.nombre_sede',
+                'u.usr_facultad',
+                'f.fac_nombre',
+                DB::raw("(
+                SELECT string_agg(c.name, ', ')
+                FROM cpu_carrera c
+                WHERE c.id IN (
+                    SELECT value::int
+                    FROM jsonb_array_elements_text(
+                        CASE
+                            WHEN jsonb_typeof(u.usr_carrera) = 'array' THEN u.usr_carrera
+                            WHEN jsonb_typeof(u.usr_carrera) = 'string' THEN to_jsonb(ARRAY[u.usr_carrera::text])
+                            ELSE '[]'::jsonb
+                        END
+                    ) AS value
+                )
+            ) AS nombre_carrera"),
+                'p.profesion as nombre_profesion', 
+                'u.created_at',
+                'u.updated_at',
+                'u.api_token',
+                'u.usr_cedula'
+            )
+            ->orderByDesc('u.id')
+            ->get();
+
+        return response()->json($data);
     }
 }

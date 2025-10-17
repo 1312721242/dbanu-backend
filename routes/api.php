@@ -668,6 +668,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
     // Casos Médicos
     Route::get('/casos-abiertos/{id_funcionario}', [CpuCasosMedicosController::class, 'getCasosAbiertos']);
+    Route::post('/casos-medicos/cerrar', [CpuCasosMedicosController::class, 'cerrarCasoConTurnos']);
 
 
     // Diversidad – Prefetch (última entrevista + conteos + salud)

@@ -45,10 +45,11 @@ return [
             'driver' => 'sanctum',
             'provider' => 'users',
         ],
-        'sbe_api' => [
-            'driver' => 'sanctum',
-            'provider' => 'users_sbe',
-        ],
+         // ✅ Nuevo guardia para tu tabla users_sbe
+   'gym' => [
+        'driver' => 'sanctum',
+        'provider' => 'users_sbe',
+    ],
     ],
 
     /*
@@ -74,10 +75,15 @@ return [
             'model' => App\Models\User::class,
         ],
 
-        'users_sbe' => [
-            'driver' => 'eloquent',
-            'model' => App\Models\UserSbe::class,
-        ],
+        // 'users' => [
+        //     'driver' => 'database',
+        //     'table' => 'users',
+        // ],
+        // ✅ Nuevo provider para UserSbe
+    'users_sbe' => [
+        'driver' => 'eloquent',
+        'model' => App\Models\UserSbe::class,
+    ],
     ],
 
     /*

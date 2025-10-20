@@ -19,6 +19,7 @@ class UserSbe extends Authenticatable
         'name',
         'email',
         'password',
+        'id_tipo_usuario',
     ];
 
     protected $hidden = [

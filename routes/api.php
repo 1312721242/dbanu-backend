@@ -92,7 +92,9 @@ use App\Http\Controllers\CpuHorarioGymControllers;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use App\Http\Controllers\TurnosGymControllers;
-
+use App\Http\Controllers\GymUleamController;
+use App\Http\Controllers\TokenController;
+use App\Http\Controllers\GymServiciosController;
 // Autenticación
 Route::get('credencial-pdf/{identificacion}/{periodo}', [CpuBecadoController::class, 'generarCredencialPDF']);
 Route::post('/login', [AuthController::class, 'login']);
@@ -106,6 +108,32 @@ Route::post('/estudiantes/bienestar', [CpuAuthSBEController::class, 'consultarBi
 Route::get('/obtener-registro-usuario/{email}', [CpuAuthSBEController::class, 'obtenerRegistroUsuario']);
 Route::post('/signup', [CpuAuthSBEController::class, 'signup']);
 
+//GYM 
+Route::post('/login-gym', [GymUleamController::class, 'login']); // público
+Route::post('/refresh-token', [TokenController::class, 'refresh']); // protegido
+Route::post('/logout-gym', [TokenController::class, 'logout'])->middleware('auth:sanctum');
+Route::middleware('auth:sanctum')->get('/user-info', [GymUleamController::class, 'userInfo']);
+
+// 🏋️ GYM AUTH
+Route::post('/login-gym', [GymUleamController::class, 'login']);
+Route::post('/refresh-token', [TokenController::class, 'refresh'])->withoutMiddleware('auth:sanctum');
+Route::post('/logout-gym', [TokenController::class, 'logout'])->middleware('auth.flex');
+
+// 🔐 Rutas protegidas GYM
+// 🔐 Rutas protegidas GYM
+Route::middleware('auth.flex')->prefix('gym')->group(function () {
+    Route::get('/user-info', [GymUleamController::class, 'userInfo']);
+
+    // 📦 Categorías y Servicios
+    Route::get('/categorias', [GymServiciosController::class, 'getCategoriaServicio']);
+    Route::get('/servicios/{idCategoria}', [GymServiciosController::class, 'getServicioCategoriaId']);
+
+    // 🕒 Turnos y Reservas
+    Route::get('/turnos', [GymServiciosController::class, 'getGenerarTurnoGym']);
+    Route::post('/reservar-turno', [GymServiciosController::class, 'reservarTurno']);
+    Route::get('/turnos-usuario/{id_usuario}', [GymServiciosController::class, 'getTurnoGymUsuarioId']);
+    Route::get('/estadisticas', [GymServiciosController::class, 'getEstadisticaHome']);
+});
 
 
 // Route::get('legalizacion-matricula/export-template', [LegalizacionMatriculaSecretariaController::class, 'exportTemplate']);

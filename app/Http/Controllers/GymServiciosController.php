@@ -64,29 +64,35 @@ class GymServiciosController extends Controller
     /**
      * 📅 Obtiene todos los turnos disponibles (función generar_turnos_disponibles)
      */
-    public function getGenerarTurnoGym(Request $request)
-    {
-        try {
-            $fecha = $request->query('fecha', date('Y-m-d'));
-            $servicio_id = $request->query('servicio_id', 1);
+    public function generarTurnoGym(Request $request)
+{
+    $fechaSeleccionada = $request->fecha;
+    $servicioId        = $request->servicio_id;
+    $tipoUsuario       = $request->tipo_usuario ?? 1; // 👈 llega desde el frontend
+    $estadosPermitidos = [1];
 
-            $data = DB::select(
-                'SELECT * FROM db_train_revive.generar_turnos_disponibles(?, ?)',
-                [$fecha, $servicio_id]
-            );
+    try {
+        $result = DB::select(
+            'SELECT * FROM db_train_revive.generar_turnos_disponibles(?, ?, ?, ?)',
+            [$fechaSeleccionada, $servicioId, $tipoUsuario, $estadosPermitidos]
+        );
 
-            Log::info('✅ Turnos disponibles generados', [
-                'fecha' => $fecha,
-                'servicio_id' => $servicio_id,
-                'count' => count($data)
-            ]);
-
-            return response()->json($data, 200);
-        } catch (\Throwable $e) {
-            Log::error('❌ Error al generar turnos: ' . $e->getMessage());
-            return response()->json(['error' => 'Error al generar turnos', 'detalle' => $e->getMessage()], 500);
+        if (empty($result)) {
+            return response()->json([
+                'alert' => 'No hay turnos disponibles en la fecha seleccionada.'
+            ], 200);
         }
+
+        return response()->json(['slots' => $result], 200);
+    } catch (\Exception $e) {
+        return response()->json([
+            'error' => 'Error al generar los turnos.',
+            'detalle' => $e->getMessage(),
+        ], 500);
     }
+}
+
+
 
     /**
      * 🏷️ Guarda (reserva) un turno para un usuario

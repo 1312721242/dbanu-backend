@@ -55,7 +55,6 @@ class CpuHorarioGymControllers extends Controller
     public function guardarHorarioGym(Request $request)
     {
         try {
-            // Validación de los datos recibidos
             $request->validate([
                 'hora_apertura'     => 'required|date_format:H:i',
                 'hora_cierre'       => 'required|date_format:H:i|after:hora_apertura',
@@ -66,7 +65,6 @@ class CpuHorarioGymControllers extends Controller
                 'servicio_id'     => 'required|integer',
             ]);
 
-            // Inserción en la tabla cpu_horarios_gym
             $id = DB::table('db_train_revive.cpu_horarios_gym')->insertGetId([
                 'tg_hora_apertura'       => $request->hora_apertura,
                 'tg_hora_cierre'         => $request->hora_cierre,
@@ -76,6 +74,7 @@ class CpuHorarioGymControllers extends Controller
                 'tg_tiempo_turno'        => $request->tiempo_sesion,
                 'tg_id_estado'           => $request->select_estado,
                 'tg_id_user'             => Auth::id(),
+                'tg_tipo_usuario'        => $request->select_tipo_usuario,
                 'tg_created_at'          => now(),
                 'tg_updated_at'          => now(),
             ], 'tg_id');

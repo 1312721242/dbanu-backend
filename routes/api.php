@@ -92,9 +92,16 @@ use App\Http\Controllers\CpuHorarioGymControllers;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use App\Http\Controllers\TurnosGymControllers;
+<<<<<<< HEAD
 use App\Http\Controllers\GymUleamController;
 use App\Http\Controllers\TokenController;
 use App\Http\Controllers\GymServiciosController;
+=======
+use App\Http\Controllers\LogController;
+use App\Http\Controllers\AuditoriaControllers;
+use App\Http\Controllers\CpuCategoriaServicioControllers;
+
+>>>>>>> 34ec881 (YN: gym 22-10-2025)
 // Autenticación
 Route::get('credencial-pdf/{identificacion}/{periodo}', [CpuBecadoController::class, 'generarCredencialPDF']);
 Route::post('/login', [AuthController::class, 'login']);
@@ -757,8 +764,11 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::post('/guardar-turno-gym-id', [TurnosGymControllers::class, 'guardarTurnoGymId']);
     Route::get('/get-generar-turno', [TurnosGymControllers::class, 'getGenerarTurnoGym']);
 
+    //Categorias de Servicios
+    Route::get('/get-categoria-servicio', [CpuCategoriaServicioControllers::class, 'getCategoriaServicio']);   
+
     //Servicios GYM
-    Route::get('/get-categoria-servicio', [ServiciosControllers::class, 'getCategoriaServicio']);
+    // Route::get('/get-categoria-servicio', [ServiciosControllers::class, 'getCategoriaServicio']);
     // Route::get('/get-tipo-servicio', [ServiciosControllers::class, 'getTipoServicio']);
     Route::get('/get-servicio-categoria-id/{idCategoria}', [ServiciosControllers::class, 'getServicioCategoriaId']);
     
@@ -771,12 +781,9 @@ Route::middleware(['auth:sanctum'])->group(function () {
     //Usuarios 
     Route::get('/get-usuario', [UsuarioController::class, 'getUsuarios']);
     
-
-
-    
-    
-
-
+    // Auditoria
+    Route::get('/get-log-auditoria-errores', [LogController::class, 'getLogAuditoriaErrores']);
+    Route::get('/get-auditoria-general', [AuditoriaControllers::class, 'consultarAuditoriaGeneral']);
 
     // Route::put('/modificar-inventario/{id}', [CpuInventarioController::class, 'modificarInventario']);
 });

@@ -42,14 +42,13 @@ class TurnosGymControllers extends Controller
             FROM db_train_revive.cpu_turnos_gym      AS t
             JOIN db_train_revive.cpu_horarios_gym    AS h
                 ON t.tg_id_horario_gym = h.tg_id
-            LEFT JOIN public.users  AS u
+            LEFT JOIN public.users_sbe  AS u
                 ON t.tg_id_user = u.id
             LEFT JOIN public.cpu_estados AS e
                 ON t.tg_id_estado = e.id
             LEFT JOIN db_train_revive.cpu_tipos_servicios AS ts
             ON t.tg_id_servicio = ts.ts_id
-
-            ORDER BY t.tg_fecha, t.tg_hora;
+            ORDER BY t.tg_id desc;
             ");
 
             return $data;
@@ -111,7 +110,7 @@ class TurnosGymControllers extends Controller
                 'UPDATE db_train_revive.cpu_turnos_gym
                  SET tg_id_estado = ?
                  WHERE tg_id = ?',
-                [2, $idTurno]
+                [$request->input('estado'), $idTurno]
             );
 
             $descripcionAuditoria = sprintf(

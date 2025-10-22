@@ -21,8 +21,31 @@ class CategoriaActivosControllers extends Controller
 
     public function consultarCategoriaActivos()
     {
-        $data = DB::select('SELECT * FROM public.view_categoria_activos');
-        return response()->json($data);
+        try {
+        $estado = 8; // podrías recibirlo por parámetro también
+
+        $data = DB::select(
+            'SELECT * FROM public.view_categoria_activos WHERE cat_id_estado = ?',
+            [$estado] // <-- evita inyección SQL
+        );
+
+        return response()->json([
+            'success' => true,
+            'data' => $data
+        ], 200);
+
+    } catch (\Exception $e) {
+        $this->logController->saveLog(
+            'Controlador: CategoriaActivosController, Función: listarCategoriasActivos()',
+            'Error al consultar categorías de activos: ' . $e->getMessage()
+        );
+
+        return response()->json([
+            'success' => false,
+            'message' => 'Error al obtener las categorías de activos',
+            'error' => $e->getMessage()
+        ], 500);
+    }
     }
 
     public function guardarCategoriaActivos(Request $request)

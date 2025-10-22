@@ -78,127 +78,126 @@ class AuthController extends Controller
     // }
 
     public function login(Request $request)
-{
-    $logProceso = "Inicio del login para email: {$request->email}. ";
+    {
+        $logProceso = "Inicio del login para email: {$request->email}. ";
 
-    try {
-        // Validación de credenciales
-        $credentials = $request->validate([
-            'email' => 'required|email',
-            'password' => 'required',
-        ]);
-        $logProceso .= "Validación de credenciales completada. ";
+        try {
+            // Validación de credenciales
+            $credentials = $request->validate([
+                'email' => 'required|email',
+                'password' => 'required',
+            ]);
+            $logProceso .= "Validación de credenciales completada. ";
 
-        // Intentar autenticar
-        if (!Auth::attempt($credentials)) {
-            $logProceso .= "Credenciales incorrectas. ";
-            
-            // Guardar en cpu_log
+            // Intentar autenticar
+            if (!Auth::attempt($credentials)) {
+                $logProceso .= "Credenciales incorrectas. ";
+
+                // Guardar en cpu_log
+                $this->logController->saveLog(
+                    'AuthController - login',
+                    $logProceso
+                );
+
+                // Auditoría
+                $this->auditoriaController->auditar(
+                    'users',
+                    'login(Request $request)',
+                    '',
+                    $request->all(),
+                    'LOGIN_FAIL',
+                    $logProceso
+                );
+
+                return response()->json(['message' => 'Las credenciales proporcionadas son incorrectas.'], 422);
+            }
+            $logProceso .= "Autenticación exitosa. ";
+
+            $user = Auth::user();
+
+            // Verificar estado del usuario
+            if ($user->usr_estado != 8) {
+                $logProceso .= "Usuario no activo. ";
+
+                $this->logController->saveLog('AuthController - login', $logProceso);
+                $this->auditoriaController->auditar(
+                    'users',
+                    'login(Request $request)',
+                    '',
+                    $request->all(),
+                    'LOGIN_FAIL',
+                    $logProceso
+                );
+
+                return response()->json(['message' => 'El usuario no está activo.'], 200);
+            }
+            $logProceso .= "Usuario activo verificado. ";
+
+            // Crear token
+            $token = $user->createToken('auth_token')->plainTextToken;
+            $logProceso .= "Token creado. ";
+
+            // Cargar relaciones
+            $user->load('tipoUsuario', 'sede', 'profesion');
+            $logProceso .= "Relaciones cargadas. ";
+
+            // Preparar datos de respuesta
+            $userData = [
+                'id' => $user->id,
+                'token' => $token,
+                'name' => $user->name,
+                'usr_tipo' => $user->tipoUsuario->role,
+                'foto_perfil' => url('Perfiles/' . $user->foto_perfil),
+            ];
+
+            if ($user->sede) {
+                $userData['usr_sede'] = $user->sede->nombre_sede;
+            }
+
+            if ($user->profesion) {
+                $userData['usr_profesion'] = $user->profesion->profesion;
+            }
+
+            // Auditoría final
+            $logProceso .= "Login exitoso completado.";
+            $this->auditoriaController->auditar(
+                'users',
+                'login(Request $request)',
+                '',
+                $request->all(),
+                'LOGIN_SUCCESS',
+                $logProceso
+            );
+
+            // Guardar todo en cpu_log
             $this->logController->saveLog(
                 'AuthController - login',
                 $logProceso
             );
 
-            // Auditoría
+            return response()->json($userData);
+        } catch (\Exception $e) {
+            $logProceso .= "Error al procesar login: " . $e->getMessage() . " en " . $e->getFile() . ":" . $e->getLine();
+
+            // Guardar todo en cpu_log
+            $this->logController->saveLog(
+                'AuthController - login',
+                $logProceso
+            );
+
+            // Guardar auditoría de error
             $this->auditoriaController->auditar(
                 'users',
                 'login(Request $request)',
                 '',
                 $request->all(),
-                'LOGIN_FAIL',
+                'LOGIN_ERROR',
                 $logProceso
             );
 
-            return response()->json(['message' => 'Las credenciales proporcionadas son incorrectas.'], 422);
+            return response()->json(['message' => 'Ocurrió un error al procesar el login.'], 500);
         }
-        $logProceso .= "Autenticación exitosa. ";
-
-        $user = Auth::user();
-
-        // Verificar estado del usuario
-        if ($user->usr_estado != 8) {
-            $logProceso .= "Usuario no activo. ";
-            
-            $this->logController->saveLog('AuthController - login', $logProceso);
-            $this->auditoriaController->auditar(
-                'users',
-                'login(Request $request)',
-                '',
-                $request->all(),
-                'LOGIN_FAIL',
-                $logProceso
-            );
-
-            return response()->json(['message' => 'El usuario no está activo.'], 200);
-        }
-        $logProceso .= "Usuario activo verificado. ";
-
-        // Crear token
-        $token = $user->createToken('auth_token')->plainTextToken;
-        $logProceso .= "Token creado. ";
-
-        // Cargar relaciones
-        $user->load('tipoUsuario', 'sede', 'profesion');
-        $logProceso .= "Relaciones cargadas. ";
-
-        // Preparar datos de respuesta
-        $userData = [
-            'id' => $user->id,
-            'token' => $token,
-            'name' => $user->name,
-            'usr_tipo' => $user->tipoUsuario->role,
-            'foto_perfil' => url('Perfiles/' . $user->foto_perfil),
-        ];
-
-        if ($user->sede) {
-            $userData['usr_sede'] = $user->sede->nombre_sede;
-        }
-
-        if ($user->profesion) {
-            $userData['usr_profesion'] = $user->profesion->profesion;
-        }
-
-        // Auditoría final
-        $logProceso .= "Login exitoso completado.";
-        $this->auditoriaController->auditar(
-            'users',
-            'login(Request $request)',
-            '',
-            $request->all(),
-            'LOGIN_SUCCESS',
-            $logProceso
-        );
-
-        // Guardar todo en cpu_log
-        $this->logController->saveLog(
-            'AuthController - login',
-            $logProceso
-        );
-
-        return response()->json($userData);
-
-    } catch (\Exception $e) {
-        $logProceso .= "Error al procesar login: " . $e->getMessage() . " en " . $e->getFile() . ":" . $e->getLine();
-
-        // Guardar todo en cpu_log
-        $this->logController->saveLog(
-            'AuthController - login',
-            $logProceso
-        );
-
-        // Guardar auditoría de error
-        $this->auditoriaController->auditar(
-            'users',
-            'login(Request $request)',
-            '',
-            $request->all(),
-            'LOGIN_ERROR',
-            $logProceso
-        );
-
-        return response()->json(['message' => 'Ocurrió un error al procesar el login.'], 500);
     }
-}
 
 
 

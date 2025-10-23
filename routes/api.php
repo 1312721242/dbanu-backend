@@ -92,16 +92,13 @@ use App\Http\Controllers\CpuHorarioGymControllers;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use App\Http\Controllers\TurnosGymControllers;
-<<<<<<< HEAD
 use App\Http\Controllers\GymUleamController;
 use App\Http\Controllers\TokenController;
 use App\Http\Controllers\GymServiciosController;
-=======
 use App\Http\Controllers\LogController;
 use App\Http\Controllers\AuditoriaControllers;
 use App\Http\Controllers\CpuCategoriaServicioControllers;
 
->>>>>>> 34ec881 (YN: gym 22-10-2025)
 // Autenticación
 Route::get('credencial-pdf/{identificacion}/{periodo}', [CpuBecadoController::class, 'generarCredencialPDF']);
 Route::post('/login', [AuthController::class, 'login']);

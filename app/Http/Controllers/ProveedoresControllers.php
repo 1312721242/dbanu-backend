@@ -54,7 +54,7 @@ class ProveedoresControllers extends Controller
         $id = DB::table('cpu_proveedores')->latest('prov_id')->first()->prov_id;
         
         $descripcionAuditoria = 'Se guardo el proveedor: ' . $data['txt-nombre'] . ' con RUC: ' . $data['txt-ruc']. ' y ID: ' . $id;
-        $this->auditoriaController->auditar('cpu_proveedores', 'guardarProveedores()', '',json_encode($data), 'INSERT', $descripcionAuditoria);;
+        $this->auditoriaController->auditar('cpu_proveedores', 'guardarProveedores()', '',json_encode($data), 'INSERT', $descripcionAuditoria);
 
         return response()->json(['success' => true, 'message' => 'Proveedor agregado correctamente']);
     }

@@ -52,6 +52,47 @@ class CpuHorarioGymControllers extends Controller
         }
     }
 
+    public function getHorarioGymId($id)
+    {
+        try {
+            $data = DB::select(
+                'SELECT 
+                h.tg_id,
+                h.tg_hora_apertura,
+                h.tg_hora_cierre,
+                h.tg_json_dias_laborables,
+                h.tg_tipo_servicio,
+                t.ts_descripcion AS tipo_servicio_descripcion,
+                h.tg_capacidad_maxima,
+                h.tg_tiempo_turno,
+                h.tg_id_estado,
+                e.estado AS nombre_estado,
+                h.tg_created_at,
+                h.tg_updated_at,
+                h.tg_id_user
+            FROM db_train_revive.cpu_horarios_gym h
+            LEFT JOIN public.cpu_estados e ON h.tg_id_estado = e.id
+            LEFT JOIN db_train_revive.cpu_tipos_servicios t ON h.tg_tipo_servicio = t.ts_id
+            WHERE h.tg_id = ?',
+                [$id]  
+            );
+
+            // Retornar solo un registro (si existe)
+            if (count($data) > 0) {
+                return response()->json(['success' => true, 'data' => $data[0]]);
+            } else {
+                return response()->json(['success' => false, 'message' => 'Horario no encontrado']);
+            }
+        } catch (\Exception $e) {
+            $this->logController->saveLog(
+                'Controlador: CpuHorarioGymControllers, Función: getHorarioGymId()',
+                'Error al consultar horario por ID: ' . $e->getMessage()
+            );
+            return response()->json(['success' => false, 'message' => 'Error al consultar horario: ' . $e->getMessage()], 500);
+        }
+    }
+
+
     public function guardarHorarioGym(Request $request)
     {
         try {

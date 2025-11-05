@@ -19,42 +19,57 @@ class TurnosGymControllers extends Controller
         $this->logController = new LogController();
     }
 
+    // public function getTurnoGym()
+    // {
+    //     try {
+    //         $data = DB::select("
+    //             SELECT
+    //             t.tg_id,
+    //             t.tg_fecha,
+    //             TO_CHAR(t.tg_fecha, 'HH24:MI') AS tg_hora_2,
+    //             t.tg_hora,
+    //             t.tg_id_servicio,
+    //             t.tg_id_estado,
+    //             t.tg_id_user,
+    //             t.tg_created_at,
+    //             h.tg_hora_apertura,
+    //             h.tg_hora_cierre,
+    //             h.tg_capacidad_maxima,
+    //             h.tg_tiempo_turno,
+    //             e.estado   AS estado_nombre,
+    //             u.name,
+    //             ts.ts_descripcion
+    //         FROM db_train_revive.cpu_turnos_gym      AS t
+    //         JOIN db_train_revive.cpu_horarios_gym    AS h
+    //             ON t.tg_id_horario_gym = h.tg_id
+    //         LEFT JOIN public.users_sbe  AS u
+    //             ON t.tg_id_user = u.id
+    //         LEFT JOIN public.cpu_estados AS e
+    //             ON t.tg_id_estado = e.id
+    //         LEFT JOIN db_train_revive.cpu_tipos_servicios AS ts
+    //         ON t.tg_id_servicio = ts.ts_id
+    //         ORDER BY t.tg_id desc;
+    //         ");
+
+    //         return $data;
+    //     } catch (\Exception $e) {
+    //         $this->logController->saveLog(
+    //             'Controlador: TurnosGymControllers, Función: getHorarioGym()',
+    //             'Error al consultar horarios para asistir al gym: ' . $e->getMessage()
+    //         );
+    //         return response()->json(['message' => 'Error al consultar horarios para asistir al gym: ' . $e->getMessage()], 500);
+    //     }
+    // }
+
     public function getTurnoGym()
     {
         try {
-            $data = DB::select("
-                SELECT
-                t.tg_id,
-                t.tg_fecha,
-                TO_CHAR(t.tg_fecha, 'HH24:MI') AS tg_hora_2,
-                t.tg_hora,
-                t.tg_id_servicio,
-                t.tg_id_estado,
-                t.tg_id_user,
-                t.tg_created_at,
-                h.tg_hora_apertura,
-                h.tg_hora_cierre,
-                h.tg_capacidad_maxima,
-                h.tg_tiempo_turno,
-                e.estado   AS estado_nombre,
-                u.name,
-                ts.ts_descripcion
-            FROM db_train_revive.cpu_turnos_gym      AS t
-            JOIN db_train_revive.cpu_horarios_gym    AS h
-                ON t.tg_id_horario_gym = h.tg_id
-            LEFT JOIN public.users_sbe  AS u
-                ON t.tg_id_user = u.id
-            LEFT JOIN public.cpu_estados AS e
-                ON t.tg_id_estado = e.id
-            LEFT JOIN db_train_revive.cpu_tipos_servicios AS ts
-            ON t.tg_id_servicio = ts.ts_id
-            ORDER BY t.tg_id desc;
-            ");
+            $data = DB::select("SELECT * FROM db_train_revive.obtener_turnos_futuros_hoy()");
 
-            return $data;
+            return response()->json($data);
         } catch (\Exception $e) {
             $this->logController->saveLog(
-                'Controlador: TurnosGymControllers, Función: getHorarioGym()',
+                'Controlador: TurnosGymControllers, Función: getTurnoGym()',
                 'Error al consultar horarios para asistir al gym: ' . $e->getMessage()
             );
             return response()->json(['message' => 'Error al consultar horarios para asistir al gym: ' . $e->getMessage()], 500);
@@ -73,14 +88,13 @@ class TurnosGymControllers extends Controller
             [$fechaSeleccionada, $servicioId]
         );
 
-        // Si $result está vacío, puedes lanzar la alerta
+       
         if (empty($result)) {
             return response()->json([
                 'alert' => 'No hay turnos disponibles en la fecha seleccionada.'
             ], 200);
         }
 
-        // De lo contrario, envías los datos a la vista / frontend
         return response()->json(['slots' => $result], 200);
     }
 
@@ -88,7 +102,6 @@ class TurnosGymControllers extends Controller
     public function guardarTurnoGymId(Request $request)
     {
         if ($request->missing('id_turno')) {
-            // 1a. El campo NO llegó
             return response()->json([
                 'success' => false,
                 'message' => 'El campo id_turno no está presente en la petición.',

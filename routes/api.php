@@ -753,6 +753,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
     //Horario de Gym
     Route::get('/get-horario-gym', [CpuHorarioGymControllers::class, 'getHorarioGym']);
+    Route::get('/get-horario-id-gym/{id}', [CpuHorarioGymControllers::class, 'getHorarioGymId']);
     Route::post('/guardar-horario-gym', [CpuHorarioGymControllers::class, 'guardarHorarioGym']);
 
     // Turnos reservados
@@ -762,7 +763,11 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('/get-generar-turno', [TurnosGymControllers::class, 'getGenerarTurnoGym']);
 
     //Categorias de Servicios
-    Route::get('/get-categoria-servicio', [CpuCategoriaServicioControllers::class, 'getCategoriaServicio']);   
+    Route::get('/get-categoria-servicio', [CpuCategoriaServicioControllers::class, 'getCategoriaServicio']);  
+    Route::get('/get-categoria-servicio-id/{id}', [CpuCategoriaServicioControllers::class, 'getCategoriaServicioId']);  
+    Route::post('/gimnasio/guardar-categoria-servicio', [CpuCategoriaServicioControllers::class, 'guardarCategoriaServicio']);
+    Route::put('/modificar-categoria-servicio/{id}', [CpuCategoriaServicioControllers::class, 'modificarCategoriaServicio']);   
+    
 
     //Servicios GYM
     // Route::get('/get-categoria-servicio', [ServiciosControllers::class, 'getCategoriaServicio']);
@@ -771,8 +776,6 @@ Route::middleware(['auth:sanctum'])->group(function () {
     
     Route::post('/reservar-turno-gym', [TurnosGymControllers::class, 'reservarTurno']);
 
-    
-   
     Route::get('/get-estadistica-home', [TurnosGymControllers::class, 'getEstadisticaHome']);
 
     //Usuarios 

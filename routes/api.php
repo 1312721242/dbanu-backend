@@ -98,6 +98,7 @@ use App\Http\Controllers\GymServiciosController;
 use App\Http\Controllers\LogController;
 use App\Http\Controllers\AuditoriaControllers;
 use App\Http\Controllers\CpuCategoriaServicioControllers;
+use App\Http\Controllers\RuletaController;
 
 // Autenticación
 Route::get('credencial-pdf/{identificacion}/{periodo}', [CpuBecadoController::class, 'generarCredencialPDF']);
@@ -717,8 +718,8 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::put('/diversidad/personas/{personaId}/segmento', [AtencionesDiversidadController::class, 'actualizarSegmentoPersona']);
 
     //SBE
-     Route::get('/servicios-por-sede/{idSede}', [RoleController::class, 'consultarServiciosPorSede']);
-     Route::post('/obtener-turnos', [TurnosController::class, 'obtenerTurnos']);
+    Route::get('/servicios-por-sede/{idSede}', [RoleController::class, 'consultarServiciosPorSede']);
+    Route::post('/obtener-turnos', [TurnosController::class, 'obtenerTurnos']);
 
     //  Route::get('/user', [AtencionesDiversidadController::class, 'actualizarSegmentoPersona']);
     //RUTAS PARA BUSCAR LOS NO ASISTIDOS
@@ -763,27 +764,34 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('/get-generar-turno', [TurnosGymControllers::class, 'getGenerarTurnoGym']);
 
     //Categorias de Servicios
-    Route::get('/get-categoria-servicio', [CpuCategoriaServicioControllers::class, 'getCategoriaServicio']);  
-    Route::get('/get-categoria-servicio-id/{id}', [CpuCategoriaServicioControllers::class, 'getCategoriaServicioId']);  
+    Route::get('/get-categoria-servicio', [CpuCategoriaServicioControllers::class, 'getCategoriaServicio']);
+    Route::get('/get-categoria-servicio-id/{id}', [CpuCategoriaServicioControllers::class, 'getCategoriaServicioId']);
     Route::post('/gimnasio/guardar-categoria-servicio', [CpuCategoriaServicioControllers::class, 'guardarCategoriaServicio']);
-    Route::put('/modificar-categoria-servicio/{id}', [CpuCategoriaServicioControllers::class, 'modificarCategoriaServicio']);   
-    
+    Route::put('/modificar-categoria-servicio/{id}', [CpuCategoriaServicioControllers::class, 'modificarCategoriaServicio']);
+
 
     //Servicios GYM
     // Route::get('/get-categoria-servicio', [ServiciosControllers::class, 'getCategoriaServicio']);
     // Route::get('/get-tipo-servicio', [ServiciosControllers::class, 'getTipoServicio']);
     Route::get('/get-servicio-categoria-id/{idCategoria}', [ServiciosControllers::class, 'getServicioCategoriaId']);
-    
+
     Route::post('/reservar-turno-gym', [TurnosGymControllers::class, 'reservarTurno']);
 
     Route::get('/get-estadistica-home', [TurnosGymControllers::class, 'getEstadisticaHome']);
 
     //Usuarios 
     Route::get('/get-usuario', [UsuarioController::class, 'getUsuarios']);
-    
+
     // Auditoria
     Route::get('/get-log-auditoria-errores', [LogController::class, 'getLogAuditoriaErrores']);
     Route::get('/get-auditoria-general', [AuditoriaControllers::class, 'consultarAuditoriaGeneral']);
+
+    //Ruleta de la suerte
+    Route::get('/ruleta/cargar-excel', [RuletaController::class, 'cargarExcel']);
+    Route::get('/ruleta/sorteo', [RuletaController::class, 'getSorteo']);
+    Route::get('/ruleta/repetir-sorteo/{idPremio}', [RuletaController::class, 'getRepetirSorteo']);
+    Route::get('/sorteo/historial', [RuletaController::class, 'getHistorialSorteo']);
+    Route::post('/ruleta/entregar/{id_ganador}', [RuletaController::class, 'entregarPremio']);
 
     // Route::put('/modificar-inventario/{id}', [CpuInventarioController::class, 'modificarInventario']);
 });

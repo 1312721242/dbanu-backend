@@ -15,6 +15,14 @@ use Illuminate\Support\Facades\Http;
 
 class CpuDerivacionController extends Controller
 {
+    protected $auditoriaController, $logController;
+
+    public function __construct()
+    {
+        $this->auditoriaController = new AuditoriaControllers();
+        $this->logController = new LogController();
+    }
+
     public function index()
     {
         $derivaciones = CpuDerivacion::all();
@@ -47,23 +55,44 @@ class CpuDerivacionController extends Controller
             'id_turno_asignado' => 'required|integer|exists:cpu_turnos,id_turnos',
         ]);
 
-        $data['id_funcionario_que_derivo'] = Auth::id();
-        $data['fecha_derivacion'] = Carbon::now();
+        try {
+            $data['id_funcionario_que_derivo'] = Auth::id();
+            $data['fecha_derivacion'] = Carbon::now();
 
-        $derivacion = CpuDerivacion::create($data);
+            $derivacion = CpuDerivacion::create($data);
 
-        if ($derivacion) {
-            // Actualizar la tabla de turnos
-            DB::table('cpu_turnos')
-                ->where('id_turnos', $data['id_turno_asignado'])
-                ->update([
-                    'estado' => $data['id_estado_derivacion'],
-                    'id_paciente' => $data['id_paciente']
-                ]);
+            if ($derivacion) {
+                // Actualizar la tabla de turnos
+                DB::table('cpu_turnos')
+                    ->where('id_turnos', $data['id_turno_asignado'])
+                    ->update([
+                        'estado' => $data['id_estado_derivacion'],
+                        'id_paciente' => $data['id_paciente']
+                    ]);
+            }
+
+            $descripcionAuditoria = "INSERCION DE NUEVA DERIVACION: {$derivacion},
+                                                 PACIENTE: {$derivacion->id_paciente},
+                                                 FUNCIONARIO QUE DERIVO: {$derivacion->id_funcionario_que_derivo},
+                                                 DOCTOR AL QUE DERIVAN: {$derivacion->id_doctor_al_que_derivan},
+                                                 MOTIVO DE DERIVACION: {$derivacion->motivo_derivacion},
+                                                 FECHA PARA ATENCION: {$derivacion->fecha_para_atencion},
+                                                 HORA PARA ATENCION: {$derivacion->hora_para_atencion},
+                                                 ESTADO DE DERIVACION: {$derivacion->id_estado_derivacion},
+                                                 TURNO ASIGNADO: {$derivacion->id_turno_asignado}";
+
+            $this->auditoriaController->auditar('cpu_derivacion', 'store', '', $derivacion, 'INSERCION', $descripcionAuditoria);
+
+            //$this->auditar('cpu_derivacion', 'store', '', $derivacion, 'INSERCION', 'Creación de derivación');
+
+            return response()->json($derivacion, 201);
+        } catch (\Exception $e) {
+            $this->logController->saveLog(
+                'Nombre de Controlador:CpuDerivacionController, Nombre de Funcion: store(Request $request)',
+                $e->getMessage()
+            );
+            return response()->json(['error' => 'Error al crear la derivación'], 500);
         }
-        $this->auditar('cpu_derivacion', 'store', '', $derivacion, 'INSERCION', 'Creación de derivación');
-
-        return response()->json($derivacion, 201);
     }
 
     public function update(Request $request, $id)

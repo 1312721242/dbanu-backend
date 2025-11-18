@@ -13,7 +13,6 @@ use Illuminate\Support\Facades\DB;
 
 class TurnosController extends Controller
 {
-    protected $auditoriaController, $logController;
     public function __construct()
     {
         // $this->middleware('auth:api');
@@ -21,11 +20,66 @@ class TurnosController extends Controller
         $this->logController = new LogController();
     }
 
+    // public function agregarTurnos(Request $request)
+    // {
+    //     $user = Auth::user();
+    //     $area = $user->usr_tipo; // Obtener el área del usuario autenticado
+    //     $doctor = $user->id; // Obtener el ID del doctor del usuario autenticado
+    //     $turnos = $request->input('turnos');
+    //     $response = [
+    //         'agregados' => 0,
+    //         'omitidos' => 0,
+    //     ];
+
+    //     if ($turnos) {
+    //         foreach ($turnos as $turno) {
+    //             $fechaTurno = $turno['fechaTurno'];
+    //             $horaTurno = $turno['horaTurno'];
+    //             // $estadoTurno = $turno['estado'];
+
+    //             $turnoExistente = CpuTurno::where('id_medico', $doctor)
+    //                 ->where('fehca_turno', $fechaTurno)
+    //                 ->where('hora', $horaTurno)
+    //                 ->whereNotBetween('estado', [3, 5])
+    //                 ->first();
+
+    //             if ($turnoExistente) {
+    //                 $response['omitidos']++;
+    //             } else {
+    //                 try {
+    //                     $insert = CpuTurno::create([
+    //                         'id_medico' => $doctor,
+    //                         'fehca_turno' => $fechaTurno,
+    //                         'hora' => $horaTurno,
+    //                         'estado' => 1,
+    //                         'area' => $area,
+    //                         'via_atencion' => 1,
+    //                         'usr_date_creacion' => now()
+    //                     ]);
+
+    //                     if ($insert) {
+    //                         $response['agregados']++;
+    //                     } else {
+    //                         $response['omitidos']++;
+    //                     }
+    //                 } catch (\Exception $e) {
+    //                     $response['omitidos']++;
+    //                 }
+    //             }
+    //         }
+    //     }
+    //     //auditar
+    //     $this->auditar('turnos', 'agregarTurnos', '', json_encode($response), 'INSERCION', 'Agregación de turnos');
+
+    //     return response()->json($response);
+    // }
+
+    // Start of Selection
     public function agregarTurnos(Request $request)
     {
         $user = Auth::user();
-        $area = $user->usr_tipo;
-        $doctor = $user->id;
+        $area = $user->usr_tipo; // Obtener el área del usuario autenticado
+        $doctor = $user->id; // Obtener el ID del doctor del usuario autenticado
         $turnos = $request->input('turnos');
         $response = [
             'agregados' => 0,
@@ -63,33 +117,67 @@ class TurnosController extends Controller
                             $response['omitidos']++;
                         }
                     } catch (\Exception $e) {
-                        $this->logController->saveLog(
-                            'Nombre de Controlador: TurnosController, Nombre de Función: agregarTurnos(Request $request)',
-                            'Error al agregar turno: ' . $e->getMessage()
-                        );
                         $response['omitidos']++;
                     }
                 }
             }
         }
-
-        $nombreDoctor = DB::table('users')->where('id', $doctor)->value('name');
-        $descripcionAuditoria = 'Agregación de turnos por el funcionario ID: ' . $doctor . ' - ' . $nombreDoctor .
-            '. Detalles: ' . json_encode($response);
-        $this->auditoriaController->auditar(
-            'TurnosController',
-            'agregarTurnos(Request $request)',
-            '',
-            json_encode($response),
-            'INSERT',
-            $descripcionAuditoria
-        );
-        //$this->auditar('turnos', 'agregarTurnos', '', json_encode($response), 'INSERCION', 'Agregación de turnos');
+        //auditar
+        $this->auditar('turnos', 'agregarTurnos', '', json_encode($response), 'INSERCION', 'Agregación de turnos');
 
         // Agregar log para ver los datos que llegan
         Log::info('Datos recibidos en agregarTurnos: ' . json_encode($request->all()));
+
         return response()->json($response);
     }
+
+    // public function listarTurnos(Request $request)
+    // {
+    //     $user = Auth::user();
+    //     $id_funcionario = $user->id;
+    //     $ini = $request->input('inicio');
+    //     $hasta = $request->input('hasta');
+    //     $fechaActual = date('Y-m-d');
+    //     $horaActual = date('H:i:s');
+
+    //     // Depuración
+    //     Log::info("Usuario: $id_funcionario, Fecha Inicio: $ini, Fecha Fin: $hasta, Fecha Actual: $fechaActual, Hora Actual: $horaActual");
+
+    //     $turnosQuery = CpuTurno::where('id_medico', $id_funcionario)
+    //         ->where('estado', 1);
+
+    //     if ($ini == $fechaActual && $hasta == $fechaActual) {
+    //         // Caso 1: Solo hoy, después de la hora actual
+    //         Log::info("Consulta para el mismo día a partir de la hora actual");
+    //         $turnosQuery->where('fehca_turno', $ini)->where('hora', '>', $horaActual);
+    //     } elseif ($ini == $fechaActual && $hasta > $fechaActual) {
+    //         // Caso 2: Hoy desde la hora actual y días futuros desde cualquier hora
+    //         Log::info("Consulta para hoy a partir de la hora actual y días futuros desde cualquier hora");
+    //         $turnosQuery->where(function ($query) use ($ini, $hasta, $horaActual) {
+    //             $query->where(function ($q) use ($ini, $horaActual) {
+    //                 $q->where('fehca_turno', $ini)->where('hora', '>', $horaActual);
+    //             })->orWhere('fehca_turno', '>', $ini);
+    //         });
+    //     } else {
+    //         // Caso 3: Fechas futuras, devolver todos los turnos
+    //         Log::info("Consulta para fechas futuras sin restricciones de hora");
+    //         $turnosQuery->whereBetween('fehca_turno', [$ini, $hasta]);
+    //     }
+
+    //     $turnos = $turnosQuery->get();
+
+    //     // Formatear fechas y horas
+    //     $turnos = $turnos->map(function ($turno) {
+    //         $turno->fehca_turno = Carbon::parse($turno->fehca_turno)->format('Y-m-d');
+    //         $turno->hora = Carbon::parse($turno->hora)->format('H:i:s');
+    //         return $turno;
+    //     });
+
+    //     Log::info("Turnos encontrados: " . $turnos->count());
+    //     //auditar
+    //     $this->auditar('turnos', 'listarTurnos', '', $turnos, 'CONSULTA', 'Consulta de turnos');
+    //     return response()->json($turnos);
+    // }
 
     public function listarTurnos(Request $request)
     {
@@ -140,22 +228,13 @@ class TurnosController extends Controller
             });
 
             Log::info("Turnos encontrados: " . $turnos->count());
-            $nombreDoctor = DB::table('users')->where('id', $id_funcionario)->value('name');
-            $descripcionAuditoria = 'Consulta de turnos desde ' . $ini . ' hasta ' . $hasta . ' por el funcionario ID: ' . $id_funcionario . ' - ' . $nombreDoctor;
-            $this->auditoriaController->auditar(
-                'TurnosController',
-                'listarTurnos(Request $request)',
-                '',
-                json_encode($turnos),
-                'GET',
-                $descripcionAuditoria
-            );
-
-            //$this->auditar('turnos', 'listarTurnos', '', $turnos, 'CONSULTA', 'Consulta de turnos');
+            //auditar
+            $this->auditar('turnos', 'listarTurnos', '', $turnos, 'CONSULTA', 'Consulta de turnos');
             return response()->json($turnos);
         } catch (\Exception $e) {
+            // Log de error
             $this->logController->saveLog(
-                'Nombre de Controlador: TurnosController, Nombre de Función: listarTurnos(Request $request)',
+                'Nombre de Controlador: TurnosController, Nombre de Función: (Request $request)',
                 'Error al listar turnos: ' . $e->getMessage()
             );
 
@@ -170,111 +249,65 @@ class TurnosController extends Controller
 
     public function listarTurnosPorFuncionario(Request $request)
     {
-        try {
-            $idFuncionario = $request->query('funcionario');
-            $fecha = $request->query('fecha');
-            $area = $request->query('area');
-            $area_deriva = $request->query('area_deriva');
+        $idFuncionario = $request->query('funcionario');
+        $fecha = $request->query('fecha');
+        $area = $request->query('area');
+        $horaActual = Carbon::now()->format('H:i:s');
+        $area_deriva = $request->query('area_deriva');
+        // // Validar que el área deriva sea un valor válido
+        // if (!in_array($area_deriva, ['FISIOTERAPIA', 'OTROS'])) {
+        //     return response()->json(['error' => 'Área deriva no válida'], 400);
+        // }
 
-            // Hora y fecha actual con zona horaria ECUADOR
-            $horaActual = Carbon::now('America/Guayaquil')->format('H:i:s');
-            $hoy = Carbon::now('America/Guayaquil')->format('Y-m-d');
+        // Log para depuración
+        Log::info("Funcionario: $idFuncionario, Fecha: $fecha, Área: $area, Hora Actual: $horaActual, Área Deriva: $area_deriva");
 
-            Log::info("[LISTAR TURNOS] Funcionario: $idFuncionario, Fecha: $fecha, Área: $area, Hora Actual: $horaActual, Área Deriva: $area_deriva");
-
-            // =======================================================
-            // 🚫 SI LA FECHA ES ANTERIOR A HOY → NO RETORNAR TURNOS
-            // =======================================================
-            if ($fecha < $hoy) {
-                Log::info("⚠️ Fecha $fecha es anterior a hoy ($hoy). No se devuelven turnos.");
-                return response()->json([], 200);
-            }
-
-            // =======================================================
-            // 🟢 CONSTRUCCIÓN DE CONSULTA BASE
-            // =======================================================
-            if ($area_deriva === 'FISIOTERAPIA') {
+        if ($area_deriva === 'FISIOTERAPIA') {
+            $turnosQuery = CpuTurno::where('id_medico', $idFuncionario)
+                ->where('estado', 1)
+                ->where('area', $area)
+                ->where('tipo_atencion', 1)
+                ->whereDate('fehca_turno', $fecha);
+        } else {
+            if ($area == 8) {
                 $turnosQuery = CpuTurno::where('id_medico', $idFuncionario)
                     ->where('estado', 1)
                     ->where('area', $area)
-                    ->where('tipo_atencion', 1)
+                    ->where('tipo_atencion', 2)
                     ->whereDate('fehca_turno', $fecha);
             } else {
-                if ($area == 8) {
-                    $turnosQuery = CpuTurno::where('id_medico', $idFuncionario)
-                        ->where('estado', 1)
-                        ->where('area', $area)
-                        ->where('tipo_atencion', 2)
-                        ->whereDate('fehca_turno', $fecha);
-                } else {
-                    $turnosQuery = CpuTurno::where('id_medico', $idFuncionario)
-                        ->where('estado', 1)
-                        ->where('area', $area)
-                        ->whereDate('fehca_turno', $fecha);
-                }
+                $turnosQuery = CpuTurno::where('id_medico', $idFuncionario)
+                    ->where('estado', 1)
+                    ->where('area', $area)
+                    ->whereDate('fehca_turno', $fecha);
             }
-
-            // =======================================================
-            // 🔥 SI LA FECHA ES HOY → MOSTRAR TURNOS DESDE LA HORA ACTUAL
-            // =======================================================
-            if ($fecha === $hoy) {
-                $turnosQuery->whereTime('hora', '>=', $horaActual);
-            }
-
-            // Obtener resultados
-            $turnos = $turnosQuery->orderBy('hora')->get();
-
-            Log::info("SQL Query: " . $turnosQuery->toSql());
-            Log::info("SQL Bindings: " . json_encode($turnosQuery->getBindings()));
-
-            // =======================================================
-            // 🕒 FORMATEAR FECHAS Y HORAS
-            // =======================================================
-            $turnos = $turnos->map(function ($turno) {
-                $turno->fehca_turno = Carbon::parse($turno->fehca_turno)->format('Y-m-d');
-                $turno->hora = Carbon::parse($turno->hora)->format('H:i:s');
-                return $turno;
-            });
-
-            Log::info("Turnos encontrados: " . $turnos->count());
-
-            // =======================================================
-            // 📝 AUDITORÍA
-            // =======================================================
-            $nombreFuncionario = DB::table('users')->where('id', $idFuncionario)->value('name');
-            $descripcionAuditoria = "Consulta de turnos para el funcionario ID: $idFuncionario ($nombreFuncionario) en fecha: $fecha";
-
-            $this->auditoriaController->auditar(
-                'TurnosController',
-                'listarTurnosPorFuncionario(Request $request)',
-                '',
-                json_encode($turnos),
-                'GET',
-                $descripcionAuditoria
-            );
-
-            return response()->json($turnos, 200);
-        } catch (\Exception $e) {
-
-            Log::error("ERROR en listarTurnosPorFuncionario: " . $e->getMessage(), [
-                'line' => $e->getLine(),
-                'file' => $e->getFile(),
-                'fecha' => $fecha ?? null,
-                'funcionario' => $idFuncionario ?? null,
-                'area' => $area ?? null,
-            ]);
-
-            $this->logController->saveLog(
-                'Nombre de Controlador: TurnosController, Nombre de Función: listarTurnosPorFuncionario',
-                'Error al listar turnos: ' . $e->getMessage()
-            );
-
-            return response()->json([
-                'error' => 'Ocurrió un error al listar los turnos.',
-                'detalle' => $e->getMessage()
-            ], 500);
         }
+
+        if ($fecha == Carbon::now()->format('Y-m-d')) {
+            $turnosQuery->where('hora', '>', $horaActual);
+        }
+
+        $turnos = $turnosQuery->get();
+
+        // Depuración de SQL
+        Log::info("Consulta SQL: " . $turnosQuery->toSql());
+        Log::info("Parámetros de consulta: " . json_encode($turnosQuery->getBindings()));
+
+        // Formatear las fechas y horas
+        $turnos = $turnos->map(function ($turno) {
+            $turno->fehca_turno = Carbon::parse($turno->fehca_turno)->format('Y-m-d');
+            $turno->hora = Carbon::parse($turno->hora)->format('H:i:s');
+            return $turno;
+        });
+
+        Log::info("Turnos encontrados: " . $turnos->count());
+        Log::info("Turnos: " . json_encode($turnos));
+        //auditar
+        $this->auditar('turnos', 'listarTurnosPorFuncionario', '', $turnos, 'CONSULTA', 'Consulta de turnos por funcionario');
+
+        return response()->json($turnos);
     }
+
 
     public function eliminarTurno(Request $request)
     {
@@ -303,33 +336,14 @@ class TurnosController extends Controller
             return response()->json(['error' => $validator->errors()], 400);
         }
 
-        try {
-            $turno = CpuTurno::find($request->input('id_turno'));
-            $turno->id_paciente = $request->input('id_paciente');
-            $turno->estado = 7;
-            $turno->save();
-            //auditar
-            $nombrePaciente = DB::table('cpu_personas')->where('id', $turno->id_paciente)->value('nombres');
-            $descripcionAuditoria = 'Reservación de turno ID: ' . $turno->id_turnos . ' para el paciente ID: ' . $turno->id_paciente . ' - ' . $nombrePaciente;
-            $this->auditoriaController->auditar(
-                'cpu_turnos',
-                'reservarTurno(Request $request)',
-                '',
-                json_encode($turno),
-                'UPDATE',
-                $descripcionAuditoria
-            );
+        $turno = CpuTurno::find($request->input('id_turno'));
+        $turno->id_paciente = $request->input('id_paciente');
+        $turno->estado = 7; // Cambia el estado según sea necesario
+        $turno->save();
+        //auditar
+        $this->auditar('turnos', 'reservarTurno', '', $turno, 'MODIFICACION', 'Reservación de turno');
 
-            //$this->auditar('turnos', 'reservarTurno', '', $turno, 'MODIFICACION', 'Reservación de turno');
-            return response()->json(['success' => true]);
-        } catch (\Exception $e) {
-            $this->logController->saveLog(
-                'Nombre de Controlador: TurnosController, Nombre de Función: reservarTurno(Request $request)',
-                'Error al reservar turno: ' . $e->getMessage()
-            );
-
-            return response()->json(['error' => 'Error al reservar turno'], 500);
-        }
+        return response()->json(['success' => true]);
     }
 
     //funcion para auditar

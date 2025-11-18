@@ -18,14 +18,14 @@ use Illuminate\Http\Request;
 
 class AuditoriaControllers extends Controller
 {
-
+    protected $logController;
     public function __construct()
     {
         $this->middleware('auth:api');
         $this->logController = new LogController();
     }
     //funcion para auditar
-    public function auditar($tabla, $campo, $dataOld, $dataNew, $tipo, $descripcion, $request = null)
+    public function auditar1111($tabla, $campo, $dataOld, $dataNew, $tipo, $descripcion, $request = null)
     {
         try {
             $usuario = $request && !is_string($request) ? $request->user()->name : auth()->user()->name;
@@ -51,6 +51,88 @@ class AuditoriaControllers extends Controller
 
             $fecha = now();
             $codigo_auditoria = strtoupper($tabla . '_' . $campo . '_' . $tipo);
+            DB::table('cpu_auditoria')->insert([
+                'aud_user' => $usuario,
+                'aud_tabla' => $tabla,
+                'aud_campo' => $campo,
+                'aud_dataold' => $dataOld,
+                'aud_datanew' => $dataNew,
+                'aud_tipo' => $tipo,
+                'aud_fecha' => $fecha,
+                'aud_ip' => $ioConcatenadas,
+                'aud_tipoauditoria' => $this->getTipoAuditoria($tipo),
+                'aud_descripcion' => $descripcion,
+                'aud_nombreequipo' => $nombreequipo,
+                'aud_descrequipo' => $nombreUsuarioEquipo,
+                'aud_codigo' => $codigo_auditoria,
+                'created_at' => now(),
+                'updated_at' => now(),
+                'aud_id_user' => $request && !is_string($request) ? $request->user()->id : auth()->user()->id,
+            ]);
+        } catch (\Exception $e) {
+            $this->logController->saveLog(
+                'Nombre de Controlador:AuditoriaControllers, Nombre de Funcion: auditar($tabla, $campo, $dataOld, $dataNew, $tipo, $descripcion, $request = null)',
+                $e->getMessage()
+            );
+        }
+    }
+
+    public function auditar($tabla, $campo, $dataOld, $dataNew, $tipo, $descripcion, $request = null)
+    {
+        try {
+            $usuario = $request && !is_string($request) ? $request->user()->name : auth()->user()->name;
+            $ip = $request && !is_string($request) ? $request->ip() : request()->ip();
+            $ipv4 = gethostbyname(gethostname());
+
+            // ================================
+            //   VALIDACIÓN IP PÚBLICA ROBUSTA
+            // ================================
+            $publicIp = '0.0.0.0';
+            $services = [
+                'https://api.ipify.org',
+                'https://ifconfig.co/ip',
+                'https://ipinfo.io/ip',
+                'https://icanhazip.com'
+            ];
+
+            foreach ($services as $url) {
+                try {
+                    $response = @file_get_contents($url);
+                    if ($response !== false) {
+                        $response = trim($response);
+                        if (filter_var($response, FILTER_VALIDATE_IP)) {
+                            $publicIp = $response;
+                            break;  // Ya obtuvimos IP válida
+                        }
+                    }
+                } catch (\Exception $e) {
+                    continue; // Si falla este servicio, probar el siguiente
+                }
+            }
+
+            // ================================
+
+            $ioConcatenadas = 'IP LOCAL: ' . $ip . '  --IPV4: ' . $ipv4 . '  --IP PUBLICA: ' . $publicIp;
+
+            $nombreequipo = gethostbyaddr($ip);
+            $userAgent = $request && !is_string($request) ? $request->header('User-Agent') : request()->header('User-Agent');
+            $tipoEquipo = 'Desconocido';
+
+            if (stripos($userAgent, 'Mobile') !== false) {
+                $tipoEquipo = 'Celular';
+            } elseif (stripos($userAgent, 'Tablet') !== false) {
+                $tipoEquipo = 'Tablet';
+            } elseif (stripos($userAgent, 'Laptop') !== false || stripos($userAgent, 'Macintosh') !== false) {
+                $tipoEquipo = 'Laptop';
+            } elseif (stripos($userAgent, 'Windows') !== false || stripos($userAgent, 'Linux') !== false) {
+                $tipoEquipo = 'Computador de Escritorio';
+            }
+
+            $nombreUsuarioEquipo = get_current_user() . ' en ' . $tipoEquipo;
+
+            $fecha = now();
+            $codigo_auditoria = strtoupper($tabla . '_' . $campo . '_' . $tipo);
+
             DB::table('cpu_auditoria')->insert([
                 'aud_user' => $usuario,
                 'aud_tabla' => $tabla,

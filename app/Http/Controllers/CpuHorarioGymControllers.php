@@ -54,62 +54,63 @@ class CpuHorarioGymControllers extends Controller
     }
 
     public function getHorarioGym()
-{
-    try {
-        $data = DB::select(
-            'SELECT 
-                h.tg_id,
-                h.tg_hora_apertura,
-                h.tg_hora_cierre,
-                h.tg_json_dias_laborables,
-                h.tg_tipo_servicio,
+    {
+        try {
+            $data = DB::select(
+                "SELECT 
+                    h.tg_id,
+                    h.tg_hora_apertura,
+                    h.tg_hora_cierre,
+                    h.tg_json_dias_laborables,
+                    h.tg_tipo_servicio,
 
-                -- Datos del servicio
-                t.ts_nombre AS tipo_servicio_nombre,
-                t.ts_descripcion AS tipo_servicio_descripcion,
-                t.ts_breve_desc AS tipo_servicio_breve_desc,
+                    t.ts_nombre AS tipo_servicio_nombre,
+                    t.ts_descripcion AS tipo_servicio_descripcion,
+                    t.ts_breve_desc AS tipo_servicio_breve_desc,
 
-                -- Datos de la categoría
-                c.cat_id AS categoria_id,
-                c.cat_nombre AS categoria_nombre,
-                c.cat_descripcion AS categoria_descripcion,
+                    c.cat_id AS categoria_id,
+                    c.cat_nombre AS categoria_nombre,
+                    c.cat_descripcion AS categoria_descripcion,
 
-                h.tg_capacidad_maxima,
-                h.tg_tiempo_turno,
-                h.tg_id_estado,
+                    h.tg_capacidad_maxima,
+                    h.tg_tiempo_turno,
+                    h.tg_id_estado,
 
-                -- Estado
-                e.estado AS nombre_estado,
+                    e.estado AS nombre_estado,
 
-                h.tg_created_at,
-                h.tg_updated_at,
-                h.tg_id_user
+                    CASE 
+                        WHEN h.tg_tipo_usuario = 1 THEN 'Estudiante'
+                        WHEN h.tg_tipo_usuario = 2 THEN 'Docente'
+                        ELSE 'Desconocido'
+                    END AS tipo_usuario_nombre,
 
-            FROM db_train_revive.cpu_horarios_gym h
-            LEFT JOIN public.cpu_estados e 
-                ON h.tg_id_estado = e.id
+                    h.tg_tipo_usuario, 
+                    h.tg_created_at,
+                    h.tg_updated_at,
+                    h.tg_id_user
 
-            LEFT JOIN db_train_revive.cpu_tipos_servicios t 
-                ON h.tg_tipo_servicio = t.ts_id
+                FROM db_train_revive.cpu_horarios_gym h
+                LEFT JOIN public.cpu_estados e 
+                    ON h.tg_id_estado = e.id
+                LEFT JOIN db_train_revive.cpu_tipos_servicios t 
+                    ON h.tg_tipo_servicio = t.ts_id
+                LEFT JOIN db_train_revive.cpu_categoria_servicios c 
+                    ON t.ts_id_categoria = c.cat_id order by h.tg_tipo_usuario desc"
+            );
 
-            LEFT JOIN db_train_revive.cpu_categoria_servicios c 
-                ON t.ts_id_categoria = c.cat_id'
-        );
+            return $data;
+        } catch (\Exception $e) {
 
-        return $data;
+            $this->logController->saveLog(
+                'Controlador: CpuHorarioGymControllers, Función: getHorarioGym()',
+                'Error al consultar horarios para asistir al gym: ' . $e->getMessage()
+            );
 
-    } catch (\Exception $e) {
-
-        $this->logController->saveLog(
-            'Controlador: CpuHorarioGymControllers, Función: getHorarioGym()',
-            'Error al consultar horarios para asistir al gym: ' . $e->getMessage()
-        );
-
-        return response()->json([
-            'message' => 'Error al consultar horarios para asistir al gym: ' . $e->getMessage()
-        ], 500);
+            return response()->json([
+                'message' => 'Error al consultar horarios para asistir al gym: ' . $e->getMessage()
+            ], 500);
+        }
     }
-}
 
 
     public function getHorarioGymId($id)

@@ -13,7 +13,7 @@ use Illuminate\Http\Request;
 
 class CpuCategoriaServicioControllers extends Controller
 {
-
+    protected $auditoriaController, $logController;
     public function __construct()
     {
         $this->middleware('auth:api');
